@@ -1,0 +1,134 @@
+---
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import StatCard from "../components/ui/StatCard.astro";
+---
+
+<DashboardLayout
+  title="Dashboard fiscal"
+  subtitle="Visão geral das regras, produtos e sugestões tributárias"
+>
+  <div class="page-header">
+    <h2>Painel executivo</h2>
+    <p>
+      Acompanhe a evolução da base tributária, importações e consistência das sugestões do sistema.
+    </p>
+  </div>
+
+  <div class="grid grid--4">
+    <StatCard label="Produtos cadastrados" value="1.284" trend="+12% no mês" />
+    <StatCard label="Regras fiscais ativas" value="326" trend="+8 novas regras" />
+    <StatCard label="Sugestões geradas" value="4.912" trend="+18% esta semana" />
+    <StatCard label="Pendências de revisão" value="27" trend="Atenção prioritária" />
+  </div>
+
+  <div style="height: 18px;"></div>
+
+  <div class="grid grid--2">
+    <section class="card card--padded">
+      <h3 class="section-title">Importações recentes</h3>
+
+      <div class="list">
+        <div class="list-item">
+          <div class="list-item__meta">
+            <span class="list-item__title">TIPI 2026-01</span>
+            <span class="list-item__subtitle">1.245 linhas processadas • hoje às 09:14</span>
+          </div>
+          <span class="badge badge--success">Concluído</span>
+        </div>
+
+        <div class="list-item">
+          <div class="list-item__meta">
+            <span class="list-item__title">NCM oficial</span>
+            <span class="list-item__subtitle">8.532 linhas processadas • hoje às 08:47</span>
+          </div>
+          <span class="badge badge--success">Concluído</span>
+        </div>
+
+        <div class="list-item">
+          <div class="list-item__meta">
+            <span class="list-item__title">CFOP base</span>
+            <span class="list-item__subtitle">594 linhas processadas • ontem às 20:31</span>
+          </div>
+          <span class="badge badge--warning">Revisar</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card card--padded">
+      <h3 class="section-title">Alertas tributários</h3>
+
+      <div class="list">
+        <div class="list-item">
+          <div class="list-item__meta">
+            <span class="list-item__title">NCM sem enriquecimento fiscal</span>
+            <span class="list-item__subtitle">14 itens precisam de revisão manual</span>
+          </div>
+          <span class="badge badge--danger">Crítico</span>
+        </div>
+
+        <div class="list-item">
+          <div class="list-item__meta">
+            <span class="list-item__title">CFOP divergente por operação</span>
+            <span class="list-item__subtitle">7 sugestões com conflito detectado</span>
+          </div>
+          <span class="badge badge--warning">Médio</span>
+        </div>
+
+        <div class="list-item">
+          <div class="list-item__meta">
+            <span class="list-item__title">Base legal pendente</span>
+            <span class="list-item__subtitle">19 regras sem justificativa vinculada</span>
+          </div>
+          <span class="badge badge--warning">Acompanhar</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div style="height: 18px;"></div>
+
+  <section class="card card--padded">
+    <h3 class="section-title">Últimas sugestões tributárias</h3>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>NCM</th>
+            <th>CFOP sugerido</th>
+            <th>Origem/Destino</th>
+            <th>Confiança</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Notebook corporativo</td>
+            <td>84713012</td>
+            <td>6102</td>
+            <td>SP → RJ</td>
+            <td>96%</td>
+            <td><span class="badge badge--success">Validado</span></td>
+          </tr>
+          <tr>
+            <td>Monitor LED 24"</td>
+            <td>85285200</td>
+            <td>5102</td>
+            <td>GO → MG</td>
+            <td>89%</td>
+            <td><span class="badge badge--warning">Revisão</span></td>
+          </tr>
+          <tr>
+            <td>Teclado mecânico</td>
+            <td>84716053</td>
+            <td>6108</td>
+            <td>SP → BA</td>
+            <td>74%</td>
+            <td><span class="badge badge--danger">Conflito</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</DashboardLayout>

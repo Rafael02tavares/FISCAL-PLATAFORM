@@ -1,0 +1,20 @@
+---
+interface Props {
+  title: string;
+  subtitle?: string;
+}
+
+const { title, subtitle = "Gestão fiscal inteligente para operações B2B" } = Astro.props;
+---
+
+<header class="topbar">
+  <div class="topbar__title">
+    <h1>{title}</h1>
+    <p>{subtitle}</p>
+  </div>
+
+  <div class="topbar__actions">
+    <input class="search-box" type="text" placeholder="Buscar NCM, CFOP, produto..." />
+    <div class="user-chip">Rafael • Ambiente local</div>
+  </div>
+</header>

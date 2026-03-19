@@ -1,0 +1,32 @@
+---
+const currentPath = Astro.url.pathname;
+
+const items = [
+  { href: "/", label: "Dashboard" },
+  { href: "/simulacao", label: "Simulação tributária" },
+  { href: "/produtos", label: "Produtos" },
+  { href: "/regras-fiscais", label: "Regras fiscais" },
+  { href: "/ncm", label: "NCM" },
+  { href: "/cfop", label: "CFOP" },
+  { href: "/importacoes", label: "Importações" },
+  { href: "/configuracoes", label: "Configurações" },
+];
+---
+
+<aside class="sidebar">
+  <div class="sidebar__brand">
+    <span class="sidebar__brand-title">Fiscal Platform</span>
+    <span class="sidebar__brand-subtitle">SaaS de inteligência tributária</span>
+  </div>
+
+  <nav class="sidebar__nav">
+    {items.map((item) => (
+      <a
+        href={item.href}
+        class={`sidebar__link ${currentPath === item.href ? "sidebar__link--active" : ""}`}
+      >
+        {item.label}
+      </a>
+    ))}
+  </nav>
+</aside>

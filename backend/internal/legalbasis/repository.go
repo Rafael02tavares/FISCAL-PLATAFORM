@@ -452,4 +452,3 @@ func (r *Repository) FindApplicableRules(ctx context.Context, p FindApplicableRu
 	return items, nil
 }
 
-teste

@@ -1,0 +1,15 @@
+---
+interface Props {
+  label: string;
+  value: string;
+  trend?: string;
+}
+
+const { label, value, trend } = Astro.props;
+---
+
+<div class="card card--padded stat-card">
+  <span class="stat-card__label">{label}</span>
+  <strong class="stat-card__value">{value}</strong>
+  {trend && <span class="stat-card__trend">{trend}</span>}
+</div>

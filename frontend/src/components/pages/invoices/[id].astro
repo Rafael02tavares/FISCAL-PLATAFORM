@@ -1,18 +1,21 @@
 ---
 export const prerender = false;
 
-import AppLayout from "../../layouts/Layout.astro";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
 
 const { id } = Astro.params;
 ---
 
-<AppLayout title="Detalhe da nota">
-  <section class="page-header">
-    <h1>Detalhe da nota</h1>
+<DashboardLayout
+  title="Detalhe da nota"
+  subtitle={`Visualização detalhada da nota fiscal ${id}`}
+>
+  <div class="page-header">
+    <h2>Detalhe da nota</h2>
     <p>ID da nota: {id}</p>
-  </section>
+  </div>
 
-  <section class="panel">
+  <section class="card card--padded">
     <div id="invoice-detail">Carregando dados da nota...</div>
   </section>
 
@@ -73,91 +76,93 @@ const { id } = Astro.params;
     }
 
     function renderLegalBasis(legalBasis) {
-  if (!legalBasis || !legalBasis.length) {
-    return `
-      <div class="compare-box">
-        <h4>Base legal</h4>
-        <p>Nenhuma base legal específica encontrada para este contexto.</p>
-      </div>
-    `;
-  }
+      if (!legalBasis || !legalBasis.length) {
+        return `
+          <div class="compare-box">
+            <h4>Base legal</h4>
+            <p>Nenhuma base legal específica encontrada para este contexto.</p>
+          </div>
+        `;
+      }
 
-  const rows = legalBasis
-    .map(
-      (item) => `
-        <div class="legal-item">
-          <div><strong>${item.tax_type || "-"}</strong></div>
-          <div><strong>Fonte:</strong> ${item.title || "-"}</div>
-          <div><strong>Referência:</strong> ${item.reference_code || "-"}</div>
-          <div><strong>Jurisdição:</strong> ${item.jurisdiction || "-"}</div>
-          <div><strong>UF:</strong> ${item.uf || "-"}</div>
-          <div><strong>Motivo:</strong> ${item.applied_reason || "-"}</div>
-          <div><strong>Peso:</strong> ${item.weight || "-"}</div>
+      const rows = legalBasis
+        .map(
+          (item) => `
+            <div class="legal-item">
+              <div><strong>${item.tax_type || "-"}</strong></div>
+              <div><strong>Fonte:</strong> ${item.title || "-"}</div>
+              <div><strong>Referência:</strong> ${item.reference_code || "-"}</div>
+              <div><strong>Jurisdição:</strong> ${item.jurisdiction || "-"}</div>
+              <div><strong>UF:</strong> ${item.uf || "-"}</div>
+              <div><strong>Motivo:</strong> ${item.applied_reason || "-"}</div>
+              <div><strong>Peso:</strong> ${item.weight || "-"}</div>
+            </div>
+          `
+        )
+        .join("");
+
+      return `
+        <div class="compare-box legal-basis-box">
+          <h4>Base legal aplicada</h4>
+          <div class="legal-list">${rows}</div>
         </div>
-      `
-    )
-    .join("");
+      `;
+    }
 
-  return `
-    <div class="compare-box legal-basis-box">
-      <h4>Base legal aplicada</h4>
-      <div class="legal-list">${rows}</div>
-    </div>
-  `;
-}
+    function renderSuggestion(result, item) {
+      const suggestion = result?.suggestion || {};
 
-function renderSuggestion(result, item) {
-  const suggestion = result?.suggestion || {};
+      return `
+        <div class="suggestion-card">
+          <div class="suggestion-top">
+            <div>
+              <strong>Sugestão fiscal</strong>
+              <div class="muted-line">
+                Baseada no histórico aprendido pela plataforma e nas regras legais
+              </div>
+            </div>
 
-  return `
-    <div class="suggestion-card">
-      <div class="suggestion-top">
-        <div>
-          <strong>Sugestão fiscal</strong>
-          <div class="muted-line">Baseada no histórico aprendido pela plataforma e nas regras legais</div>
+            <div class="confidence-badge ${confidenceClass(result.confidence_score)}">
+              Confiança ${confidenceLabel(result.confidence_score)} (${result.confidence_score ?? 0})
+            </div>
+          </div>
+
+          <div class="suggestion-grid">
+            <div class="compare-box">
+              <h4>Dados da nota</h4>
+              <p><strong>Descrição:</strong> ${item.description || "-"}</p>
+              <p><strong>GTIN:</strong> ${item.gtin || "-"}</p>
+              <p><strong>NCM:</strong> ${item.ncm || "-"}</p>
+              <p><strong>CFOP:</strong> ${item.cfop || "-"}</p>
+              <p><strong>Total:</strong> ${item.total_value || "-"}</p>
+            </div>
+
+            <div class="compare-box">
+              <h4>Sugestão da plataforma</h4>
+              <p><strong>Match:</strong> ${result.match_type || "-"}</p>
+              <p><strong>NCM sugerido:</strong> ${suggestion.ncm || "-"}</p>
+              <p><strong>CEST sugerido:</strong> ${suggestion.cest || "-"}</p>
+              <p><strong>cClasTrib:</strong> ${suggestion.cclas_trib || "-"}</p>
+              <p><strong>CFOP sugerido:</strong> ${suggestion.cfop || "-"}</p>
+              <p><strong>PIS CST:</strong> ${suggestion.pis_cst || "-"}</p>
+              <p><strong>COFINS CST:</strong> ${suggestion.cofins_cst || "-"}</p>
+              <p><strong>Cód. rec. PIS:</strong> ${suggestion.pis_revenue_code || "-"}</p>
+              <p><strong>Cód. rec. COFINS:</strong> ${suggestion.cofins_revenue_code || "-"}</p>
+              <p><strong>ICMS:</strong> ${suggestion.icms_value || "-"}</p>
+              <p><strong>IPI:</strong> ${suggestion.ipi_value || "-"}</p>
+              <p><strong>PIS:</strong> ${suggestion.pis_value || "-"}</p>
+              <p><strong>COFINS:</strong> ${suggestion.cofins_value || "-"}</p>
+              <p><strong>IBS:</strong> ${suggestion.ibs_rate || "-"}</p>
+              <p><strong>CBS:</strong> ${suggestion.cbs_rate || "-"}</p>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px;">
+            ${renderLegalBasis(result.legal_basis || [])}
+          </div>
         </div>
-
-        <div class="confidence-badge ${confidenceClass(result.confidence_score)}">
-          Confiança ${confidenceLabel(result.confidence_score)} (${result.confidence_score ?? 0})
-        </div>
-      </div>
-
-      <div class="suggestion-grid">
-        <div class="compare-box">
-          <h4>Dados da nota</h4>
-          <p><strong>Descrição:</strong> ${item.description || "-"}</p>
-          <p><strong>GTIN:</strong> ${item.gtin || "-"}</p>
-          <p><strong>NCM:</strong> ${item.ncm || "-"}</p>
-          <p><strong>CFOP:</strong> ${item.cfop || "-"}</p>
-          <p><strong>Total:</strong> ${item.total_value || "-"}</p>
-        </div>
-
-        <div class="compare-box">
-          <h4>Sugestão da plataforma</h4>
-          <p><strong>Match:</strong> ${result.match_type || "-"}</p>
-          <p><strong>NCM sugerido:</strong> ${suggestion.ncm || "-"}</p>
-          <p><strong>CEST sugerido:</strong> ${suggestion.cest || "-"}</p>
-          <p><strong>cClasTrib:</strong> ${suggestion.cclas_trib || "-"}</p>
-          <p><strong>CFOP sugerido:</strong> ${suggestion.cfop || "-"}</p>
-          <p><strong>PIS CST:</strong> ${suggestion.pis_cst || "-"}</p>
-          <p><strong>COFINS CST:</strong> ${suggestion.cofins_cst || "-"}</p>
-          <p><strong>Cód. rec. PIS:</strong> ${suggestion.pis_revenue_code || "-"}</p>
-          <p><strong>Cód. rec. COFINS:</strong> ${suggestion.cofins_revenue_code || "-"}</p>
-          <p><strong>ICMS:</strong> ${suggestion.icms_value || "-"}</p>
-          <p><strong>IPI:</strong> ${suggestion.ipi_value || "-"}</p>
-          <p><strong>PIS:</strong> ${suggestion.pis_value || "-"}</p>
-          <p><strong>COFINS:</strong> ${suggestion.cofins_value || "-"}</p>
-          <p><strong>IBS:</strong> ${suggestion.ibs_rate || "-"}</p>
-          <p><strong>CBS:</strong> ${suggestion.cbs_rate || "-"}</p>
-        </div>
-      </div>
-
-      <div style="margin-top:14px;">
-        ${renderLegalBasis(result.legal_basis || [])}
-      </div>
-    </div>
-  `;
-}
+      `;
+    }
 
     async function loadInvoice() {
       const token = localStorage.getItem("token");
@@ -219,21 +224,23 @@ function renderSuggestion(result, item) {
             <div><strong>Total:</strong> ${invoice.total_amount || "-"}</div>
           </div>
 
-          <h2 style="margin-top:20px;">Itens da nota</h2>
+          <h3 style="margin-top: 20px;" class="section-title">Itens da nota</h3>
 
-          <table class="table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Produto</th>
-                <th>NCM</th>
-                <th>CFOP</th>
-                <th>Total</th>
-                <th>Ação</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Produto</th>
+                  <th>NCM</th>
+                  <th>CFOP</th>
+                  <th>Total</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
         `;
 
         document.querySelectorAll(".suggest-btn").forEach((button) => {
@@ -277,7 +284,7 @@ function renderSuggestion(result, item) {
   <style>
     .invoice-meta-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
       background: white;
       padding: 16px;
@@ -387,25 +394,33 @@ function renderSuggestion(result, item) {
       padding: 12px;
       border-radius: 8px;
     }
+
     .legal-basis-box {
-  background: #fcfcfd;
-}
+      background: #fcfcfd;
+    }
 
-.legal-list {
-  display: grid;
-  gap: 10px;
-}
+    .legal-list {
+      display: grid;
+      gap: 10px;
+    }
 
-.legal-item {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 10px;
-  background: white;
-  font-size: 14px;
-}
+    .legal-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px;
+      background: white;
+      font-size: 14px;
+    }
 
-.legal-item div {
-  margin: 4px 0;
-}
+    .legal-item div {
+      margin: 4px 0;
+    }
+
+    @media (max-width: 900px) {
+      .invoice-meta-grid,
+      .suggestion-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
-</AppLayout>
+</DashboardLayout>

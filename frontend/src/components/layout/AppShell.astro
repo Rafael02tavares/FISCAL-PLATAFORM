@@ -1,0 +1,22 @@
+---
+import Sidebar from "./Sidebar.astro";
+import Topbar from "./Topbar.astro";
+
+interface Props {
+  title: string;
+  subtitle?: string;
+}
+
+const { title, subtitle } = Astro.props;
+---
+
+<div class="app-shell">
+  <Sidebar />
+
+  <main class="main">
+    <Topbar title={title} subtitle={subtitle} />
+    <section class="content">
+      <slot />
+    </section>
+  </main>
+</div>

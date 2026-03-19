@@ -1,1 +1,3 @@
-DROP TABLE IF EXISTS ncm_catalog;
+-- 000007_ncm_catalog.down.sql
+-- No-op.
+-- O rollback real do catálogo NCM está em 000005_ncm_import_base.down.sql.
