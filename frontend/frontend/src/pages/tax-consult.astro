@@ -1,0 +1,390 @@
+---
+import AppLayout from "../layouts/Layout.astro";
+---
+
+<AppLayout title="Consulta fiscal">
+  <section class="page-header">
+    <h1>Consulta fiscal</h1>
+    <p>Consulte sugestão tributária por GTIN ou descrição.</p>
+  </section>
+
+  <section class="panel">
+    <form id="tax-form" class="form">
+      <label>
+        GTIN
+        <input type="text" id="tax-gtin" placeholder="Digite o GTIN" />
+      </label>
+
+      <label>
+        Descrição
+        <input type="text" id="tax-description" placeholder="Digite a descrição do produto" />
+      </label>
+
+      <label>
+        Operação fiscal
+        <select id="tax-operation">
+          <option value="">Carregando operações...</option>
+        </select>
+      </label>
+
+      <label>
+        Regime tributário
+        <select id="tax-regime">
+          <option value="">Selecione</option>
+          <option value="simples_nacional">Simples Nacional</option>
+          <option value="lucro_presumido">Lucro Presumido</option>
+          <option value="lucro_real">Lucro Real</option>
+        </select>
+      </label>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <label>
+          UF origem
+          <input type="text" id="tax-emitter-uf" maxlength="2" placeholder="GO" />
+        </label>
+
+        <label>
+          UF destino
+          <input type="text" id="tax-recipient-uf" maxlength="2" placeholder="GO" />
+        </label>
+      </div>
+
+      <button type="submit">Consultar classificação</button>
+    </form>
+  </section>
+
+  <section class="panel" style="margin-top:20px;">
+    <div id="tax-result">Preencha os dados e clique em consultar.</div>
+  </section>
+
+  <script type="module">
+    const API_URL = "http://localhost:8081";
+
+    const form = document.getElementById("tax-form");
+    const result = document.getElementById("tax-result");
+    const operationSelect = document.getElementById("tax-operation");
+
+    function setResult(html) {
+      if (result) result.innerHTML = html;
+    }
+
+    async function apiFetch(path, options = {}) {
+      const token = localStorage.getItem("token");
+      const organizationId = localStorage.getItem("organization_id");
+
+      const response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(organizationId ? { "X-Organization-ID": organizationId } : {}),
+          ...(options.headers || {}),
+        },
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      const isJSON = contentType.includes("application/json");
+
+      if (!response.ok) {
+        const errorBody = isJSON ? await response.json() : await response.text();
+        throw new Error(typeof errorBody === "string" ? errorBody : JSON.stringify(errorBody));
+      }
+
+      return isJSON ? response.json() : response.text();
+    }
+
+    async function listFiscalOperations() {
+      return apiFetch("/fiscal-operations", { method: "GET" });
+    }
+
+    async function suggestTax(payload) {
+      return apiFetch("/tax/suggest", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    }
+
+    function confidenceLabel(score) {
+      const n = Number(score || 0);
+      if (n >= 0.9) return "Alta";
+      if (n >= 0.7) return "Média";
+      return "Baixa";
+    }
+
+    function confidenceClass(score) {
+      const n = Number(score || 0);
+      if (n >= 0.9) return "confidence-high";
+      if (n >= 0.7) return "confidence-medium";
+      return "confidence-low";
+    }
+
+    function renderLegalBasis(legalBasis) {
+      if (!legalBasis || !legalBasis.length) {
+        return `
+          <div class="compare-box">
+            <h4>Base legal</h4>
+            <p>Nenhuma base legal específica encontrada para este contexto.</p>
+          </div>
+        `;
+      }
+
+      const rows = legalBasis
+        .map(
+          (item) => `
+            <div class="legal-item">
+              <div><strong>${item.tax_type || "-"}</strong></div>
+              <div><strong>Fonte:</strong> ${item.title || "-"}</div>
+              <div><strong>Referência:</strong> ${item.reference_code || "-"}</div>
+              <div><strong>Jurisdição:</strong> ${item.jurisdiction || "-"}</div>
+              <div><strong>UF:</strong> ${item.uf || "-"}</div>
+              <div><strong>Motivo:</strong> ${item.applied_reason || "-"}</div>
+              <div><strong>Peso:</strong> ${item.weight || "-"}</div>
+            </div>
+          `
+        )
+        .join("");
+
+      return `
+        <div class="compare-box legal-basis-box">
+          <h4>Base legal aplicada</h4>
+          <div class="legal-list">${rows}</div>
+        </div>
+      `;
+    }
+
+    function renderSuggestion(data) {
+      const op = data.selected_operation || {};
+      const s = data.suggestion || {};
+
+      return `
+        <div class="suggestion-card">
+          <div class="suggestion-top">
+            <div>
+              <h3 style="margin:0;">Sugestão principal</h3>
+              <div class="muted-line">
+                Operação considerada: <strong>${op.name || "-"}</strong>
+              </div>
+            </div>
+
+            <div class="confidence-badge ${confidenceClass(data.confidence_score)}">
+              Confiança ${confidenceLabel(data.confidence_score)} (${data.confidence_score ?? 0})
+            </div>
+          </div>
+
+          <div class="suggestion-grid">
+            <div class="compare-box">
+              <h4>Operação</h4>
+              <p><strong>Código:</strong> ${op.code || "-"}</p>
+              <p><strong>CFOP base:</strong> ${op.cfop || "-"}</p>
+              <p><strong>Match:</strong> ${data.match_type || "-"}</p>
+            </div>
+
+            <div class="compare-box">
+              <h4>Classificação</h4>
+              <p><strong>NCM:</strong> ${s.ncm || "-"}</p>
+              <p><strong>CEST:</strong> ${s.cest || "-"}</p>
+              <p><strong>cClasTrib:</strong> ${s.cclas_trib || "-"}</p>
+              <p><strong>CFOP sugerido:</strong> ${s.cfop || "-"}</p>
+            </div>
+
+            <div class="compare-box">
+              <h4>PIS / COFINS</h4>
+              <p><strong>PIS CST:</strong> ${s.pis_cst || "-"}</p>
+              <p><strong>COFINS CST:</strong> ${s.cofins_cst || "-"}</p>
+              <p><strong>Cód. rec. PIS:</strong> ${s.pis_revenue_code || "-"}</p>
+              <p><strong>Cód. rec. COFINS:</strong> ${s.cofins_revenue_code || "-"}</p>
+              <p><strong>PIS:</strong> ${s.pis_value || "-"}</p>
+              <p><strong>COFINS:</strong> ${s.cofins_value || "-"}</p>
+            </div>
+
+            <div class="compare-box">
+              <h4>ICMS / IBS / CBS</h4>
+              <p><strong>ICMS:</strong> ${s.icms_value || "-"}</p>
+              <p><strong>IPI:</strong> ${s.ipi_value || "-"}</p>
+              <p><strong>IBS:</strong> ${s.ibs_rate || "-"}</p>
+              <p><strong>CBS:</strong> ${s.cbs_rate || "-"}</p>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;">
+            ${renderLegalBasis(data.legal_basis || [])}
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadOperations() {
+      if (!operationSelect) return;
+
+      try {
+        const data = await listFiscalOperations();
+        const operations = data.operations || [];
+
+        if (!operations.length) {
+          operationSelect.innerHTML = `<option value="">Nenhuma operação encontrada</option>`;
+          return;
+        }
+
+        operationSelect.innerHTML = operations
+          .map((op) => {
+            const selected = op.is_default ? "selected" : "";
+            return `<option value="${op.code}" ${selected}>${op.name}</option>`;
+          })
+          .join("");
+      } catch {
+        operationSelect.innerHTML = `<option value="">Erro ao carregar operações</option>`;
+      }
+    }
+
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const token = localStorage.getItem("token");
+      const organizationId = localStorage.getItem("organization_id");
+
+      if (!token) {
+        window.location.href = "/login";
+        return;
+      }
+
+      if (!organizationId) {
+        window.location.href = "/organizations";
+        return;
+      }
+
+      const gtin = document.getElementById("tax-gtin")?.value?.trim() || "";
+      const description = document.getElementById("tax-description")?.value?.trim() || "";
+      const operation_code = document.getElementById("tax-operation")?.value || "";
+      const tax_regime = document.getElementById("tax-regime")?.value || "";
+      const emitter_uf = (document.getElementById("tax-emitter-uf")?.value || "").trim().toUpperCase();
+      const recipient_uf = (document.getElementById("tax-recipient-uf")?.value || "").trim().toUpperCase();
+
+      if (!gtin && !description) {
+        setResult(`<div class="error-box">Informe GTIN ou descrição.</div>`);
+        return;
+      }
+
+      setResult(`<div class="loading-box">Consultando sugestão fiscal...</div>`);
+
+      try {
+        const data = await suggestTax({
+          gtin,
+          description,
+          operation_code,
+          tax_regime,
+          emitter_uf,
+          recipient_uf,
+        });
+
+        setResult(renderSuggestion(data));
+      } catch (error) {
+        setResult(`<div class="error-box">Erro ao consultar: ${String(error)}</div>`);
+      }
+    });
+
+    loadOperations();
+  </script>
+
+  <style>
+    .suggestion-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: #ffffff;
+      padding: 14px;
+    }
+
+    .suggestion-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .muted-line {
+      color: #6b7280;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .suggestion-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .compare-box {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      background: #f9fafb;
+    }
+
+    .compare-box h4 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    .compare-box p {
+      margin: 6px 0;
+    }
+
+    .legal-basis-box {
+      background: #fcfcfd;
+    }
+
+    .legal-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .legal-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px;
+      background: white;
+      font-size: 14px;
+    }
+
+    .legal-item div {
+      margin: 4px 0;
+    }
+
+    .confidence-badge {
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .confidence-high {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .confidence-medium {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .confidence-low {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .loading-box {
+      background: #eff6ff;
+      color: #1d4ed8;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .error-box {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 8px;
+    }
+  </style>
+</AppLayout>

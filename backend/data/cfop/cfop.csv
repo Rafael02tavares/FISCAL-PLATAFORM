@@ -1,0 +1,562 @@
+CFOP;Descri��o Resumida;indNFe;indComunica;indTransp;indDevol
+1 101;Compra p/ industrializa��o ou produ��o rural;1;0;0;0
+1 102;Compra p/ comercializa��o;1;0;0;0
+1 111;Compra p/ industrializa��o de mercadoria recebida anteriormente em consigna��o industrial;1;0;0;0
+1 113;Compra p/ comercializa��o, de mercadoria recebida anteriormente em consigna��o mercantil;1;0;0;0
+1 116;Compra p/ industrializa��o ou produ��o rural originada de encomenda p/ recebimento futuro;1;0;0;0
+1 117;Compra p/ comercializa��o originada de encomenda p/ recebimento futuro;1;0;0;0
+1 118;Compra de mercadoria p/ comercializa��o pelo adquirente origin�rio, entregue pelo vendedor remetente ao destinat�rio, em venda � ordem.;1;0;0;0
+1 120;Compra p/ industrializa��o, em venda � ordem, j� recebida do vendedor remetente;1;0;0;0
+1 121;Compra p/ comercializa��o, em venda � ordem, j� recebida do vendedor remetente;1;0;0;0
+1 122;Compra p/ industrializa��o em que a mercadoria foi remetida pelo fornecedor ao industrializador sem transitar pelo estabelecimento adquirente;1;0;0;0
+1 124;Industrializa��o efetuada por outra empresa;1;0;0;0
+1 125;Industrializa��o efetuada por outra empresa quando a mercadoria remetida p/ utiliza��o no processo de industrializa��o n�o transitou pelo estabelecimento adquirente da mercadoria;1;0;0;0
+1 126;Compra p/ utiliza��o na presta��o de servi�o sujeita ao ICMS;1;0;0;0
+1 128;Compra p/ utiliza��o na presta��o de servi�o sujeita ao ISSQN;1;0;0;0
+1 151;Transfer�ncia p/ industrializa��o ou produ��o rural;1;0;0;0
+1 152;Transfer�ncia p/ comercializa��o;1;0;0;0
+1 153;Transfer�ncia de energia el�trica p/ distribui��o;1;0;0;0
+1 154;Transfer�ncia p/ utiliza��o na presta��o de servi�o;1;0;0;0
+1 201;Devolu��o de venda de produ��o do estabelecimento ;1;0;0;1
+1 202;Devolu��o de venda de mercadoria adquirida ou recebida de terceiros;1;0;0;1
+1 203;Devolu��o de venda de produ��o do estabelecimento, destinada � ZFM ou ALC;1;0;0;1
+1 204;Devolu��o de venda de mercadoria adquirida ou recebida de terceiros, destinada � ZFM ou ALC;1;0;0;1
+1 205;Anula��o de valor relativo � presta��o de servi�o de comunica��o;1;0;0;0
+1 206;Anula��o de valor relativo � presta��o de servi�o de transporte;1;0;0;0
+1 207;Anula��o de valor relativo � venda de energia el�trica;1;0;0;0
+1 208;Devolu��o de produ��o do estabelecimento, remetida em transfer�ncia;1;0;0;1
+1 209;Devolu��o de mercadoria adquirida ou recebida de terceiros, remetida em transfer�ncia;1;0;0;1
+1 212;Devolu��o de venda no mercado interno de mercadoria industrializada e insumo importado sob o Regime Aduaneiro Especial de Entreposto Industrial (Recof-Sped);1;0;0;1
+1 251;Compra de energia el�trica p/ distribui��o ou comercializa��o;1;0;0;0
+1 252;Compra de energia el�trica por estabelecimento industrial;1;0;0;0
+1 253;Compra de energia el�trica por estabelecimento comercial;1;0;0;0
+1 254;Compra de energia el�trica por estabelecimento prestador de servi�o de transporte;1;0;0;0
+1 255;Compra de energia el�trica por estabelecimento prestador de servi�o de comunica��o;1;0;0;0
+1 256;Compra de energia el�trica por estabelecimento de produtor rural;1;0;0;0
+1 257;Compra de energia el�trica p/ consumo por demanda contratada;1;0;0;0
+1 301;Aquisi��o de servi�o de comunica��o p/ execu��o de servi�o da mesma natureza;1;0;0;0
+1 302;Aquisi��o de servi�o de comunica��o por estabelecimento industrial;1;0;0;0
+1 303;Aquisi��o de servi�o de comunica��o por estabelecimento comercial;1;0;0;0
+1 304;Aquisi��o de servi�o de comunica��o por estabelecimento de prestador de servi�o de transporte;1;0;0;0
+1 305;Aquisi��o de servi�o de comunica��o por estabelecimento de geradora ou de distribuidora de energia el�trica;1;0;0;0
+1 306;Aquisi��o de servi�o de comunica��o por estabelecimento de produtor rural;1;0;0;0
+1 351;Aquisi��o de servi�o de transporte p/ execu��o de servi�o da mesma natureza;1;0;0;0
+1 352;Aquisi��o de servi�o de transporte por estabelecimento industrial;1;0;0;0
+1 353;Aquisi��o de servi�o de transporte por estabelecimento comercial;1;0;0;0
+1 354;Aquisi��o de servi�o de transporte por estabelecimento de prestador de servi�o de comunica��o;1;0;0;0
+1 355;Aquisi��o de servi�o de transporte por estabelecimento de geradora ou de distribuidora de energia el�trica;1;0;0;0
+1 356;Aquisi��o de servi�o de transporte por estabelecimento de produtor rural;1;0;0;0
+1 360;Aquisi��o de servi�o de transporte por contribuinte-substituto em rela��o ao servi�o de transporte;1;0;0;0
+1 401;Compra p/ industrializa��o ou produ��o rural de mercadoria sujeita a ST;1;0;0;0
+1 403;Compra p/ comercializa��o em opera��o com mercadoria sujeita a ST;1;0;0;0
+1 406;Compra de bem p/ o ativo imobilizado cuja mercadoria est� sujeita a ST;1;0;0;0
+1 407;Compra de mercadoria p/ uso ou consumo cuja mercadoria est� sujeita a ST;1;0;0;0
+1 408;Transfer�ncia p/ industrializa��o ou produ��o rural de mercadoria sujeita a ST;1;0;0;0
+1 409;Transfer�ncia p/ comercializa��o em opera��o com mercadoria sujeita a ST;1;0;0;0
+1 410;Devolu��o de venda de mercadoria, de produ��o do estabelecimento, sujeita a ST;1;0;0;1
+1 411;Devolu��o de venda de mercadoria adquirida ou recebida de terceiros em opera��o com mercadoria sujeita a ST;1;0;0;1
+1 414;Retorno de mercadoria de produ��o do estabelecimento, remetida p/ venda fora do estabelecimento, sujeita a ST;1;0;0;0
+1 415;Retorno de mercadoria adquirida ou recebida de terceiros, remetida p/ venda fora do estabelecimento em opera��o com mercadoria sujeita a ST;1;0;0;0
+1 451;Retorno de animal do estabelecimento produtor;1;0;0;0
+1 452;Retorno de insumo n�o utilizado na produ��o;1;0;0;0
+1 501;Entrada de mercadoria recebida com fim espec�fico de exporta��o;1;0;0;0
+1 503;Entrada decorrente de devolu��o de produto, de fabrica��o do estabelecimento, remetido com fim espec�fico de exporta��o;1;0;0;1
+1 504;Entrada decorrente de devolu��o de mercadoria remetida com fim espec�fico de exporta��o, adquirida ou recebida de terceiros;1;0;0;1
+1 505;Entrada decorrente de devolu��o simb�lica de mercadoria remetida p/ forma��o de lote de exporta��o, de produto industrializado ou produzido pelo pr�prio estabelecimento.;1;0;0;1
+1 506;Entrada decorrente de devolu��o simb�lica de mercadoria, adquirida ou recebida de terceiros, remetida p/ forma��o de lote de exporta��o.;1;0;0;1
+1 551;Compra de bem p/ o ativo imobilizado;1;0;0;0
+1 552;Transfer�ncia de bem do ativo imobilizado;1;0;0;0
+1 553;Devolu��o de venda de bem do ativo imobilizado;1;0;0;1
+1 554;Retorno de bem do ativo imobilizado remetido p/ uso fora do estabelecimento;1;0;0;0
+1 555;Entrada de bem do ativo imobilizado de terceiro, remetido p/ uso no estabelecimento;1;0;0;0
+1 556;Compra de material p/ uso ou consumo;1;0;0;0
+1 557;Transfer�ncia de material p/ uso ou consumo;1;0;0;0
+1 601;Recebimento, por transfer�ncia, de cr�dito de ICMS;1;0;0;0
+1 602;Recebimento, por transfer�ncia, de saldo credor do ICMS, de outro estabelecimento da mesma empresa, p/ compensa��o de saldo devedor do imposto. ;1;0;0;0
+1 603;Ressarcimento de ICMS retido por substitui��o tribut�ria;1;0;0;0
+1 604;Lan�amento do cr�dito relativo � compra de bem p/ o ativo imobilizado;1;0;0;0
+1 605;Recebimento, por transfer�ncia, de saldo devedor do ICMS de outro estabelecimento da mesma empresa;1;0;0;0
+1 651;Compra de combust�vel ou lubrificante p/ industrializa��o subseq�ente;1;0;0;0
+1 652;Compra de combust�vel ou lubrificante p/ comercializa��o;1;0;0;0
+1 653;Compra de combust�vel ou lubrificante por consumidor ou usu�rio final;1;0;0;0
+1 658;Transfer�ncia de combust�vel ou lubrificante p/ industrializa��o;1;0;0;0
+1 659;Transfer�ncia de combust�vel ou lubrificante p/ comercializa��o;1;0;0;0
+1 660;Devolu��o de venda de combust�vel ou lubrificante destinados � industrializa��o subseq�ente;1;0;0;1
+1 661;Devolu��o de venda de combust�vel ou lubrificante destinados � comercializa��o;1;0;0;1
+1 662;Devolu��o de venda de combust�vel ou lubrificante destinados a consumidor ou usu�rio final;1;0;0;1
+1 663;Entrada de combust�vel ou lubrificante p/ armazenagem;1;0;0;0
+1 664;Retorno de combust�vel ou lubrificante remetidos p/ armazenagem;1;0;0;0
+1 901;Entrada p/ industrializa��o por encomenda;1;0;0;0
+1 902;Retorno de mercadoria remetida p/ industrializa��o por encomenda;1;0;0;0
+1 903;Entrada de mercadoria remetida p/ industrializa��o e n�o aplicada no referido processo;1;0;0;0
+1 904;Retorno de remessa p/ venda fora do estabelecimento;1;0;0;0
+1 905;Entrada de mercadoria recebida p/ dep�sito em dep�sito fechado ou armaz�m geral;1;0;0;0
+1 906;Retorno de mercadoria remetida p/ dep�sito fechado ou armaz�m geral;1;0;0;0
+1 907;Retorno simb�lico de mercadoria remetida p/ dep�sito fechado ou armaz�m geral;1;0;0;0
+1 908;Entrada de bem por conta de contrato de comodato;1;0;0;0
+1 909;Retorno de bem remetido por conta de contrato de comodato;1;0;0;0
+1 910;Entrada de bonifica��o, doa��o ou brinde;1;0;0;0
+1 911;Entrada de amostra gr�tis;1;0;0;0
+1 912;Entrada de mercadoria ou bem recebido p/ demonstra��o;1;0;0;0
+1 913;Retorno de mercadoria ou bem remetido p/ demonstra��o;1;0;0;0
+1 914;Retorno de mercadoria ou bem remetido p/ exposi��o ou feira;1;0;0;0
+1 915;Entrada de mercadoria ou bem recebido p/ conserto ou reparo;1;0;0;0
+1 916;Retorno de mercadoria ou bem remetido p/ conserto ou reparo;1;0;0;0
+1 917;Entrada de mercadoria recebida em consigna��o mercantil ou industrial;1;0;0;0
+1 918;Devolu��o de mercadoria remetida em consigna��o mercantil ou industrial;1;0;0;1
+1 919;Devolu��o simb�lica de mercadoria vendida ou utilizada em processo industrial, remetida anteriormente em consigna��o mercantil ou industrial;1;0;0;1
+1 920;Entrada de vasilhame ou sacaria;1;0;0;0
+1 921;Retorno de vasilhame ou sacaria;1;0;0;0
+1 922;Lan�amento efetuado a t�tulo de simples faturamento decorrente de compra p/ recebimento futuro;1;0;0;0
+1 923;Entrada de mercadoria recebida do vendedor remetente, em venda � ordem;1;0;0;0
+1 924;Entrada p/ industrializa��o por conta e ordem do adquirente da mercadoria, quando esta n�o transitar pelo estabelecimento do adquirente;1;0;0;0
+1 925;Retorno de mercadoria remetida p/ industrializa��o por conta e ordem do adquirente da mercadoria, quando esta n�o transitar pelo estabelecimento do adquirente;1;0;0;0
+1 926;Lan�amento efetuado a t�tulo de reclassifica��o de mercadoria decorrente de forma��o de kit ou de sua desagrega��o;1;0;0;0
+1 931;Lan�amento efetuado pelo tomador do servi�o de transporte, quando a responsabilidade de reten��o do imposto for atribu�da ao remetente ou alienante da mercadoria, pelo servi�o de transporte realizado por transportador aut�nomo ou por transportador n�o-inscrito na UF onde se tenha iniciado o servi�o.;1;0;0;0
+1 932;Aquisi��o de servi�o de transporte iniciado em UF diversa daquela onde esteja inscrito o prestador;1;0;0;0
+1 933;Aquisi��o de servi�o tributado pelo Imposto sobre Servi�os de Qualquer Natureza;1;0;0;0
+1 934;Entrada simb�lica de mercadoria recebida p/ dep�sito fechado ou armaz�m geral;1;0;0;0
+1 949;Outra entrada de mercadoria ou presta��o de servi�o n�o especificada;1;0;0;0
+2 101;Compra p/ industrializa��o ou produ��o rural;1;0;0;0
+2 102;Compra p/ comercializa��o;1;0;0;0
+2 111;Compra p/ industrializa��o de mercadoria recebida anteriormente em consigna��o industrial;1;0;0;0
+2 113;Compra p/ comercializa��o, de mercadoria recebida anteriormente em consigna��o mercantil;1;0;0;0
+2 116;Compra p/ industrializa��o ou produ��o rural originada de encomenda p/ recebimento futuro;1;0;0;0
+2 117;Compra p/ comercializa��o originada de encomenda p/ recebimento futuro;1;0;0;0
+2 118;Compra de mercadoria p/ comercializa��o pelo adquirente origin�rio, entregue pelo vendedor remetente ao destinat�rio, em venda � ordem;1;0;0;0
+2 120;Compra p/ industrializa��o, em venda � ordem, j� recebida do vendedor remetente;1;0;0;0
+2 121;Compra p/ comercializa��o, em venda � ordem, j� recebida do vendedor remetente;1;0;0;0
+2 122;Compra p/ industrializa��o em que a mercadoria foi remetida pelo fornecedor ao industrializador sem transitar pelo estabelecimento adquirente;1;0;0;0
+2 124;Industrializa��o efetuada por outra empresa;1;0;0;0
+2 125;Industrializa��o efetuada por outra empresa quando a mercadoria remetida p/ utiliza��o no processo de industrializa��o n�o transitou pelo estabelecimento adquirente da mercadoria;1;0;0;0
+2 126;Compra p/ utiliza��o na presta��o de servi�o sujeita ao ICMS;1;0;0;0
+2 128;Compra p/ utiliza��o na presta��o de servi�o sujeita ao ISSQN;1;0;0;0
+2 151;Transfer�ncia p/ industrializa��o ou produ��o rural;1;0;0;0
+2 152;Transfer�ncia p/ comercializa��o;1;0;0;0
+2 153;Transfer�ncia de energia el�trica p/ distribui��o;1;0;0;0
+2 154;Transfer�ncia p/ utiliza��o na presta��o de servi�o;1;0;0;0
+2 201;Devolu��o de venda de produ��o do estabelecimento;1;0;0;1
+2 202;Devolu��o de venda de mercadoria adquirida ou recebida de terceiros;1;0;0;1
+2 203;Devolu��o de venda de produ��o do estabelecimento destinada � ZFM ou ALC;1;0;0;1
+2 204;Devolu��o de venda de mercadoria adquirida ou recebida de terceiros, destinada � ZFM ou ALC;1;0;0;1
+2 205;Anula��o de valor relativo � presta��o de servi�o de comunica��o;1;0;0;0
+2 206;Anula��o de valor relativo � presta��o de servi�o de transporte;1;0;0;0
+2 207;Anula��o de valor relativo � venda de energia el�trica;1;0;0;0
+2 208;Devolu��o de produ��o do estabelecimento, remetida em transfer�ncia.;1;0;0;1
+2 209;Devolu��o de mercadoria adquirida ou recebida de terceiros e remetida em transfer�ncia;1;0;0;1
+2 212;Devolu��o de venda no mercado interno de mercadoria industrializada e insumo importado sob o Regime Aduaneiro Especial de Entreposto Industrial (Recof-Sped);1;0;0;1
+2 251;Compra de energia el�trica p/ distribui��o ou comercializa��o;1;0;0;0
+2 252;Compra de energia el�trica por estabelecimento industrial;1;0;0;0
+2 253;Compra de energia el�trica por estabelecimento comercial;1;0;0;0
+2 254;Compra de energia el�trica por estabelecimento prestador de servi�o de transporte;1;0;0;0
+2 255;Compra de energia el�trica por estabelecimento prestador de servi�o de comunica��o;1;0;0;0
+2 256;Compra de energia el�trica por estabelecimento de produtor rural;1;0;0;0
+2 257;Compra de energia el�trica p/ consumo por demanda contratada;1;0;0;0
+2 301;Aquisi��o de servi�o de comunica��o p/ execu��o de servi�o da mesma natureza;1;0;0;0
+2 302;Aquisi��o de servi�o de comunica��o por estabelecimento industrial;1;0;0;0
+2 303;Aquisi��o de servi�o de comunica��o por estabelecimento comercial;1;0;0;0
+2 304;Aquisi��o de servi�o de comunica��o por estabelecimento de prestador de servi�o de transporte;1;0;0;0
+2 305;Aquisi��o de servi�o de comunica��o por estabelecimento de geradora ou de distribuidora de energia el�trica;1;0;0;0
+2 306;Aquisi��o de servi�o de comunica��o por estabelecimento de produtor rural;1;0;0;0
+2 351;Aquisi��o de servi�o de transporte p/ execu��o de servi�o da mesma natureza;1;0;0;0
+2 352;Aquisi��o de servi�o de transporte por estabelecimento industrial;1;0;0;0
+2 353;Aquisi��o de servi�o de transporte por estabelecimento comercial;1;0;0;0
+2 354;Aquisi��o de servi�o de transporte por estabelecimento de prestador de servi�o de comunica��o;1;0;0;0
+2 355;Aquisi��o de servi�o de transporte por estabelecimento de geradora ou de distribuidora de energia el�trica;1;0;0;0
+2 356;Aquisi��o de servi�o de transporte por estabelecimento de produtor rural;1;0;0;0
+2 401;Compra p/ industrializa��o ou produ��o rural de mercadoria sujeita a ST;1;0;0;0
+2 403;Compra p/ comercializa��o em opera��o com mercadoria sujeita a ST;1;0;0;0
+2 406;Compra de bem p/ o ativo imobilizado cuja mercadoria est� sujeita a ST;1;0;0;0
+2 407;Compra de mercadoria p/ uso ou consumo cuja mercadoria est� sujeita a ST;1;0;0;0
+2 408;Transfer�ncia p/ industrializa��o ou produ��o rural de mercadoria sujeita a ST;1;0;0;0
+2 409;Transfer�ncia p/ comercializa��o em opera��o com mercadoria sujeita a ST;1;0;0;0
+2 410;Devolu��o de venda de produ��o do estabelecimento, quando o produto sujeito a ST;1;0;0;1
+2 411;Devolu��o de venda de mercadoria adquirida ou recebida de terceiros em opera��o com mercadoria sujeita a ST;1;0;0;1
+2 414;Retorno de produ��o do estabelecimento, remetida p/ venda fora do estabelecimento, quando o produto sujeito a ST;1;0;0;0
+2 415;Retorno de mercadoria adquirida ou recebida de terceiros, remetida p/ venda fora do estabelecimento em opera��o com mercadoria sujeita a ST;1;0;0;0
+2 501;Entrada de mercadoria recebida com fim espec�fico de exporta��o;1;0;0;0
+2 503;Entrada decorrente de devolu��o de produto industrializado pelo estabelecimento, remetido com fim espec�fico de exporta��o;1;0;0;1
+2 504;Entrada decorrente de devolu��o de mercadoria remetida com fim espec�fico de exporta��o, adquirida ou recebida de terceiros;1;0;0;1
+2 505;Entrada decorrente de devolu��o simb�lica de mercadoria remetida p/ forma��o de lote de exporta��o, de produto industrializado ou produzido pelo pr�prio estabelecimento.;1;0;0;1
+2 506;Entrada decorrente de devolu��o simb�lica de mercadoria, adquirida ou recebida de terceiros, remetida p/ forma��o de lote de exporta��o.;1;0;0;1
+2 551;Compra de bem p/ o ativo imobilizado;1;0;0;0
+2 552;Transfer�ncia de bem do ativo imobilizado;1;0;0;0
+2 553;Devolu��o de venda de bem do ativo imobilizado;1;0;0;1
+2 554;Retorno de bem do ativo imobilizado remetido p/ uso fora do estabelecimento;1;0;0;0
+2 555;Entrada de bem do ativo imobilizado de terceiro, remetido p/ uso no estabelecimento;1;0;0;0
+2 556;Compra de material p/ uso ou consumo;1;0;0;0
+2 557;Transfer�ncia de material p/ uso ou consumo;1;0;0;0
+2 603;Ressarcimento de ICMS retido por substitui��o tribut�ria;1;0;0;0
+2 651;Compra de combust�vel ou lubrificante p/ industrializa��o subseq�ente;1;0;0;0
+2 652;Compra de combust�vel ou lubrificante p/ comercializa��o;1;0;0;0
+2 652;Compra de combust�vel ou lubrificante p/ comercializa��o;1;0;0;0
+2 653;Compra de combust�vel ou lubrificante por consumidor ou usu�rio final;1;0;0;0
+2 658;Transfer�ncia de combust�vel ou lubrificante p/ industrializa��o;1;0;0;0
+2 659;Transfer�ncia de combust�vel ou lubrificante p/ comercializa��o ;1;0;0;0
+2 660;Devolu��o de venda de combust�vel ou lubrificante destinados � industrializa��o subseq�ente;1;0;0;1
+2 661;Devolu��o de venda de combust�vel ou lubrificante destinados � comercializa��o;1;0;0;1
+2 662;Devolu��o de venda de combust�vel ou lubrificante destinados a consumidor ou usu�rio final;1;0;0;1
+2 663;Entrada de combust�vel ou lubrificante p/ armazenagem;1;0;0;0
+2 664;Retorno de combust�vel ou lubrificante remetidos p/ armazenagem;1;0;0;0
+2 901;Entrada p/ industrializa��o por encomenda;1;0;0;0
+2 902;Retorno de mercadoria remetida p/ industrializa��o por encomenda;1;0;0;0
+2 903;Entrada de mercadoria remetida p/ industrializa��o e n�o aplicada no referido processo;1;0;0;0
+2 904;Retorno de remessa p/ venda fora do estabelecimento;1;0;0;0
+2 905;Entrada de mercadoria recebida p/ dep�sito em dep�sito fechado ou armaz�m geral;1;0;0;0
+2 906;Retorno de mercadoria remetida p/ dep�sito fechado ou armaz�m geral;1;0;0;0
+2 907;Retorno simb�lico de mercadoria remetida p/ dep�sito fechado ou armaz�m geral;1;0;0;0
+2 908;Entrada de bem por conta de contrato de comodato;1;0;0;0
+2 909;Retorno de bem remetido por conta de contrato de comodato;1;0;0;0
+2 910;Entrada de bonifica��o, doa��o ou brinde;1;0;0;0
+2 911;Entrada de amostra gr�tis;1;0;0;0
+2 912;Entrada de mercadoria ou bem recebido p/ demonstra��o;1;0;0;0
+2 913;Retorno de mercadoria ou bem remetido p/ demonstra��o;1;0;0;0
+2 914;Retorno de mercadoria ou bem remetido p/ exposi��o ou feira;1;0;0;0
+2 915;Entrada de mercadoria ou bem recebido p/ conserto ou reparo;1;0;0;0
+2 916;Retorno de mercadoria ou bem remetido p/ conserto ou reparo;1;0;0;0
+2 917;Entrada de mercadoria recebida em consigna��o mercantil ou industrial;1;0;0;0
+2 918;Devolu��o de mercadoria remetida em consigna��o mercantil ou industrial;1;0;0;1
+2 919;Devolu��o simb�lica de mercadoria vendida ou utilizada em processo industrial, remetida anteriormente em consigna��o mercantil ou industrial;1;0;0;1
+2 920;Entrada de vasilhame ou sacaria;1;0;0;0
+2 921;Retorno de vasilhame ou sacaria;1;0;0;0
+2 922;Lan�amento efetuado a t�tulo de simples faturamento decorrente de compra p/ recebimento futuro;1;0;0;0
+2 923;Entrada de mercadoria recebida do vendedor remetente, em venda � ordem;1;0;0;0
+2 924;Entrada p/ industrializa��o por conta e ordem do adquirente da mercadoria, quando esta n�o transitar pelo estabelecimento do adquirente;1;0;0;0
+2 925;Retorno de mercadoria remetida p/ industrializa��o por conta e ordem do adquirente da mercadoria, quando esta n�o transitar pelo estabelecimento do adquirente;1;0;0;0
+2 931;Lan�amento efetuado pelo tomador do servi�o de transporte, quando a responsabilidade de reten��o do imposto for atribu�da ao remetente ou alienante da mercadoria, pelo servi�o de transporte realizado por transportador aut�nomo ou por transportador n�o-inscrito na UF onde se tenha iniciado o servi�o  ;1;0;0;0
+2 932;Aquisi��o de servi�o de transporte iniciado em UF diversa daquela onde esteja inscrito o prestador ;1;0;0;0
+2 933;Aquisi��o de servi�o tributado pelo Imposto Sobre Servi�os de Qualquer Natureza;1;0;0;0
+2 934;Entrada simb�lica de mercadoria recebida p/ dep�sito fechado ou armaz�m geral;1;0;0;0
+2 949;Outra entrada de mercadoria ou presta��o de servi�o n�o especificado;1;0;0;0
+3 101;Compra p/ industrializa��o ou produ��o rural;1;0;0;0
+3 102;Compra p/ comercializa��o;1;0;0;0
+3 126;Compra p/ utiliza��o na presta��o de servi�o sujeita ao ICMS;1;0;0;0
+3 127;Compra p/ industrializa��o sob o regime de drawback ;1;0;0;0
+3 128;Compra p/ utiliza��o na presta��o de servi�o sujeita ao ISSQN;1;0;0;0
+3 129;Compra para industrializa��o sob o Regime Aduaneiro Especial de Entreposto Industrial (Recof-Sped);1;0;0;0
+3 201;Devolu��o de venda de produ��o do estabelecimento;1;0;0;1
+3 202;Devolu��o de venda de mercadoria adquirida ou recebida de terceiros;1;0;0;1
+3 205;Anula��o de valor relativo � presta��o de servi�o de comunica��o;1;0;0;0
+3 206;Anula��o de valor relativo � presta��o de servi�o de transporte;1;0;0;0
+3 207;Anula��o de valor relativo � venda de energia el�trica;1;0;0;0
+3 211;Devolu��o de venda de produ��o do estabelecimento sob o regime de drawback ;1;0;0;1
+3 212;Devolu��o de venda no mercado externo de mercadoria industrializada sob o Regime Aduaneiro Especial de Entreposto Industrial (Recof-Sped);1;0;0;1
+3 251;Compra de energia el�trica p/ distribui��o ou comercializa��o;1;0;0;0
+3 301;Aquisi��o de servi�o de comunica��o p/ execu��o de servi�o da mesma natureza;1;0;0;0
+3 351;Aquisi��o de servi�o de transporte p/ execu��o de servi�o da mesma natureza;1;0;0;0
+3 352;Aquisi��o de servi�o de transporte por estabelecimento industrial;1;0;0;0
+3 353;Aquisi��o de servi�o de transporte por estabelecimento comercial;1;0;0;0
+3 354;Aquisi��o de servi�o de transporte por estabelecimento de prestador de servi�o de comunica��o;1;0;0;0
+3 355;Aquisi��o de servi�o de transporte por estabelecimento de geradora ou de distribuidora de energia el�trica;1;0;0;0
+3 356;Aquisi��o de servi�o de transporte por estabelecimento de produtor rural;1;0;0;0
+3 503;Devolu��o de mercadoria exportada que tenha sido recebida com fim espec�fico de exporta��o;1;0;0;1
+3 551;Compra de bem p/ o ativo imobilizado;1;0;0;0
+3 553;Devolu��o de venda de bem do ativo imobilizado;1;0;0;1
+3 556;Compra de material p/ uso ou consumo;1;0;0;0
+3 651;Compra de combust�vel ou lubrificante p/ industrializa��o subseq�ente;1;0;0;0
+3 652;Compra de combust�vel ou lubrificante p/ comercializa��o;1;0;0;0
+3 653;Compra de combust�vel ou lubrificante por consumidor ou usu�rio final;1;0;0;0
+3 930;Lan�amento efetuado a t�tulo de entrada de bem sob amparo de regime especial aduaneiro de admiss�o tempor�ria;1;0;0;0
+3 949;Outra entrada de mercadoria ou presta��o de servi�o n�o especificado;1;0;0;0
+5 101;Venda de produ��o do estabelecimento;1;0;0;0
+5 102;Venda de mercadoria adquirida ou recebida de terceiros;1;0;0;0
+5 103;Venda de produ��o do estabelecimento efetuada fora do estabelecimento;1;0;0;0
+5 104;Venda de mercadoria adquirida ou recebida de terceiros, efetuada fora do estabelecimento;1;0;0;0
+5 105;Venda de produ��o do estabelecimento que n�o deva por ele transitar;1;0;0;0
+5 106;Venda de mercadoria adquirida ou recebida de terceiros, que n�o deva por ele transitar ;1;0;0;0
+5 109;Venda de produ��o do estabelecimento destinada � ZFM ou ALC;1;0;0;0
+5 110;Venda de mercadoria, adquirida ou recebida de terceiros, destinada � ZFM ou ALC;1;0;0;0
+5 111;Venda de produ��o do estabelecimento remetida anteriormente em consigna��o industrial;1;0;0;0
+5 112;Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consigna��o industrial;1;0;0;0
+5 113;Venda de produ��o do estabelecimento remetida anteriormente em consigna��o mercantil;1;0;0;0
+5 114;Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consigna��o mercantil;1;0;0;0
+5 115;Venda de mercadoria adquirida ou recebida de terceiros, recebida anteriormente em consigna��o mercantil;1;0;0;0
+5 116;Venda de produ��o do estabelecimento originada de encomenda p/ entrega futura;1;0;0;0
+5 117;Venda de mercadoria adquirida ou recebida de terceiros, originada de encomenda p/ entrega futura;1;0;0;0
+5 118;Venda de produ��o do estabelecimento entregue ao destinat�rio por conta e ordem do adquirente origin�rio, em venda � ordem;1;0;0;0
+5 119;Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinat�rio por conta e ordem do adquirente origin�rio, em venda � ordem;1;0;0;0
+5 120;Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinat�rio pelo vendedor remetente, em venda � ordem;1;0;0;0
+5 122;Venda de produ��o do estabelecimento remetida p/ industrializa��o, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente;1;0;0;0
+5 123;Venda de mercadoria adquirida ou recebida de terceiros remetida p/ industrializa��o, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente;1;0;0;0
+5 124;Industrializa��o efetuada p/ outra empresa;1;0;0;0
+5 125;Industrializa��o efetuada p/ outra empresa quando a mercadoria recebida p/ utiliza��o no processo de industrializa��o n�o transitar pelo estabelecimento adquirente da mercadoria;1;0;0;0
+5 129;Venda de insumo importado e de mercadoria industrializada sob o amparo do Regime Aduaneiro Especial de Entreposto Industrial (Recof-Sped);1;0;0;0
+5 151;;1;0;0;0
+5 152;Transfer�ncia de mercadoria adquirida ou recebida de terceiros;1;0;0;0
+5 153;Transfer�ncia de energia el�trica;1;0;0;0
+5 155;Transfer�ncia de produ��o do estabelecimento, que n�o deva por ele transitar;1;0;0;0
+5 156;Transfer�ncia de mercadoria adquirida ou recebida de terceiros, que n�o deva por ele transitar;1;0;0;0
+5 201;Devolu��o de compra p/ industrializa��o ou produ��o rural;1;0;0;1
+5 202;Devolu��o de compra p/ comercializa��o;1;0;0;1
+5 205;Anula��o de valor relativo a aquisi��o de servi�o de comunica��o;1;0;0;0
+5 206;Anula��o de valor relativo a aquisi��o de servi�o de transporte;1;0;0;0
+5 207;Anula��o de valor relativo � compra de energia el�trica;1;0;0;0
+5 208;Devolu��o de mercadoria recebida em transfer�ncia p/ industrializa��o ou produ��o rural ;1;0;0;1
+5 209;Devolu��o de mercadoria recebida em transfer�ncia p/ comercializa��o;1;0;0;1
+5 210;Devolu��o de compra p/ utiliza��o na presta��o de servi�o;1;0;0;1
+5 251;Venda de energia el�trica p/ distribui��o ou comercializa��o;1;0;0;0
+5 252;Venda de energia el�trica p/ estabelecimento industrial;1;0;0;0
+5 253;Venda de energia el�trica p/ estabelecimento comercial;1;0;0;0
+5 254;Venda de energia el�trica p/ estabelecimento prestador de servi�o de transporte;1;0;0;0
+5 255;Venda de energia el�trica p/ estabelecimento prestador de servi�o de comunica��o;1;0;0;0
+5 256;Venda de energia el�trica p/ estabelecimento de produtor rural;1;0;0;0
+5 257;Venda de energia el�trica p/ consumo por demanda contratada;1;0;0;0
+5 258;Venda de energia el�trica a n�o contribuinte;1;0;0;0
+5 301;Presta��o de servi�o de comunica��o p/ execu��o de servi�o da mesma natureza;0;1;0;0
+5 302;Presta��o de servi�o de comunica��o a estabelecimento industrial;0;1;0;0
+5 303;Presta��o de servi�o de comunica��o a estabelecimento comercial;0;1;0;0
+5 304;Presta��o de servi�o de comunica��o a estabelecimento de prestador de servi�o de transporte;0;1;0;0
+5 305;Presta��o de servi�o de comunica��o a estabelecimento de geradora ou de distribuidora de energia el�trica;0;1;0;0
+5 306;Presta��o de servi�o de comunica��o a estabelecimento de produtor rural;0;1;0;0
+5 307;Presta��o de servi�o de comunica��o a n�o contribuinte;0;1;0;0
+5 351;Presta��o de servi�o de transporte p/ execu��o de servi�o da mesma natureza;0;0;1;0
+5 352;Presta��o de servi�o de transporte a estabelecimento industrial;0;0;1;0
+5 353;Presta��o de servi�o de transporte a estabelecimento comercial;0;0;1;0
+5 354;Presta��o de servi�o de transporte a estabelecimento de prestador de servi�o de comunica��o;0;0;1;0
+5 355;Presta��o de servi�o de transporte a estabelecimento de geradora ou de distribuidora de energia el�trica;0;0;1;0
+5 356;Presta��o de servi�o de transporte a estabelecimento de produtor rural;0;0;1;0
+5 357;Presta��o de servi�o de transporte a n�o contribuinte;0;0;1;0
+5 359;Presta��o de servi�o de transporte a contribuinte ou a n�o-contribuinte, quando a mercadoria transportada esteja dispensada de emiss�o de Nota Fiscal  ;0;0;1;0
+5 360;Presta��o de servi�o de transporte a contribuinte-substituto em rela��o ao servi�o de transporte;0;0;1;0
+5 401;Venda de produ��o do estabelecimento quando o produto esteja sujeito a ST;1;0;0;0
+5 402;Venda de produ��o do estabelecimento de produto sujeito a ST, em opera��o entre contribuintes substitutos do mesmo produto;1;0;0;0
+5 403;Venda de mercadoria, adquirida ou recebida de terceiros, sujeita a ST, na condi��o de contribuinte-substituto;1;0;0;0
+5 405;Venda de mercadoria, adquirida ou recebida de terceiros, sujeita a ST, na condi��o de contribuinte-substitu�do;1;0;0;0
+5 408;Transfer�ncia de produ��o do estabelecimento quando o produto sujeito a ST;1;0;0;0
+5 409;Transfer�ncia de mercadoria adquirida ou recebida de terceiros em opera��o com mercadoria sujeita a ST;1;0;0;0
+5 410;Devolu��o de compra p/ industrializa��o de mercadoria sujeita a ST;1;0;0;1
+5 411;Devolu��o de compra p/ comercializa��o em opera��o com mercadoria sujeita a ST;1;0;0;1
+5 412;Devolu��o de bem do ativo imobilizado, em opera��o com mercadoria sujeita a ST;1;0;0;1
+5 413;Devolu��o de mercadoria destinada ao uso ou consumo, em opera��o com mercadoria sujeita a ST.;1;0;0;1
+5 414;Remessa de produ��o do estabelecimento p/ venda fora do estabelecimento, quando o produto sujeito a ST;1;0;0;0
+5 415;Remessa de mercadoria adquirida ou recebida de terceiros p/ venda fora do estabelecimento, em opera��o com mercadoria sujeita a ST;1;0;0;0
+5 451;Remessa de animal e de insumo p/ estabelecimento produtor;1;0;0;0
+5 501;Remessa de produ��o do estabelecimento, com fim espec�fico de exporta��o;1;0;0;0
+5 502;Remessa de mercadoria adquirida ou recebida de terceiros, com fim espec�fico de exporta��o;1;0;0;0
+5 503;Devolu��o de mercadoria recebida com fim espec�fico de exporta��o;1;0;0;1
+5 504;Remessa de mercadoria p/ forma��o de lote de exporta��o, de produto industrializado ou produzido pelo pr�prio estabelecimento.;1;0;0;0
+5 505;Remessa de mercadoria, adquirida ou recebida de terceiros, p/ forma��o de lote de exporta��o.;1;0;0;0
+5 551;Venda de bem do ativo imobilizado;1;0;0;0
+5 552;Transfer�ncia de bem do ativo imobilizado;1;0;0;0
+5 553;Devolu��o de compra de bem p/ o ativo imobilizado;1;0;0;1
+5 554;Remessa de bem do ativo imobilizado p/ uso fora do estabelecimento;1;0;0;0
+5 555;Devolu��o de bem do ativo imobilizado de terceiro, recebido p/ uso no estabelecimento;1;0;0;1
+5 556;Devolu��o de compra de material de uso ou consumo;1;0;0;1
+5 557;Transfer�ncia de material de uso ou consumo;1;0;0;0
+5 601;Transfer�ncia de cr�dito de ICMS acumulado;1;0;0;0
+5 602;Transfer�ncia de saldo credor do ICMS, p/ outro estabelecimento da mesma empresa, destinado � compensa��o de saldo devedor do ICMS;1;0;0;0
+5 603;Ressarcimento de ICMS retido por substitui��o tribut�ria;1;0;0;0
+5 605;Transfer�ncia de saldo devedor do ICMS de outro estabelecimento da mesma empresa  ;1;0;0;0
+5 606;Utiliza��o de saldo credor do ICMS p/ extin��o por compensa��o de d�bitos fiscais;1;0;0;0
+5 651;Venda de combust�vel ou lubrificante de produ��o do estabelecimento destinados � industrializa��o subseq�ente;1;0;0;0
+5 652;Venda de combust�vel ou lubrificante, de produ��o do estabelecimento, destinados � comercializa��o;1;0;0;0
+5 653;Venda de combust�vel ou lubrificante, de produ��o do estabelecimento, destinados a consumidor ou usu�rio final;1;0;0;0
+5 654;Venda de combust�vel ou lubrificante, adquiridos ou recebidos de terceiros, destinados � industrializa��o subseq�ente;1;0;0;0
+5 655;Venda de combust�vel ou lubrificante, adquiridos ou recebidos de terceiros, destinados � comercializa��o;1;0;0;0
+5 656;Venda de combust�vel ou lubrificante, adquiridos ou recebidos de terceiros, destinados a consumidor ou usu�rio final;1;0;0;0
+5 657;Remessa de combust�vel ou lubrificante, adquiridos ou recebidos de terceiros, p/ venda fora do estabelecimento;1;0;0;0
+5 658;Transfer�ncia de combust�vel ou lubrificante de produ��o do estabelecimento;1;0;0;0
+5 659;Transfer�ncia de combust�vel ou lubrificante adquiridos ou recebidos de terceiros;1;0;0;0
+5 660;Devolu��o de compra de combust�vel ou lubrificante adquiridos p/ industrializa��o subseq�ente;1;0;0;1
+5 661;Devolu��o de compra de combust�vel ou lubrificante adquiridos p/ comercializa��o;1;0;0;1
+5 662;Devolu��o de compra de combust�vel ou lubrificante adquiridos por consumidor ou usu�rio final;1;0;0;1
+5 663;Remessa p/ armazenagem de combust�vel ou lubrificante;1;0;0;0
+5 664;Retorno de combust�vel ou lubrificante recebidos p/ armazenagem;1;0;0;0
+5 665;Retorno simb�lico de combust�vel ou lubrificante recebidos p/ armazenagem;1;0;0;0
+5 666;Remessa, por conta e ordem de terceiros, de combust�vel ou lubrificante recebidos p/ armazenagem;1;0;0;0
+5 667;Venda de combust�vel ou lubrificante a consumidor ou usu�rio final estabelecido em outra UF;1;0;0;0
+5 901;Remessa p/ industrializa��o por encomenda;1;0;0;0
+5 902;Retorno de mercadoria utilizada na industrializa��o por encomenda;1;0;0;0
+5 903;Retorno de mercadoria recebida p/ industrializa��o e n�o aplicada no referido processo;1;0;0;0
+5 904;Remessa p/ venda fora do estabelecimento;1;0;0;0
+5 905;Remessa p/ dep�sito fechado ou armaz�m geral;1;0;0;0
+5 906;Retorno de mercadoria depositada em dep�sito fechado ou armaz�m geral;1;0;0;0
+5 907;Retorno simb�lico de mercadoria depositada em dep�sito fechado ou armaz�m geral;1;0;0;0
+5 908;Remessa de bem por conta de contrato de comodato;1;0;0;0
+5 909;Retorno de bem recebido por conta de contrato de comodato;1;0;0;0
+5 910;Remessa em bonifica��o, doa��o ou brinde;1;0;0;0
+5 911;Remessa de amostra gr�tis;1;0;0;0
+5 912;Remessa de mercadoria ou bem p/ demonstra��o;1;0;0;0
+5 913;Retorno de mercadoria ou bem recebido p/ demonstra��o;1;0;0;0
+5 914;Remessa de mercadoria ou bem p/ exposi��o ou feira;1;0;0;0
+5 915;Remessa de mercadoria ou bem p/ conserto ou reparo;1;0;0;0
+5 916;Retorno de mercadoria ou bem recebido p/ conserto ou reparo;1;0;0;0
+5 917;Remessa de mercadoria em consigna��o mercantil ou industrial;1;0;0;0
+5 918;Devolu��o de mercadoria recebida em consigna��o mercantil ou industrial;1;0;0;1
+5 919;Devolu��o simb�lica de mercadoria vendida ou utilizada em processo industrial, recebida anteriormente em consigna��o mercantil ou industrial;1;0;0;1
+5 920;Remessa de vasilhame ou sacaria;1;0;0;0
+5 921;Devolu��o de vasilhame ou sacaria;1;0;0;1
+5 922;Lan�amento efetuado a t�tulo de simples faturamento decorrente de venda p/ entrega futura;1;0;0;0
+5 923;Remessa de mercadoria por conta e ordem de terceiros, em venda � ordem ou em opera��es com armaz�m geral ou dep�sito fechado.;1;0;0;0
+5 924;Remessa p/ industrializa��o por conta e ordem do adquirente da mercadoria, quando esta n�o transitar pelo estabelecimento do adquirente;1;0;0;0
+5 925;Retorno de mercadoria recebida p/ industrializa��o por conta e ordem do adquirente da mercadoria, quando aquela n�o transitar pelo estabelecimento do adquirente;1;0;0;0
+5 926;Lan�amento efetuado a t�tulo de reclassifica��o de mercadoria decorrente de forma��o de kit ou de sua desagrega��o;1;0;0;0
+5 927;Lan�amento efetuado a t�tulo de baixa de estoque decorrente de perda, roubo ou deteriora��o;1;0;0;0
+5 928;Lan�amento efetuado a t�tulo de baixa de estoque decorrente do encerramento da atividade da empresa;1;0;0;0
+5 929;Lan�amento efetuado em decorr�ncia de emiss�o de documento fiscal relativo a opera��o ou presta��o tamb�m registrada em equipamento Emissor de Cupom Fiscal - ECF;1;0;0;0
+5 931;Lan�amento efetuado em decorr�ncia da responsabilidade de reten��o do imposto por substitui��o tribut�ria, atribu�da ao remetente ou alienante da mercadoria, pelo servi�o de transporte realizado por transportador aut�nomo ou por transportador n�o inscrito na UF onde iniciado o servi�o;1;0;1;0
+5 932;Presta��o de servi�o de transporte iniciada em UF diversa daquela onde inscrito o prestador;1;0;1;0
+5 933;Presta��o de servi�o tributado pelo Imposto Sobre Servi�os de Qualquer Natureza;1;0;0;0
+5 934;Remessa simb�lica de mercadoria depositada em armaz�m geral ou dep�sito fechado.;1;0;0;0
+5 949;Outra sa�da de mercadoria ou presta��o de servi�o n�o especificado;1;0;0;0
+6 101;Venda de produ��o do estabelecimento;1;0;0;0
+6 102;Venda de mercadoria adquirida ou recebida de terceiros;1;0;0;0
+6 103;Venda de produ��o do estabelecimento, efetuada fora do estabelecimento;1;0;0;0
+6 104;Venda de mercadoria adquirida ou recebida de terceiros, efetuada fora do estabelecimento;1;0;0;0
+6 105;Venda de produ��o do estabelecimento que n�o deva por ele transitar;1;0;0;0
+6 106;Venda de mercadoria adquirida ou recebida de terceiros, que n�o deva por ele transitar;1;0;0;0
+6 107;Venda de produ��o do estabelecimento, destinada a n�o contribuinte;1;0;0;0
+6 108;Venda de mercadoria adquirida ou recebida de terceiros, destinada a n�o contribuinte;1;0;0;0
+6 109;Venda de produ��o do estabelecimento destinada � ZFM ou ALC;1;0;0;0
+6 110;Venda de mercadoria, adquirida ou recebida de terceiros, destinada � ZFM ou ALC;1;0;0;0
+6 111;Venda de produ��o do estabelecimento remetida anteriormente em consigna��o industrial;1;0;0;0
+6 112;Venda de mercadoria adquirida ou recebida de Terceiros remetida anteriormente em consigna��o industrial;1;0;0;0
+6 113;Venda de produ��o do estabelecimento remetida anteriormente em consigna��o mercantil;1;0;0;0
+6 114;Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consigna��o mercantil;1;0;0;0
+6 115;Venda de mercadoria adquirida ou recebida de terceiros, recebida anteriormente em consigna��o mercantil;1;0;0;0
+6 116;Venda de produ��o do estabelecimento originada de encomenda p/ entrega futura;1;0;0;0
+6 117;Venda de mercadoria adquirida ou recebida de terceiros, originada de encomenda p/ entrega futura;1;0;0;0
+6 118;Venda de produ��o do estabelecimento entregue ao destinat�rio por conta e ordem do adquirente origin�rio, em venda � ordem;1;0;0;0
+6 119;Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinat�rio por conta e ordem do adquirente origin�rio, em venda � ordem;1;0;0;0
+6 120;Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinat�rio pelo vendedor remetente, em venda � ordem;1;0;0;0
+6 122;Venda de produ��o do estabelecimento remetida p/ industrializa��o, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente;1;0;0;0
+6 123;Venda de mercadoria adquirida ou recebida de terceiros remetida p/ industrializa��o, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente;1;0;0;0
+6 124;Industrializa��o efetuada p/ outra empresa;1;0;0;0
+6 125;Industrializa��o efetuada p/ outra empresa quando a mercadoria recebida p/ utiliza��o no processo de industrializa��o n�o transitar pelo estabelecimento adquirente da mercadoria;1;0;0;0
+6 129;Venda de insumo importado e de mercadoria industrializada sob o amparo do Regime Aduaneiro Especial de Entreposto Industrial (Recof-Sped);1;0;0;0
+6 151;Transfer�ncia de produ��o do estabelecimento;1;0;0;0
+6 152;Transfer�ncia de mercadoria adquirida ou recebida de terceiros;1;0;0;0
+6 153;Transfer�ncia de energia el�trica;1;0;0;0
+6 155;Transfer�ncia de produ��o do estabelecimento, que n�o deva por ele transitar;1;0;0;0
+6 156;Transfer�ncia de mercadoria adquirida ou recebida de terceiros, que n�o deva por ele transitar;1;0;0;0
+6 201;Devolu��o de compra p/ industrializa��o ou produ��o rural;1;0;0;1
+6 202;Devolu��o de compra p/ comercializa��o;1;0;0;1
+6 205;Anula��o de valor relativo a aquisi��o de servi�o de comunica��o;1;0;0;0
+6 206;Anula��o de valor relativo a aquisi��o de servi�o de transporte;1;0;0;0
+6 207;Anula��o de valor relativo � compra de energia el�trica;1;0;0;0
+6 208;Devolu��o de mercadoria recebida em transfer�ncia p/ industrializa��o ou produ��o rural ;1;0;0;1
+6 209;Devolu��o de mercadoria recebida em transfer�ncia p/ comercializa��o;1;0;0;1
+6 210;Devolu��o de compra p/ utiliza��o na presta��o de servi�o;1;0;0;1
+6 251;Venda de energia el�trica p/ distribui��o ou comercializa��o;1;0;0;0
+6 252;Venda de energia el�trica p/ estabelecimento industrial;1;0;0;0
+6 253;Venda de energia el�trica p/ estabelecimento comercial;1;0;0;0
+6 254;Venda de energia el�trica p/ estabelecimento prestador de servi�o de transporte;1;0;0;0
+6 255;Venda de energia el�trica p/ estabelecimento prestador de servi�o de comunica��o;1;0;0;0
+6 256;Venda de energia el�trica p/ estabelecimento de produtor rural;1;0;0;0
+6 257;Venda de energia el�trica p/ consumo por demanda contratada;1;0;0;0
+6 258;Venda de energia el�trica a n�o contribuinte;1;0;0;0
+6 301;Presta��o de servi�o de comunica��o p/ execu��o de servi�o da mesma natureza;0;1;0;0
+6 302;Presta��o de servi�o de comunica��o a estabelecimento industrial;0;1;0;0
+6 303;Presta��o de servi�o de comunica��o a estabelecimento comercial;0;1;0;0
+6 304;Presta��o de servi�o de comunica��o a estabelecimento de prestador de servi�o de transporte;0;1;0;0
+6 305;Presta��o de servi�o de comunica��o a estabelecimento de geradora ou de distribuidora de energia el�trica;0;1;0;0
+6 306;Presta��o de servi�o de comunica��o a estabelecimento de produtor rural;0;1;0;0
+6 307;Presta��o de servi�o de comunica��o a n�o contribuinte;0;1;0;0
+6 351;Presta��o de servi�o de transporte p/ execu��o de servi�o da mesma natureza;0;0;1;0
+6 352;Presta��o de servi�o de transporte a estabelecimento industrial;0;0;1;0
+6 353;Presta��o de servi�o de transporte a estabelecimento comercial;0;0;1;0
+6 354;Presta��o de servi�o de transporte a estabelecimento de prestador de servi�o de comunica��o;0;0;1;0
+6 355;Presta��o de servi�o de transporte a estabelecimento de geradora ou de distribuidora de energia el�trica;0;0;1;0
+6 356;Presta��o de servi�o de transporte a estabelecimento de produtor rural;0;0;1;0
+6 357;Presta��o de servi�o de transporte a n�o contribuinte;0;0;1;0
+6 359;Presta��o de servi�o de transporte a contribuinte ou a n�o-contribuinte, quando a mercadoria transportada esteja dispensada de emiss�o de Nota Fiscal  ;0;0;1;0
+6 360;Presta��o de servi�o de transporte a contribuinte substituto em rela��o ao servi�o de transporte  ;0;0;1;0
+6 401;Venda de produ��o do estabelecimento quando o produto sujeito a ST;1;0;0;0
+6 402;Venda de produ��o do estabelecimento de produto sujeito a ST, em opera��o entre contribuintes substitutos do mesmo produto;1;0;0;0
+6 403;Venda de mercadoria adquirida ou recebida de terceiros em opera��o com mercadoria sujeita a ST, na condi��o de contribuinte substituto;1;0;0;0
+6 404;Venda de mercadoria sujeita a ST, cujo imposto j� tenha sido retido anteriormente;1;0;0;0
+6 408;Transfer�ncia de produ��o do estabelecimento quando o produto sujeito a ST;1;0;0;0
+6 409;Transfer�ncia de mercadoria adquirida ou recebida de terceiros, sujeita a ST;1;0;0;0
+6 410;Devolu��o de compra p/ industrializa��o ou ptrodu��o rural quando a mercadoria sujeita a ST;1;0;0;1
+6 411;Devolu��o de compra p/ comercializa��o em opera��o com mercadoria sujeita a ST;1;0;0;1
+6 412;Devolu��o de bem do ativo imobilizado, em opera��o com mercadoria sujeita a ST;1;0;0;1
+6 413;Devolu��o de mercadoria destinada ao uso ou consumo, em opera��o com mercadoria sujeita a ST;1;0;0;1
+6 414;Remessa de produ��o do estabelecimento p/ venda fora do estabelecimento, quando o produto sujeito a ST;1;0;0;0
+6 415;Remessa de mercadoria adquirida ou recebida de terceiros p/ venda fora do estabelecimento, quando a referida ra��o com mercadoria sujeita a ST;1;0;0;0
+6 501;Remessa de produ��o do estabelecimento, com fim espec�fico de exporta��o;1;0;0;0
+6 502;Remessa de mercadoria adquirida ou recebida de terceiros, com fim espec�fico de exporta��o;1;0;0;0
+6 503;Devolu��o de mercadoria recebida com fim espec�fico de exporta��o;1;0;0;1
+6 504;Remessa de mercadoria p/ forma��o de lote de exporta��o, de produto industrializado ou produzido pelo pr�prio estabelecimento.;1;0;0;0
+6 505;Remessa de mercadoria, adquirida ou recebida de terceiros, p/ forma��o de lote de exporta��o.;1;0;0;0
+6 551;Venda de bem do ativo imobilizado;1;0;0;0
+6 552;Transfer�ncia de bem do ativo imobilizado;1;0;0;0
+6 553;Devolu��o de compra de bem p/ o ativo imobilizado;1;0;0;1
+6 554;Remessa de bem do ativo imobilizado p/ uso fora do estabelecimento;1;0;0;0
+6 555;Devolu��o de bem do ativo imobilizado de terceiro, recebido p/ uso no estabelecimento;1;0;0;1
+6 556;Devolu��o de compra de material de uso ou consumo;1;0;0;1
+6 557;Transfer�ncia de material de uso ou consumo;1;0;0;0
+6 603;Ressarcimento de ICMS retido por substitui��o tribut�ria;1;0;0;0
+6 651;Venda de combust�vel ou lubrificante, de produ��o do estabelecimento, destinados � industrializa��o subseq�ente;1;0;0;0
+6 652;Venda de combust�vel ou lubrificante, de produ��o do estabelecimento, destinados � comercializa��o;1;0;0;0
+6 653;Venda de combust�vel ou lubrificante, de produ��o do estabelecimento, destinados a consumidor ou usu�rio final ;1;0;0;0
+6 654;Venda de combust�vel ou lubrificante, adquiridos ou recebidos de terceiros, destinados � industrializa��o subseq�ente ;1;0;0;0
+6 655;Venda de combust�vel ou lubrificante, adquiridos ou recebidos de terceiros, destinados � comercializa��o;1;0;0;0
+6 656;Venda de combust�vel ou lubrificante, adquiridos ou recebidos de terceiros, destinados a consumidor ou usu�rio final;1;0;0;0
+6 657;Remessa de combust�vel ou lubrificante, adquiridos ou recebidos de terceiros, p/ venda fora do estabelecimento;1;0;0;0
+6 658;Transfer�ncia de combust�vel ou lubrificante de produ��o do estabelecimento;1;0;0;0
+6 659;Transfer�ncia de combust�vel ou lubrificante adquiridos ou recebidos de terceiros;1;0;0;0
+6 660;Devolu��o de compra de combust�vel ou lubrificante adquiridos p/ industrializa��o subseq�ente;1;0;0;1
+6 661;Devolu��o de compra de combust�vel ou lubrificante adquiridos p/ comercializa��o;1;0;0;1
+6 662;Devolu��o de compra de combust�vel ou lubrificante adquiridos por consumidor ou usu�rio final;1;0;0;1
+6 663;Remessa p/ armazenagem de combust�vel ou lubrificante;1;0;0;0
+6 664;Retorno de combust�vel ou lubrificante recebidos p/ armazenagem;1;0;0;0
+6 665;Retorno simb�lico de combust�vel ou lubrificante recebidos p/ armazenagem;1;0;0;0
+6 666;Remessa, por conta e ordem de terceiros, de combust�vel ou lubrificante recebidos p/ armazenagem;1;0;0;0
+6 667;Venda de combust�vel ou lubrificante a consumidor ou usu�rio final estabelecido em outra UF diferente da que ocorrer o consumo;1;0;0;0
+6 901;Remessa p/ industrializa��o por encomenda;1;0;0;0
+6 902;Retorno de mercadoria utilizada na industrializa��o por encomenda;1;0;0;0
+6 903;Retorno de mercadoria recebida p/ industrializa��o e n�o aplicada no referido processo;1;0;0;0
+6 904;Remessa p/ venda fora do estabelecimento;1;0;0;0
+6 905;Remessa p/ dep�sito fechado ou armaz�m geral;1;0;0;0
+6 906;Retorno de mercadoria depositada em dep�sito fechado ou armaz�m geral;1;0;0;0
+6 907;Retorno simb�lico de mercadoria depositada em dep�sito fechado ou armaz�m geral;1;0;0;0
+6 908;Remessa de bem por conta de contrato de comodato;1;0;0;0
+6 909;Retorno de bem recebido por conta de contrato de comodato;1;0;0;0
+6 910;Remessa em bonifica��o, doa��o ou brinde;1;0;0;0
+6 911;Remessa de amostra gr�tis;1;0;0;0
+6 912;Remessa de mercadoria ou bem p/ demonstra��o;1;0;0;0
+6 913;Retorno de mercadoria ou bem recebido p/ demonstra��o;1;0;0;0
+6 914;Remessa de mercadoria ou bem p/ exposi��o ou feira;1;0;0;0
+6 915;Remessa de mercadoria ou bem p/ conserto ou reparo;1;0;0;0
+6 916;Retorno de mercadoria ou bem recebido p/ conserto ou reparo;1;0;0;0
+6 917;Remessa de mercadoria em consigna��o mercantil ou industrial;1;0;0;0
+6 918;Devolu��o de mercadoria recebida em consigna��o mercantil ou industrial;1;0;0;1
+6 919;Devolu��o simb�lica de mercadoria vendida ou utilizada em processo industrial, recebida anteriormente em consigna��o mercantil ou industrial;1;0;0;1
+6 920;Remessa de vasilhame ou sacaria;1;0;0;0
+6 921;Devolu��o de vasilhame ou sacaria;1;0;0;1
+6 922;Lan�amento efetuado a t�tulo de simples faturamento decorrente de venda p/ entrega futura;1;0;0;0
+6 923;Remessa de mercadoria por conta e ordem de terceiros, em venda � ordem ou em opera��es com armaz�m geral ou dep�sito fechado;1;0;0;0
+6 924;Remessa p/ industrializa��o por conta e ordem do adquirente da mercadoria, quando esta n�o transitar pelo estabelecimento do adquirente;1;0;0;0
+6 925;Retorno de mercadoria recebida p/ industrializa��o por conta e ordem do adquirente da mercadoria, quando aquela n�o transitar pelo estabelecimento do adquirente;1;0;0;0
+6 929;Lan�amento efetuado em decorr�ncia de emiss�o de documento fiscal relativo a opera��o ou presta��o tamb�m registrada em equipamento Emissor de Cupom Fiscal - ECF;1;0;0;0
+6 931;Lan�amento efetuado em decorr�ncia da responsabilidade de reten��o do imposto por substitui��o tribut�ria, atribu�da ao remetente ou alienante da mercadoria, pelo servi�o de transporte realizado por transportador aut�nomo ou por transportador n�o inscrito na UF onde iniciado o servi�o;1;0;1;0
+6 932;Presta��o de servi�o de transporte iniciada em UF diversa daquela onde inscrito o prestador;1;0;1;0
+6 933;Presta��o de servi�o tributado pelo Imposto Sobre Servi�os de Qualquer Natureza ;1;0;0;0
+6 934;Remessa simb�lica de mercadoria depositada em armaz�m geral ou dep�sito fechado;1;0;0;0
+6 949;Outra sa�da de mercadoria ou presta��o de servi�o n�o especificado;1;0;0;0
+7 101;Venda de produ��o do estabelecimento;1;0;0;0
+7 102;Venda de mercadoria adquirida ou recebida de terceiros;1;0;0;0
+7 105;Venda de produ��o do estabelecimento, que n�o deva por ele transitar;1;0;0;0
+7 106;Venda de mercadoria adquirida ou recebida de terceiros, que n�o deva por ele transitar;1;0;0;0
+7 127;Venda de produ��o do estabelecimento sob o regime de drawback ;1;0;0;0
+7 129;Venda de produ��o do estabelecimento ao mercado externo de mercadoria industrializada sob o amparo do Regime Aduaneiro Especial de Entreposto Industrial (Recof-Sped);1;0;0;0
+7 201;Devolu��o de compra p/ industrializa��o ou produ��o rural;1;0;0;1
+7 202;Devolu��o de compra p/ comercializa��o;1;0;0;1
+7 205;Anula��o de valor relativo � aquisi��o de servi�o de comunica��o;1;0;0;0
+7 206;Anula��o de valor relativo a aquisi��o de servi�o de transporte;1;0;0;0
+7 207;Anula��o de valor relativo � compra de energia el�trica;1;0;0;0
+7 210;Devolu��o de compra p/ utiliza��o na presta��o de servi�o;1;0;0;1
+7 211;Devolu��o de compras p/ industrializa��o sob o regime de drawback ;1;0;0;1
+7 212;Devolu��o de compras para industrializa��o sob o regime de Regime Aduaneiro Especial de Entreposto Industrial (Recof-Sped);1;0;0;1
+7 251;Venda de energia el�trica p/ o exterior;1;0;0;0
+7 301;Presta��o de servi�o de comunica��o p/ execu��o de servi�o da mesma natureza;0;1;0;0
+7 358;Presta��o de servi�o de transporte;0;0;1;0
+7 501;Exporta��o de mercadorias recebidas com fim espec�fico de exporta��o;1;0;0;0
+7 551;Venda de bem do ativo imobilizado;1;0;0;0
+7 553;Devolu��o de compra de bem p/ o ativo imobilizado;1;0;0;1
+7 556;Devolu��o de compra de material de uso ou consumo;1;0;0;1
+7 651;Venda de combust�vel ou lubrificante de produ��o do estabelecimento;1;0;0;0
+7 654;Venda de combust�vel ou lubrificante adquiridos ou recebidos de terceiros;1;0;0;0
+7 667;Venda de combust�vel ou lubrificante a consumidor ou usu�rio final;1;0;0;0
+7 930;Lan�amento efetuado a t�tulo de devolu��o de bem cuja entrada tenha ocorrido sob amparo de regime especial aduaneiro de admiss�o tempor�ria;1;0;0;0
+7 949;Outra sa�da de mercadoria ou presta��o de servi�o n�o especificado;1;0;0;0

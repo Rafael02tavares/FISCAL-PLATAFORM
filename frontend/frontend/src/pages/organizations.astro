@@ -1,0 +1,305 @@
+---
+import AppLayout from "../layouts/Layout.astro";
+---
+
+<AppLayout title="Selecionar empresa">
+  <section class="page-header">
+    <h1>Selecione uma empresa</h1>
+    <p>Escolha a organização que deseja acessar.</p>
+  </section>
+
+  <section class="panel">
+    <div id="org-list">Carregando empresas...</div>
+  </section>
+
+  <section class="panel" style="margin-top: 20px;">
+    <h2>Nova empresa</h2>
+
+    <form id="org-form" class="form">
+      <label>
+        CNPJ
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="org-cnpj" placeholder="Somente números ou formatado" />
+          <button type="button" id="lookup-cnpj-btn">Buscar CNPJ</button>
+        </div>
+      </label>
+
+      <label>
+        Nome da empresa
+        <input type="text" id="org-name" required />
+      </label>
+
+      <label>
+        Regime tributário
+        <select id="org-tax-regime">
+          <option value="">Selecione</option>
+          <option value="simples_nacional">Simples Nacional</option>
+          <option value="lucro_presumido">Lucro Presumido</option>
+          <option value="lucro_real">Lucro Real</option>
+        </select>
+      </label>
+
+      <label>
+        CRT
+        <select id="org-crt">
+          <option value="">Selecione</option>
+          <option value="1">1 - Simples Nacional</option>
+          <option value="2">2 - Simples excesso sublimite</option>
+          <option value="3">3 - Regime normal</option>
+        </select>
+      </label>
+
+      <label>
+        Inscrição estadual
+        <input type="text" id="org-state-registration" />
+      </label>
+
+      <label>
+        UF
+        <input type="text" id="org-home-uf" maxlength="2" />
+      </label>
+
+      <button type="submit">Criar empresa</button>
+    </form>
+
+    <pre id="org-result" class="result-box"></pre>
+  </section>
+
+  <script type="module">
+    const API_URL = "http://localhost:8081";
+
+    const container = document.getElementById("org-list");
+    const form = document.getElementById("org-form");
+    const result = document.getElementById("org-result");
+
+    const lookupBtn = document.getElementById("lookup-cnpj-btn");
+    const cnpjInput = document.getElementById("org-cnpj");
+    const nameInput = document.getElementById("org-name");
+    const taxRegimeInput = document.getElementById("org-tax-regime");
+    const crtInput = document.getElementById("org-crt");
+    const stateRegistrationInput = document.getElementById("org-state-registration");
+    const homeUFInput = document.getElementById("org-home-uf");
+
+    async function apiFetch(path, options = {}) {
+      const token = localStorage.getItem("token");
+      const organizationId = localStorage.getItem("organization_id");
+
+      const response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(organizationId ? { "X-Organization-ID": organizationId } : {}),
+          ...(options.headers || {}),
+        },
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      const isJSON = contentType.includes("application/json");
+
+      if (!response.ok) {
+        const errorBody = isJSON ? await response.json() : await response.text();
+        throw new Error(typeof errorBody === "string" ? errorBody : JSON.stringify(errorBody));
+      }
+
+      return isJSON ? response.json() : response.text();
+    }
+
+    async function listOrganizations() {
+      return apiFetch("/organizations", { method: "GET" });
+    }
+
+    async function createOrganization(payload) {
+      return apiFetch("/organizations", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    }
+
+    async function lookupCompanyByCNPJ(cnpj) {
+      return apiFetch(`/companies/lookup?cnpj=${encodeURIComponent(cnpj)}`, {
+        method: "GET",
+      });
+    }
+
+    function setResult(message) {
+      if (result) result.textContent = message;
+    }
+
+    function inferCRT(taxRegime) {
+      if (taxRegime === "simples_nacional") return "1";
+      if (taxRegime === "lucro_presumido" || taxRegime === "lucro_real") return "3";
+      return "";
+    }
+
+    function renderOrganizations(orgs) {
+      if (!container) return;
+
+      if (!orgs.length) {
+        container.innerHTML = `
+          <p>Nenhuma empresa encontrada.</p>
+          <p>Crie uma empresa para começar.</p>
+        `;
+        return;
+      }
+
+      const rows = orgs
+        .map(
+          (org) => `
+            <div class="org-card">
+              <div class="org-info">
+                <strong>${org.name}</strong>
+                <p>CNPJ: ${org.cnpj || "-"}</p>
+                <p>Regime: ${org.tax_regime || "-"}</p>
+                <p>UF: ${org.home_uf || "-"}</p>
+              </div>
+
+              <button class="org-select" data-id="${org.id}">
+                Usar empresa
+              </button>
+            </div>
+          `
+        )
+        .join("");
+
+      container.innerHTML = rows;
+
+      document.querySelectorAll(".org-select").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          if (!id) return;
+
+          localStorage.setItem("organization_id", id);
+          window.location.href = "/dashboard";
+        });
+      });
+    }
+
+    async function loadOrganizations() {
+      if (!container) return;
+
+      try {
+        const data = await listOrganizations();
+        renderOrganizations(data.organizations || []);
+      } catch (error) {
+        container.textContent = `Erro ao carregar empresas: ${String(error)}`;
+      }
+    }
+
+    lookupBtn?.addEventListener("click", async () => {
+      const cnpj = cnpjInput?.value?.trim() || "";
+
+      if (!cnpj) {
+        setResult("Informe um CNPJ para buscar.");
+        return;
+      }
+
+      setResult("Consultando CNPJ...");
+
+      try {
+        const data = await lookupCompanyByCNPJ(cnpj);
+
+        if (nameInput) {
+          nameInput.value = data.legal_name || data.trade_name || "";
+        }
+
+        if (homeUFInput) {
+          homeUFInput.value = (data.state || "").toUpperCase();
+        }
+
+        if (stateRegistrationInput && data.state_registrations?.length) {
+          stateRegistrationInput.value = data.state_registrations[0].number || "";
+        }
+
+        if (taxRegimeInput && data.tax_regime_hint) {
+          taxRegimeInput.value = data.tax_regime_hint;
+        }
+
+        if (crtInput) {
+          crtInput.value = inferCRT(taxRegimeInput?.value || "");
+        }
+
+        setResult("CNPJ consultado com sucesso.");
+      } catch (error) {
+        setResult(`Erro ao consultar CNPJ: ${String(error)}`);
+      }
+    });
+
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const payload = {
+        name: nameInput?.value?.trim() || "",
+        cnpj: cnpjInput?.value?.trim() || "",
+        tax_regime: taxRegimeInput?.value || "",
+        crt: crtInput?.value || "",
+        state_registration: stateRegistrationInput?.value?.trim() || "",
+        home_uf: (homeUFInput?.value || "").trim().toUpperCase(),
+      };
+
+      if (!payload.name) {
+        setResult("Informe o nome da empresa.");
+        return;
+      }
+
+      setResult("Criando empresa...");
+
+      try {
+        const data = await createOrganization(payload);
+        const org = data.organization;
+
+        if (!org?.id) {
+          setResult(`Resposta inválida da API: ${JSON.stringify(data)}`);
+          return;
+        }
+
+        localStorage.setItem("organization_id", org.id);
+        setResult("Empresa criada com sucesso. Redirecionando...");
+
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 700);
+      } catch (error) {
+        setResult(`Erro ao criar empresa: ${String(error)}`);
+      }
+    });
+
+    loadOrganizations();
+  </script>
+
+  <style>
+    .org-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: white;
+    }
+
+    .org-info strong {
+      font-size: 16px;
+    }
+
+    .org-info p {
+      margin: 4px 0 0 0;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .org-select {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .org-select:hover {
+      background: #1d4ed8;
+    }
+  </style>
+</AppLayout>

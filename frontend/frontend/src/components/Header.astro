@@ -1,0 +1,31 @@
+---
+---
+<header class="topbar">
+  <div>
+    <strong>Plataforma Fiscal</strong>
+  </div>
+
+  <div class="topbar-user">
+    <span id="active-org-name">Empresa ativa: --</span>
+    <button id="logout-btn" style="margin-left: 12px;">Sair</button>
+  </div>
+
+  <script>
+    const activeOrg = document.getElementById("active-org-name");
+    const logoutBtn = document.getElementById("logout-btn");
+
+    const organizationId = localStorage.getItem("organization_id");
+
+    if (activeOrg) {
+      activeOrg.textContent = organizationId
+        ? `Empresa ativa: ${organizationId}`
+        : "Empresa ativa: não selecionada";
+    }
+
+    logoutBtn?.addEventListener("click", () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("organization_id");
+      window.location.href = "/login";
+    });
+  </script>
+</header>

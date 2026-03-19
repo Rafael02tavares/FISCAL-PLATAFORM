@@ -1,0 +1,411 @@
+---
+export const prerender = false;
+
+import AppLayout from "../../layouts/Layout.astro";
+
+const { id } = Astro.params;
+---
+
+<AppLayout title="Detalhe da nota">
+  <section class="page-header">
+    <h1>Detalhe da nota</h1>
+    <p>ID da nota: {id}</p>
+  </section>
+
+  <section class="panel">
+    <div id="invoice-detail">Carregando dados da nota...</div>
+  </section>
+
+  <script type="module" define:vars={{ id }}>
+    const API_URL = "http://localhost:8081";
+    const wrapper = document.getElementById("invoice-detail");
+
+    async function apiFetch(path, options = {}) {
+      const token = localStorage.getItem("token");
+      const organizationId = localStorage.getItem("organization_id");
+
+      const response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "X-Organization-ID": organizationId || "",
+          ...(options.headers || {}),
+        },
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      const isJSON = contentType.includes("application/json");
+
+      if (!response.ok) {
+        const errorBody = isJSON ? await response.json() : await response.text();
+        throw new Error(typeof errorBody === "string" ? errorBody : JSON.stringify(errorBody));
+      }
+
+      return isJSON ? response.json() : response.text();
+    }
+
+    async function getInvoice(invoiceId) {
+      return apiFetch(`/invoices/${invoiceId}`, {
+        method: "GET",
+      });
+    }
+
+    async function suggestTax(payload) {
+      return apiFetch("/tax/suggest", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    }
+
+    function confidenceLabel(score) {
+      const n = Number(score || 0);
+      if (n >= 0.9) return "Alta";
+      if (n >= 0.7) return "Média";
+      return "Baixa";
+    }
+
+    function confidenceClass(score) {
+      const n = Number(score || 0);
+      if (n >= 0.9) return "confidence-high";
+      if (n >= 0.7) return "confidence-medium";
+      return "confidence-low";
+    }
+
+    function renderLegalBasis(legalBasis) {
+  if (!legalBasis || !legalBasis.length) {
+    return `
+      <div class="compare-box">
+        <h4>Base legal</h4>
+        <p>Nenhuma base legal específica encontrada para este contexto.</p>
+      </div>
+    `;
+  }
+
+  const rows = legalBasis
+    .map(
+      (item) => `
+        <div class="legal-item">
+          <div><strong>${item.tax_type || "-"}</strong></div>
+          <div><strong>Fonte:</strong> ${item.title || "-"}</div>
+          <div><strong>Referência:</strong> ${item.reference_code || "-"}</div>
+          <div><strong>Jurisdição:</strong> ${item.jurisdiction || "-"}</div>
+          <div><strong>UF:</strong> ${item.uf || "-"}</div>
+          <div><strong>Motivo:</strong> ${item.applied_reason || "-"}</div>
+          <div><strong>Peso:</strong> ${item.weight || "-"}</div>
+        </div>
+      `
+    )
+    .join("");
+
+  return `
+    <div class="compare-box legal-basis-box">
+      <h4>Base legal aplicada</h4>
+      <div class="legal-list">${rows}</div>
+    </div>
+  `;
+}
+
+function renderSuggestion(result, item) {
+  const suggestion = result?.suggestion || {};
+
+  return `
+    <div class="suggestion-card">
+      <div class="suggestion-top">
+        <div>
+          <strong>Sugestão fiscal</strong>
+          <div class="muted-line">Baseada no histórico aprendido pela plataforma e nas regras legais</div>
+        </div>
+
+        <div class="confidence-badge ${confidenceClass(result.confidence_score)}">
+          Confiança ${confidenceLabel(result.confidence_score)} (${result.confidence_score ?? 0})
+        </div>
+      </div>
+
+      <div class="suggestion-grid">
+        <div class="compare-box">
+          <h4>Dados da nota</h4>
+          <p><strong>Descrição:</strong> ${item.description || "-"}</p>
+          <p><strong>GTIN:</strong> ${item.gtin || "-"}</p>
+          <p><strong>NCM:</strong> ${item.ncm || "-"}</p>
+          <p><strong>CFOP:</strong> ${item.cfop || "-"}</p>
+          <p><strong>Total:</strong> ${item.total_value || "-"}</p>
+        </div>
+
+        <div class="compare-box">
+          <h4>Sugestão da plataforma</h4>
+          <p><strong>Match:</strong> ${result.match_type || "-"}</p>
+          <p><strong>NCM sugerido:</strong> ${suggestion.ncm || "-"}</p>
+          <p><strong>CEST sugerido:</strong> ${suggestion.cest || "-"}</p>
+          <p><strong>cClasTrib:</strong> ${suggestion.cclas_trib || "-"}</p>
+          <p><strong>CFOP sugerido:</strong> ${suggestion.cfop || "-"}</p>
+          <p><strong>PIS CST:</strong> ${suggestion.pis_cst || "-"}</p>
+          <p><strong>COFINS CST:</strong> ${suggestion.cofins_cst || "-"}</p>
+          <p><strong>Cód. rec. PIS:</strong> ${suggestion.pis_revenue_code || "-"}</p>
+          <p><strong>Cód. rec. COFINS:</strong> ${suggestion.cofins_revenue_code || "-"}</p>
+          <p><strong>ICMS:</strong> ${suggestion.icms_value || "-"}</p>
+          <p><strong>IPI:</strong> ${suggestion.ipi_value || "-"}</p>
+          <p><strong>PIS:</strong> ${suggestion.pis_value || "-"}</p>
+          <p><strong>COFINS:</strong> ${suggestion.cofins_value || "-"}</p>
+          <p><strong>IBS:</strong> ${suggestion.ibs_rate || "-"}</p>
+          <p><strong>CBS:</strong> ${suggestion.cbs_rate || "-"}</p>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        ${renderLegalBasis(result.legal_basis || [])}
+      </div>
+    </div>
+  `;
+}
+
+    async function loadInvoice() {
+      const token = localStorage.getItem("token");
+      const organizationId = localStorage.getItem("organization_id");
+
+      if (!token) {
+        window.location.href = "/login";
+        return;
+      }
+
+      if (!organizationId) {
+        window.location.href = "/organizations";
+        return;
+      }
+
+      if (!wrapper) return;
+
+      try {
+        const data = await getInvoice(id);
+        const invoice = data.invoice;
+
+        const rows = (invoice.items || [])
+          .map(
+            (item, index) => `
+              <tr>
+                <td>${item.item_number}</td>
+                <td>
+                  <div><strong>${item.description || "-"}</strong></div>
+                  <div class="small-muted">GTIN: ${item.gtin || "-"}</div>
+                </td>
+                <td>${item.ncm || "-"}</td>
+                <td>${item.cfop || "-"}</td>
+                <td>${item.total_value || "-"}</td>
+                <td>
+                  <button class="suggest-btn" data-index="${index}">
+                    Sugerir
+                  </button>
+                </td>
+              </tr>
+
+              <tr>
+                <td colspan="6">
+                  <div id="suggestion-${index}" class="suggestion-slot" style="display:none;"></div>
+                </td>
+              </tr>
+            `
+          )
+          .join("");
+
+        wrapper.innerHTML = `
+          <div class="invoice-meta-grid">
+            <div><strong>Número:</strong> ${invoice.number || "-"}</div>
+            <div><strong>Série:</strong> ${invoice.series || "-"}</div>
+            <div><strong>Data:</strong> ${invoice.issued_at || "-"}</div>
+            <div><strong>Status:</strong> ${invoice.status || "-"}</div>
+            <div><strong>Emitente:</strong> ${invoice.emitter_name || "-"}</div>
+            <div><strong>Destinatário:</strong> ${invoice.recipient_name || "-"}</div>
+            <div><strong>Natureza:</strong> ${invoice.operation_nature || "-"}</div>
+            <div><strong>Total:</strong> ${invoice.total_amount || "-"}</div>
+          </div>
+
+          <h2 style="margin-top:20px;">Itens da nota</h2>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Produto</th>
+                <th>NCM</th>
+                <th>CFOP</th>
+                <th>Total</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+
+        document.querySelectorAll(".suggest-btn").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const idx = button.getAttribute("data-index");
+            if (idx === null) return;
+
+            const item = invoice.items[Number(idx)];
+            const target = document.getElementById(`suggestion-${idx}`);
+            if (!target) return;
+
+            target.style.display = "block";
+            target.innerHTML = `<div class="loading-box">Consultando sugestão fiscal...</div>`;
+
+            try {
+              const result = await suggestTax({
+                gtin: item.gtin || "",
+                description: item.description || "",
+                emitter_uf: "",
+                recipient_uf: "",
+              });
+
+              target.innerHTML = renderSuggestion(result, item);
+            } catch (error) {
+              target.innerHTML = `
+                <div class="error-box">
+                  Erro ao consultar sugestão: ${String(error)}
+                </div>
+              `;
+            }
+          });
+        });
+      } catch (error) {
+        wrapper.textContent = `Erro ao carregar nota: ${String(error)}`;
+      }
+    }
+
+    loadInvoice();
+  </script>
+
+  <style>
+    .invoice-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .suggest-btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .suggest-btn:hover {
+      background: #1d4ed8;
+    }
+
+    .small-muted {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .suggestion-slot {
+      padding: 10px 0;
+    }
+
+    .suggestion-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: #ffffff;
+      padding: 14px;
+    }
+
+    .suggestion-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .muted-line {
+      color: #6b7280;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .suggestion-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .compare-box {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      background: #f9fafb;
+    }
+
+    .compare-box h4 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    .compare-box p {
+      margin: 6px 0;
+    }
+
+    .confidence-badge {
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .confidence-high {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .confidence-medium {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .confidence-low {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .loading-box {
+      background: #eff6ff;
+      color: #1d4ed8;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .error-box {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .legal-basis-box {
+  background: #fcfcfd;
+}
+
+.legal-list {
+  display: grid;
+  gap: 10px;
+}
+
+.legal-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  background: white;
+  font-size: 14px;
+}
+
+.legal-item div {
+  margin: 4px 0;
+}
+  </style>
+</AppLayout>

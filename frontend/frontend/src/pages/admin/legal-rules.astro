@@ -1,0 +1,423 @@
+---
+import AppLayout from "../../layouts/Layout.astro";
+---
+
+<AppLayout title="Admin · Regras legais">
+  <section class="page-header">
+    <h1>Regras legais</h1>
+    <p>Cadastre regras normativas aplicáveis por tributo, operação, regime e NCM.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Nova regra legal</h2>
+
+    <form id="legal-rule-form" class="form">
+      <label>
+        Fonte legal
+        <select id="legal-source-id" required>
+          <option value="">Carregando fontes...</option>
+        </select>
+      </label>
+
+      <label>
+        Tributo
+        <select id="tax-type" required>
+          <option value="">Selecione</option>
+          <option value="cfop">CFOP</option>
+          <option value="ncm">NCM</option>
+          <option value="pis">PIS</option>
+          <option value="cofins">COFINS</option>
+          <option value="icms">ICMS</option>
+          <option value="ipi">IPI</option>
+          <option value="ibs">IBS</option>
+          <option value="cbs">CBS</option>
+          <option value="cbenef">CBENEF</option>
+          <option value="cclas_trib">cClasTrib</option>
+        </select>
+      </label>
+
+      <label>
+        Tipo da regra
+        <select id="value-type" required>
+          <option value="">Selecione</option>
+          <option value="cfop_rule">CFOP</option>
+          <option value="classification_rule">Classificação</option>
+          <option value="cst_rule">CST</option>
+          <option value="rate_rule">Alíquota</option>
+          <option value="benefit_rule">Benefício</option>
+        </select>
+      </label>
+
+      <label>
+        Operação fiscal
+        <select id="operation-code">
+          <option value="">Carregando operações...</option>
+        </select>
+      </label>
+
+      <label>
+        Regime tributário
+        <select id="tax-regime">
+          <option value="">Todos</option>
+          <option value="simples_nacional">Simples Nacional</option>
+          <option value="lucro_presumido">Lucro Presumido</option>
+          <option value="lucro_real">Lucro Real</option>
+        </select>
+      </label>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+        <label>
+          NCM
+          <input type="text" id="ncm-code" placeholder="22021000" />
+        </label>
+
+        <label>
+          CEST
+          <input type="text" id="cest" />
+        </label>
+
+        <label>
+          cClasTrib
+          <input type="text" id="cclas-trib" />
+        </label>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+        <label>
+          CFOP
+          <input type="text" id="cfop" />
+        </label>
+
+        <label>
+          PIS CST
+          <input type="text" id="pis-cst" />
+        </label>
+
+        <label>
+          COFINS CST
+          <input type="text" id="cofins-cst" />
+        </label>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+        <label>
+          ICMS CST
+          <input type="text" id="icms-cst" />
+        </label>
+
+        <label>
+          CSOSN
+          <input type="text" id="csosn" />
+        </label>
+
+        <label>
+          CBENEF
+          <input type="text" id="cbenef" />
+        </label>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <label>
+          UF origem
+          <input type="text" id="emitter-uf" maxlength="2" />
+        </label>
+
+        <label>
+          UF destino
+          <input type="text" id="recipient-uf" maxlength="2" />
+        </label>
+      </div>
+
+      <label>
+        Value Content (JSON)
+        <textarea
+          id="value-content"
+          rows="6"
+          placeholder='{"cfop":"5102"} ou {"pis_cst":"01","cofins_cst":"01"}'
+          required
+        ></textarea>
+      </label>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px;">
+        <label>
+          Prioridade
+          <input type="number" id="priority" value="100" />
+        </label>
+
+        <label>
+          Confiança base
+          <input type="text" id="confidence-base" value="0.70" />
+        </label>
+
+        <label>
+          Vigência inicial
+          <input type="date" id="effective-from" />
+        </label>
+
+        <label>
+          Vigência final
+          <input type="date" id="effective-to" />
+        </label>
+      </div>
+
+      <button type="submit">Salvar regra legal</button>
+    </form>
+
+    <pre id="legal-rule-result" class="result-box"></pre>
+  </section>
+
+  <section class="panel" style="margin-top:20px;">
+    <h2>Regras cadastradas</h2>
+    <div id="legal-rule-list">Carregando...</div>
+  </section>
+
+  <script type="module">
+    const API_URL = "http://localhost:8081";
+
+    const form = document.getElementById("legal-rule-form");
+    const result = document.getElementById("legal-rule-result");
+    const listWrapper = document.getElementById("legal-rule-list");
+    const sourceSelect = document.getElementById("legal-source-id");
+    const operationSelect = document.getElementById("operation-code");
+
+    function setResult(message) {
+      if (result) result.textContent = message;
+    }
+
+    async function apiFetch(path, options = {}) {
+      const token = localStorage.getItem("token");
+      const organizationId = localStorage.getItem("organization_id");
+
+      const response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(organizationId ? { "X-Organization-ID": organizationId } : {}),
+          ...(options.headers || {}),
+        },
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      const isJSON = contentType.includes("application/json");
+
+      if (!response.ok) {
+        const errorBody = isJSON ? await response.json() : await response.text();
+        throw new Error(typeof errorBody === "string" ? errorBody : JSON.stringify(errorBody));
+      }
+
+      return isJSON ? response.json() : response.text();
+    }
+
+    async function listLegalSources() {
+      return apiFetch("/legal-sources?limit=200", { method: "GET" });
+    }
+
+    async function listLegalRules() {
+      return apiFetch("/legal-rules?limit=100", { method: "GET" });
+    }
+
+    async function createLegalRule(payload) {
+      return apiFetch("/legal-rules", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    }
+
+    async function listFiscalOperations() {
+      return apiFetch("/fiscal-operations", { method: "GET" });
+    }
+
+    function renderRules(items) {
+      if (!listWrapper) return;
+
+      if (!items?.length) {
+        listWrapper.innerHTML = "<p>Nenhuma regra legal cadastrada.</p>";
+        return;
+      }
+
+      const html = items.map((item) => `
+        <div class="admin-card">
+          <div class="admin-card-top">
+            <strong>${item.tax_type || "-"}</strong>
+            <span class="badge">${item.value_type || "-"}</span>
+          </div>
+          <p><strong>Fonte:</strong> ${item.legal_source_id || "-"}</p>
+          <p><strong>Operação:</strong> ${item.operation_code || "-"}</p>
+          <p><strong>Regime:</strong> ${item.tax_regime || "-"}</p>
+          <p><strong>NCM:</strong> ${item.ncm_code || "-"}</p>
+          <p><strong>CFOP:</strong> ${item.cfop || "-"}</p>
+          <p><strong>UFs:</strong> ${item.emitter_uf || "-"} → ${item.recipient_uf || "-"}</p>
+          <p><strong>Prioridade:</strong> ${item.priority || "-"}</p>
+          <p><strong>Confiança base:</strong> ${item.confidence_base || "-"}</p>
+          <p><strong>JSON:</strong></p>
+          <pre class="json-box">${item.value_content || "{}"}</pre>
+        </div>
+      `).join("");
+
+      listWrapper.innerHTML = html;
+    }
+
+    async function loadSources() {
+      try {
+        const data = await listLegalSources();
+        const items = data.items || [];
+
+        if (!sourceSelect) return;
+
+        if (!items.length) {
+          sourceSelect.innerHTML = `<option value="">Nenhuma fonte encontrada</option>`;
+          return;
+        }
+
+        sourceSelect.innerHTML = `
+          <option value="">Selecione</option>
+          ${items.map((item) => `
+            <option value="${item.id}">
+              ${item.title} · ${item.tax_type}${item.uf ? ` · ${item.uf}` : ""}
+            </option>
+          `).join("")}
+        `;
+      } catch (error) {
+        if (sourceSelect) {
+          sourceSelect.innerHTML = `<option value="">Erro ao carregar fontes</option>`;
+        }
+      }
+    }
+
+    async function loadOperations() {
+      try {
+        const data = await listFiscalOperations();
+        const items = data.operations || [];
+
+        if (!operationSelect) return;
+
+        if (!items.length) {
+          operationSelect.innerHTML = `<option value="">Nenhuma operação encontrada</option>`;
+          return;
+        }
+
+        operationSelect.innerHTML = `
+          <option value="">Todas</option>
+          ${items.map((item) => `
+            <option value="${item.code}">
+              ${item.name}
+            </option>
+          `).join("")}
+        `;
+      } catch {
+        if (operationSelect) {
+          operationSelect.innerHTML = `<option value="">Erro ao carregar operações</option>`;
+        }
+      }
+    }
+
+    async function loadRules() {
+      try {
+        const data = await listLegalRules();
+        renderRules(data.items || []);
+      } catch (error) {
+        if (listWrapper) {
+          listWrapper.textContent = `Erro ao carregar regras legais: ${String(error)}`;
+        }
+      }
+    }
+
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const valueContent = document.getElementById("value-content")?.value?.trim() || "{}";
+
+      try {
+        JSON.parse(valueContent);
+      } catch {
+        setResult("O campo Value Content precisa ser um JSON válido.");
+        return;
+      }
+
+      const payload = {
+        legal_source_id: document.getElementById("legal-source-id")?.value || "",
+        tax_type: document.getElementById("tax-type")?.value || "",
+        operation_code: document.getElementById("operation-code")?.value || "",
+        tax_regime: document.getElementById("tax-regime")?.value || "",
+        ncm_code: (document.getElementById("ncm-code")?.value || "").trim(),
+        cest: (document.getElementById("cest")?.value || "").trim(),
+        cclas_trib: (document.getElementById("cclas-trib")?.value || "").trim(),
+        cfop: (document.getElementById("cfop")?.value || "").trim(),
+        pis_cst: (document.getElementById("pis-cst")?.value || "").trim(),
+        cofins_cst: (document.getElementById("cofins-cst")?.value || "").trim(),
+        icms_cst: (document.getElementById("icms-cst")?.value || "").trim(),
+        csosn: (document.getElementById("csosn")?.value || "").trim(),
+        cbenef: (document.getElementById("cbenef")?.value || "").trim(),
+        emitter_uf: (document.getElementById("emitter-uf")?.value || "").trim().toUpperCase(),
+        recipient_uf: (document.getElementById("recipient-uf")?.value || "").trim().toUpperCase(),
+        value_type: document.getElementById("value-type")?.value || "",
+        value_content: valueContent,
+        priority: Number(document.getElementById("priority")?.value || 100),
+        confidence_base: (document.getElementById("confidence-base")?.value || "").trim(),
+        effective_from: document.getElementById("effective-from")?.value || "",
+        effective_to: document.getElementById("effective-to")?.value || "",
+      };
+
+      if (!payload.legal_source_id || !payload.tax_type || !payload.value_type) {
+        setResult("Preencha os campos obrigatórios.");
+        return;
+      }
+
+      try {
+        setResult("Salvando regra legal...");
+        await createLegalRule(payload);
+        setResult("Regra legal cadastrada com sucesso.");
+        form.reset();
+        loadRules();
+      } catch (error) {
+        setResult(`Erro ao salvar regra legal: ${String(error)}`);
+      }
+    });
+
+    loadSources();
+    loadOperations();
+    loadRules();
+  </script>
+
+  <style>
+    .admin-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: white;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .admin-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .admin-card p {
+      margin: 6px 0;
+    }
+
+    .badge {
+      background: #eef2ff;
+      color: #3730a3;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .json-box {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+    }
+  </style>
+</AppLayout>
