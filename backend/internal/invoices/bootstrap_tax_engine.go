@@ -1,70 +1,97 @@
-package invoices
+package config
 
 import (
-	"errors"
+	"fmt"
+	"os"
+	"strings"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/rafa/fiscal-platform/backend/internal/taxengine"
-	taxenginedomain "github.com/rafa/fiscal-platform/backend/internal/taxengine/domain"
+	"github.com/joho/godotenv"
 )
 
-type TaxEngineModule struct {
-	DecisionRepository *InvoiceItemTaxDecisionRepository
-	IntegrationService *TaxEngineIntegrationService
-	ProcessingService  *InvoiceTaxProcessingService
-	QueryRepository    *InvoiceTaxProcessingQueryRepository
-	Handler            *TaxEngineHandler
-	Engine             taxenginedomain.Engine
+type Config struct {
+	AppEnv         string
+	Port           string
+	DatabaseURL    string
+	JWTSecret      string
+	AllowedOrigins []string
 }
 
-type TaxEngineModuleDependencies struct {
-	DB *pgxpool.Pool
+func Load() (Config, error) {
+	// Carrega .env se existir. Em produção, as variáveis podem vir do ambiente.
+	_ = godotenv.Load()
+
+	cfg := Config{
+		AppEnv:         normalizeEnv(getEnv("APP_ENV", "development")),
+		Port:           strings.TrimSpace(getEnv("APP_PORT", "8081")),
+		DatabaseURL:    strings.TrimSpace(getEnv("DATABASE_URL", "")),
+		JWTSecret:      strings.TrimSpace(getEnv("JWT_SECRET", "")),
+		AllowedOrigins: parseCSVEnv(getEnv("ALLOWED_ORIGINS", "http://localhost:4321")),
+	}
+
+	if cfg.DatabaseURL == "" {
+		return Config{}, fmt.Errorf("DATABASE_URL is required")
+	}
+
+	if cfg.JWTSecret == "" {
+		return Config{}, fmt.Errorf("JWT_SECRET is required")
+	}
+
+	if cfg.Port == "" {
+		return Config{}, fmt.Errorf("APP_PORT is required")
+	}
+
+	if len(cfg.AllowedOrigins) == 0 {
+		return Config{}, fmt.Errorf("ALLOWED_ORIGINS must contain at least one origin")
+	}
+
+	return cfg, nil
 }
 
-func NewTaxEngineModule(deps TaxEngineModuleDependencies) (*TaxEngineModule, error) {
-	if deps.DB == nil {
-		return nil, errors.New("invoice tax engine module: db is required")
+func getEnv(key, fallback string) string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func normalizeEnv(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+
+	switch value {
+	case "production", "prod":
+		return "production"
+	case "staging", "stage":
+		return "staging"
+	case "test", "testing":
+		return "test"
+	default:
+		return "development"
+	}
+}
+
+func parseCSVEnv(value string) []string {
+	if strings.TrimSpace(value) == "" {
+		return nil
 	}
 
-	decisionRepo, err := NewInvoiceItemTaxDecisionRepository(deps.DB)
-	if err != nil {
-		return nil, err
+	parts := strings.Split(value, ",")
+	origins := make([]string, 0, len(parts))
+	seen := make(map[string]struct{})
+
+	for _, part := range parts {
+		origin := strings.TrimSpace(part)
+		if origin == "" {
+			continue
+		}
+
+		if _, exists := seen[origin]; exists {
+			continue
+		}
+
+		seen[origin] = struct{}{}
+		origins = append(origins, origin)
 	}
 
-	engine, err := taxengine.New(taxengine.Dependencies{
-		DB: deps.DB,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	integrationService, err := NewTaxEngineIntegrationService(engine, decisionRepo)
-	if err != nil {
-		return nil, err
-	}
-
-	processingService, err := NewInvoiceTaxProcessingService(integrationService)
-	if err != nil {
-		return nil, err
-	}
-
-	queryRepository, err := NewInvoiceTaxProcessingQueryRepository(deps.DB)
-	if err != nil {
-		return nil, err
-	}
-
-	handler, err := NewTaxEngineHandler(processingService, queryRepository)
-	if err != nil {
-		return nil, err
-	}
-
-	return &TaxEngineModule{
-		DecisionRepository: decisionRepo,
-		IntegrationService: integrationService,
-		ProcessingService:  processingService,
-		QueryRepository:    queryRepository,
-		Handler:            handler,
-		Engine:             engine,
-	}, nil
+	return origins
 }

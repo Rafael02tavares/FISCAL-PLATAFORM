@@ -3,8 +3,10 @@ package invoices
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/rafa/fiscal-platform/backend/internal/auth"
@@ -24,44 +26,37 @@ func NewHandler(service *Service, organizationService *organizations.Service) *H
 }
 
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := h.authorizeOrganizationRequest(w, r)
+	if !ok {
+		return
+	}
+
 	if err := r.ParseMultipartForm(20 << 20); err != nil {
-		http.Error(w, "invalid multipart form: "+err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "INVALID_MULTIPART_FORM", "formulário multipart inválido")
 		return
 	}
 
-	userID := auth.UserIDFromContext(r.Context())
-	if userID == "" {
-		http.Error(w, "user not authenticated", http.StatusUnauthorized)
-		return
-	}
-
-	orgID := r.Header.Get("X-Organization-ID")
-	if orgID == "" {
-		http.Error(w, "X-Organization-ID is required", http.StatusBadRequest)
-		return
-	}
-
-	allowed, err := h.organizationService.UserBelongsToOrganization(r.Context(), userID, orgID)
+	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "cannot validate organization access: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if !allowed {
-		http.Error(w, "forbidden for this organization", http.StatusForbidden)
-		return
-	}
-
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, "file is required", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "FILE_REQUIRED", "arquivo é obrigatório no campo 'file'")
 		return
 	}
 	defer file.Close()
 
+	filename := strings.TrimSpace(fileHeader.Filename)
+	if filename == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_FILENAME", "nome do arquivo é obrigatório")
+		return
+	}
+
 	xmlBytes, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "cannot read file", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "FILE_READ_FAILED", "não foi possível ler o arquivo enviado")
+		return
+	}
+
+	if len(bytes.TrimSpace(xmlBytes)) == 0 {
+		writeError(w, http.StatusBadRequest, "EMPTY_FILE", "o arquivo enviado está vazio")
 		return
 	}
 
@@ -72,97 +67,105 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		bytes.NewReader(xmlBytes),
 	)
 	if err != nil {
-		http.Error(w, "cannot process xml: "+err.Error(), http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "PROCESS_XML_FAILED", "não foi possível processar o XML enviado")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(result)
+	writeJSON(w, http.StatusCreated, result)
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	userID := auth.UserIDFromContext(r.Context())
-	if userID == "" {
-		http.Error(w, "user not authenticated", http.StatusUnauthorized)
-		return
-	}
-
-	orgID := r.Header.Get("X-Organization-ID")
-	if orgID == "" {
-		http.Error(w, "X-Organization-ID is required", http.StatusBadRequest)
-		return
-	}
-
-	allowed, err := h.organizationService.UserBelongsToOrganization(r.Context(), userID, orgID)
-	if err != nil {
-		http.Error(w, "cannot validate organization access: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if !allowed {
-		http.Error(w, "forbidden for this organization", http.StatusForbidden)
+	orgID, ok := h.authorizeOrganizationRequest(w, r)
+	if !ok {
 		return
 	}
 
 	invoices, err := h.service.ListInvoices(r.Context(), orgID)
 	if err != nil {
-		http.Error(w, "cannot list invoices: "+err.Error(), http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "LIST_INVOICES_FAILED", "não foi possível listar as notas fiscais")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"invoices": invoices,
 	})
 }
 
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
-	userID := auth.UserIDFromContext(r.Context())
-	if userID == "" {
-		http.Error(w, "user not authenticated", http.StatusUnauthorized)
+	orgID, ok := h.authorizeOrganizationRequest(w, r)
+	if !ok {
 		return
 	}
 
-	orgID := r.Header.Get("X-Organization-ID")
-	if orgID == "" {
-		http.Error(w, "X-Organization-ID is required", http.StatusBadRequest)
-		return
-	}
-
-	allowed, err := h.organizationService.UserBelongsToOrganization(r.Context(), userID, orgID)
+	invoiceID, err := extractInvoiceID(r.URL.Path)
 	if err != nil {
-		http.Error(w, "cannot validate organization access: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if !allowed {
-		http.Error(w, "forbidden for this organization", http.StatusForbidden)
-		return
-	}
-
-	prefix := "/invoices/"
-	path := r.URL.Path
-
-	if !strings.HasPrefix(path, prefix) {
-		http.NotFound(w, r)
-		return
-	}
-
-	invoiceID := strings.TrimPrefix(path, prefix)
-	if invoiceID == "" || invoiceID == "upload" {
-		http.NotFound(w, r)
+		writeError(w, http.StatusNotFound, "INVOICE_NOT_FOUND", err.Error())
 		return
 	}
 
 	invoice, err := h.service.GetInvoiceByID(r.Context(), orgID, invoiceID)
 	if err != nil {
-		http.Error(w, "cannot get invoice: "+err.Error(), http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "GET_INVOICE_FAILED", "não foi possível buscar a nota fiscal")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"invoice": invoice,
+	})
+}
+
+func (h *Handler) authorizeOrganizationRequest(w http.ResponseWriter, r *http.Request) (string, bool) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "usuário não autenticado")
+		return "", false
+	}
+
+	orgID := strings.TrimSpace(r.Header.Get("X-Organization-ID"))
+	if orgID == "" {
+		writeError(w, http.StatusBadRequest, "MISSING_ORGANIZATION_ID", "X-Organization-ID é obrigatório")
+		return "", false
+	}
+
+	allowed, err := h.organizationService.UserBelongsToOrganization(r.Context(), userID, orgID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "ORGANIZATION_VALIDATION_FAILED", "não foi possível validar acesso à organização")
+		return "", false
+	}
+
+	if !allowed {
+		writeError(w, http.StatusForbidden, "FORBIDDEN", "usuário sem acesso a esta organização")
+		return "", false
+	}
+
+	return orgID, true
+}
+
+func extractInvoiceID(urlPath string) (string, error) {
+	cleanPath := strings.TrimSpace(urlPath)
+	if cleanPath == "" {
+		return "", errors.New("identificador da nota fiscal não informado")
+	}
+
+	last := strings.TrimSpace(path.Base(cleanPath))
+	if last == "" || last == "." || last == "invoices" || last == "upload" {
+		return "", errors.New("identificador da nota fiscal inválido")
+	}
+
+	return last, nil
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func writeError(w http.ResponseWriter, status int, code, message string) {
+	writeJSON(w, status, map[string]any{
+		"error": map[string]string{
+			"code":    code,
+			"message": message,
+		},
 	})
 }

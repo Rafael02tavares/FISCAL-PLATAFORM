@@ -2,7 +2,9 @@ package tax
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/rafa/fiscal-platform/backend/internal/auth"
 	"github.com/rafa/fiscal-platform/backend/internal/organizations"
@@ -23,41 +25,97 @@ func NewHandler(service *Service, orgService *organizations.Service) *Handler {
 func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserIDFromContext(r.Context())
 	if userID == "" {
-		http.Error(w, "user not authenticated", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "usuário não autenticado")
 		return
 	}
 
-	organizationID := r.Header.Get("X-Organization-ID")
+	organizationID := strings.TrimSpace(r.Header.Get("X-Organization-ID"))
 	if organizationID == "" {
-		http.Error(w, "X-Organization-ID is required", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "MISSING_ORGANIZATION_ID", "X-Organization-ID é obrigatório")
 		return
 	}
 
 	allowed, err := h.orgService.UserBelongsToOrganization(r.Context(), userID, organizationID)
 	if err != nil {
-		http.Error(w, "cannot validate organization access: "+err.Error(), http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "ORGANIZATION_VALIDATION_FAILED", "não foi possível validar acesso à organização")
 		return
 	}
 
 	if !allowed {
-		http.Error(w, "forbidden for this organization", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "FORBIDDEN", "usuário sem acesso a esta organização")
 		return
 	}
 
 	var req SuggestRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid body", http.StatusBadRequest)
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_BODY", "corpo da requisição inválido")
+		return
+	}
+
+	req.normalize()
+
+	if err := req.validate(); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
 
 	resp, err := h.service.Suggest(r.Context(), req)
 	if err != nil {
-		http.Error(w, "cannot suggest tax profile: "+err.Error(), http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "SUGGESTION_NOT_FOUND", "não foi possível sugerir perfil tributário para o contexto informado")
 		return
 	}
 
-	_ = h.service.PersistSuggestion(r.Context(), organizationID, req, resp)
+	if err := h.service.PersistSuggestion(r.Context(), organizationID, req, resp); err != nil {
+		writeError(w, http.StatusInternalServerError, "PERSIST_SUGGESTION_FAILED", "a sugestão foi gerada, mas não pôde ser salva")
+		return
+	}
 
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (r *SuggestRequest) normalize() {
+	r.GTIN = strings.TrimSpace(r.GTIN)
+	r.Description = strings.TrimSpace(r.Description)
+	r.OperationCode = strings.TrimSpace(r.OperationCode)
+	r.TaxRegime = strings.TrimSpace(r.TaxRegime)
+	r.EmitterUF = strings.ToUpper(strings.TrimSpace(r.EmitterUF))
+	r.RecipientUF = strings.ToUpper(strings.TrimSpace(r.RecipientUF))
+}
+
+func (r *SuggestRequest) validate() error {
+	switch {
+	case r.OperationCode == "":
+		return errors.New("operation_code é obrigatório")
+	case r.Description == "" && r.GTIN == "":
+		return errors.New("description ou gtin deve ser informado")
+	case r.EmitterUF == "":
+		return errors.New("emitter_uf é obrigatório")
+	case len(r.EmitterUF) != 2:
+		return errors.New("emitter_uf deve conter 2 caracteres")
+	case r.RecipientUF == "":
+		return errors.New("recipient_uf é obrigatório")
+	case len(r.RecipientUF) != 2:
+		return errors.New("recipient_uf deve conter 2 caracteres")
+	default:
+		return nil
+	}
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(resp)
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func writeError(w http.ResponseWriter, status int, code, message string) {
+	writeJSON(w, status, map[string]any{
+		"error": map[string]string{
+			"code":    code,
+			"message": message,
+		},
+	})
 }

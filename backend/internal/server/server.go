@@ -20,21 +20,23 @@ import (
 )
 
 type Server struct {
-	cfg config.Config
-	db  *pgxpool.Pool
-	mux *http.ServeMux
+	cfg  config.Config
+	db   *pgxpool.Pool
+	mux  *http.ServeMux
+	cors map[string]struct{}
 }
 
 func New(cfg config.Config, db *pgxpool.Pool) http.Handler {
 	s := &Server{
-		cfg: cfg,
-		db:  db,
-		mux: http.NewServeMux(),
+		cfg:  cfg,
+		db:   db,
+		mux:  http.NewServeMux(),
+		cors: buildAllowedOriginsMap(cfg.AllowedOrigins),
 	}
 
 	s.registerRoutes()
 
-	return withCORS(s.mux)
+	return s.withCORS(s.mux)
 }
 
 func (s *Server) registerRoutes() {
@@ -78,7 +80,9 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /legal-rules", legalHandler.ListLegalRuleMappings)
 	s.mux.HandleFunc("POST /legal-rules", legalHandler.CreateLegalRuleMapping)
 
+	// protected routes
 	protectedMux := http.NewServeMux()
+
 	protectedMux.HandleFunc("GET /auth/me", authHandler.Me)
 
 	// organizations
@@ -133,19 +137,45 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func withCORS(next http.Handler) http.Handler {
+func (s *Server) withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4321")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Organization-ID")
+		origin := r.Header.Get("Origin")
+
+		w.Header().Add("Vary", "Origin")
+		w.Header().Add("Vary", "Access-Control-Request-Method")
+		w.Header().Add("Vary", "Access-Control-Request-Headers")
+
+		if origin != "" && s.isAllowedOrigin(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Organization-ID")
+		}
 
 		if r.Method == http.MethodOptions {
+			if origin == "" || !s.isAllowedOrigin(origin) {
+				http.Error(w, "CORS origin not allowed", http.StatusForbidden)
+				return
+			}
+
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) isAllowedOrigin(origin string) bool {
+	_, ok := s.cors[origin]
+	return ok
+}
+
+func buildAllowedOriginsMap(origins []string) map[string]struct{} {
+	allowed := make(map[string]struct{}, len(origins))
+	for _, origin := range origins {
+		allowed[origin] = struct{}{}
+	}
+	return allowed
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

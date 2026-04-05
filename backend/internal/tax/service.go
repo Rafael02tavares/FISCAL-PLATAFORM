@@ -3,6 +3,8 @@ package tax
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 
 	"github.com/rafa/fiscal-platform/backend/internal/fiscaloperations"
 	"github.com/rafa/fiscal-platform/backend/internal/legalbasis"
@@ -12,6 +14,23 @@ type Service struct {
 	repo              *Repository
 	fiscalOpService   *fiscaloperations.Service
 	legalBasisService *legalbasis.Service
+}
+
+type legalRulePayload struct {
+	CFOP              string `json:"cfop"`
+	NCM               string `json:"ncm"`
+	CEST              string `json:"cest"`
+	CClasTrib         string `json:"cclas_trib"`
+	PISCST            string `json:"pis_cst"`
+	COFINSCST         string `json:"cofins_cst"`
+	IBSRate           string `json:"ibs_rate"`
+	CBSRate           string `json:"cbs_rate"`
+	PISRevenueCode    string `json:"pis_revenue_code"`
+	COFINSRevenueCode string `json:"cofins_revenue_code"`
+	PISValue          string `json:"pis_value"`
+	COFINSValue       string `json:"cofins_value"`
+	ICMSValue         string `json:"icms_value"`
+	IPIValue          string `json:"ipi_value"`
 }
 
 func NewService(
@@ -37,32 +56,7 @@ func (s *Service) Suggest(ctx context.Context, req SuggestRequest) (*SuggestResp
 		return nil, err
 	}
 
-	resp := &SuggestResponse{
-		SelectedOperation: SelectedOperation{
-			Code: op.Code,
-			Name: op.Name,
-			CFOP: op.DefaultCFOP,
-		},
-		MatchType:       item.MatchType,
-		ConfidenceScore: item.ConfidenceScore,
-		Suggestion: Suggestion{
-			NCM:               item.NCM,
-			CEST:              item.CEST,
-			CClasTrib:         item.CClasTrib,
-			CFOP:              op.DefaultCFOP,
-			PISCST:            item.PISCST,
-			COFINSCST:         item.COFINSCST,
-			PISRevenueCode:    item.PISRevenueCode,
-			COFINSRevenueCode: item.COFINSRevenueCode,
-			ICMSValue:         item.ICMSValue,
-			IPIValue:          item.IPIValue,
-			PISValue:          item.PISValue,
-			COFINSValue:       item.COFINSValue,
-			IBSRate:           item.IBSRate,
-			CBSRate:           item.CBSRate,
-		},
-		LegalBasis: []LegalBasisItem{},
-	}
+	resp := s.buildBaseResponse(op, item)
 
 	rules, err := s.legalBasisService.FindApplicableRules(ctx, legalbasis.FindApplicableRulesParams{
 		OperationCode: op.Code,
@@ -85,6 +79,14 @@ func (s *Service) PersistSuggestion(
 	req SuggestRequest,
 	resp *SuggestResponse,
 ) error {
+	if strings.TrimSpace(organizationID) == "" {
+		return errors.New("organizationID is required")
+	}
+
+	if resp == nil {
+		return errors.New("suggest response is required")
+	}
+
 	suggestionLogID, err := s.repo.CreateSuggestionLog(ctx, CreateSuggestionLogParams{
 		OrganizationID: organizationID,
 
@@ -118,20 +120,54 @@ func (s *Service) PersistSuggestion(
 	}
 
 	for _, item := range resp.LegalBasis {
-		if item.LegalSourceID == "" {
+		if strings.TrimSpace(item.LegalSourceID) == "" {
 			continue
 		}
 
-		_ = s.repo.CreateSuggestionLegalBasis(ctx, CreateSuggestionLegalBasisParams{
+		if err := s.repo.CreateSuggestionLegalBasis(ctx, CreateSuggestionLegalBasisParams{
 			SuggestionLogID: suggestionLogID,
 			LegalSourceID:   item.LegalSourceID,
 			TaxType:         item.TaxType,
 			AppliedReason:   item.AppliedReason,
 			Weight:          item.Weight,
-		})
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+func (s *Service) buildBaseResponse(
+	op *fiscaloperations.Operation,
+	item *BestMatchResult,
+) *SuggestResponse {
+	return &SuggestResponse{
+		SelectedOperation: SelectedOperation{
+			Code: op.Code,
+			Name: op.Name,
+			CFOP: op.DefaultCFOP,
+		},
+		MatchType:       item.MatchType,
+		ConfidenceScore: item.ConfidenceScore,
+		Suggestion: Suggestion{
+			NCM:               item.NCM,
+			CEST:              item.CEST,
+			CClasTrib:         item.CClasTrib,
+			CFOP:              op.DefaultCFOP,
+			PISCST:            item.PISCST,
+			COFINSCST:         item.COFINSCST,
+			PISRevenueCode:    item.PISRevenueCode,
+			COFINSRevenueCode: item.COFINSRevenueCode,
+			ICMSValue:         item.ICMSValue,
+			IPIValue:          item.IPIValue,
+			PISValue:          item.PISValue,
+			COFINSValue:       item.COFINSValue,
+			IBSRate:           item.IBSRate,
+			CBSRate:           item.CBSRate,
+		},
+		LegalBasis: []LegalBasisItem{},
+	}
 }
 
 func buildLegalBasisItems(rules []legalbasis.ApplicableLegalRule) []LegalBasisItem {
@@ -154,62 +190,100 @@ func buildLegalBasisItems(rules []legalbasis.ApplicableLegalRule) []LegalBasisIt
 }
 
 func applyLegalRules(resp *SuggestResponse, rules []legalbasis.ApplicableLegalRule) {
+	if resp == nil {
+		return
+	}
+
 	for _, rule := range rules {
-		var payload map[string]string
-		if err := json.Unmarshal([]byte(rule.ValueContent), &payload); err != nil {
+		payload, ok := parseLegalRulePayload(rule.ValueContent)
+		if !ok {
 			continue
 		}
 
-		switch rule.ValueType {
-		case "cfop_rule":
-			if v := payload["cfop"]; v != "" {
-				resp.Suggestion.CFOP = v
-			}
+		applyLegalRuleByType(resp, rule.ValueType, payload)
+	}
+}
 
-		case "classification_rule":
-			if v := payload["ncm"]; v != "" {
-				resp.Suggestion.NCM = v
-			}
-			if v := payload["cest"]; v != "" {
-				resp.Suggestion.CEST = v
-			}
-			if v := payload["cclas_trib"]; v != "" {
-				resp.Suggestion.CClasTrib = v
-			}
+func parseLegalRulePayload(raw string) (legalRulePayload, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return legalRulePayload{}, false
+	}
 
-		case "cst_rule":
-			if v := payload["pis_cst"]; v != "" {
-				resp.Suggestion.PISCST = v
-			}
-			if v := payload["cofins_cst"]; v != "" {
-				resp.Suggestion.COFINSCST = v
-			}
+	var payload legalRulePayload
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		return legalRulePayload{}, false
+	}
 
-		case "rate_rule":
-			if v := payload["ibs_rate"]; v != "" {
-				resp.Suggestion.IBSRate = v
-			}
-			if v := payload["cbs_rate"]; v != "" {
-				resp.Suggestion.CBSRate = v
-			}
-			if v := payload["pis_revenue_code"]; v != "" {
-				resp.Suggestion.PISRevenueCode = v
-			}
-			if v := payload["cofins_revenue_code"]; v != "" {
-				resp.Suggestion.COFINSRevenueCode = v
-			}
-			if v := payload["pis_value"]; v != "" {
-				resp.Suggestion.PISValue = v
-			}
-			if v := payload["cofins_value"]; v != "" {
-				resp.Suggestion.COFINSValue = v
-			}
-			if v := payload["icms_value"]; v != "" {
-				resp.Suggestion.ICMSValue = v
-			}
-			if v := payload["ipi_value"]; v != "" {
-				resp.Suggestion.IPIValue = v
-			}
-		}
+	return payload, true
+}
+
+func applyLegalRuleByType(resp *SuggestResponse, valueType string, payload legalRulePayload) {
+	switch valueType {
+	case "cfop_rule":
+		applyCFOPRule(resp, payload)
+
+	case "classification_rule":
+		applyClassificationRule(resp, payload)
+
+	case "cst_rule":
+		applyCSTRule(resp, payload)
+
+	case "rate_rule":
+		applyRateRule(resp, payload)
+	}
+}
+
+func applyCFOPRule(resp *SuggestResponse, payload legalRulePayload) {
+	if payload.CFOP != "" {
+		resp.Suggestion.CFOP = payload.CFOP
+	}
+}
+
+func applyClassificationRule(resp *SuggestResponse, payload legalRulePayload) {
+	if payload.NCM != "" {
+		resp.Suggestion.NCM = payload.NCM
+	}
+	if payload.CEST != "" {
+		resp.Suggestion.CEST = payload.CEST
+	}
+	if payload.CClasTrib != "" {
+		resp.Suggestion.CClasTrib = payload.CClasTrib
+	}
+}
+
+func applyCSTRule(resp *SuggestResponse, payload legalRulePayload) {
+	if payload.PISCST != "" {
+		resp.Suggestion.PISCST = payload.PISCST
+	}
+	if payload.COFINSCST != "" {
+		resp.Suggestion.COFINSCST = payload.COFINSCST
+	}
+}
+
+func applyRateRule(resp *SuggestResponse, payload legalRulePayload) {
+	if payload.IBSRate != "" {
+		resp.Suggestion.IBSRate = payload.IBSRate
+	}
+	if payload.CBSRate != "" {
+		resp.Suggestion.CBSRate = payload.CBSRate
+	}
+	if payload.PISRevenueCode != "" {
+		resp.Suggestion.PISRevenueCode = payload.PISRevenueCode
+	}
+	if payload.COFINSRevenueCode != "" {
+		resp.Suggestion.COFINSRevenueCode = payload.COFINSRevenueCode
+	}
+	if payload.PISValue != "" {
+		resp.Suggestion.PISValue = payload.PISValue
+	}
+	if payload.COFINSValue != "" {
+		resp.Suggestion.COFINSValue = payload.COFINSValue
+	}
+	if payload.ICMSValue != "" {
+		resp.Suggestion.ICMSValue = payload.ICMSValue
+	}
+	if payload.IPIValue != "" {
+		resp.Suggestion.IPIValue = payload.IPIValue
 	}
 }
