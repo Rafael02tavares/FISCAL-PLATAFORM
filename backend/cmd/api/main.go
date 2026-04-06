@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -9,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rafa/fiscal-platform/backend/internal/config"
-	"github.com/rafa/fiscal-platform/backend/internal/database"
-	"github.com/rafa/fiscal-platform/backend/internal/server"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/config"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/database"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/server"
 )
 
 func main() {
@@ -20,11 +21,18 @@ func main() {
 		log.Fatalf("load config: %v", err)
 	}
 
+	if cfg.Port == "" {
+		log.Fatal("load config: PORT is required")
+	}
+
 	db, err := database.NewPostgres(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("connect database: %v", err)
 	}
 	defer db.Close()
+
+	log.Printf("database connected successfully")
+	log.Printf("starting server in %s environment on port %s", cfg.AppEnv, cfg.Port)
 
 	handler := server.New(cfg, db)
 
@@ -36,32 +44,45 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	go func() {
-		log.Printf("server running on port %s", cfg.Port)
+	serverErr := make(chan error, 1)
 
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen and serve: %v", err)
+	go func() {
+		err := httpServer.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErr <- err
 		}
+		close(serverErr)
 	}()
 
-	waitForShutdown(httpServer)
+	select {
+	case err := <-serverErr:
+		if err != nil {
+			log.Fatalf("listen and serve: %v", err)
+		}
+	case <-shutdownSignal():
+		log.Println("shutdown signal received")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := httpServer.Shutdown(ctx); err != nil {
+			log.Printf("graceful shutdown failed: %v", err)
+		} else {
+			log.Println("server stopped")
+		}
+	}
 }
 
-func waitForShutdown(httpServer *http.Server) {
+func shutdownSignal() <-chan struct{} {
 	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
-	<-stopCtx.Done()
+	done := make(chan struct{})
 
-	log.Println("shutdown signal received")
+	go func() {
+		defer stop()
+		<-stopCtx.Done()
+		close(done)
+	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := httpServer.Shutdown(ctx); err != nil {
-		log.Printf("graceful shutdown failed: %v", err)
-		return
-	}
-
-	log.Println("server stopped")
+	return done
 }

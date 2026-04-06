@@ -32,9 +32,14 @@ type loginRequest struct {
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	var req registerRequest
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_BODY", "corpo da requisição inválido")
 		return
 	}
@@ -47,8 +52,17 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.Register(r.Context(), req.Name, req.Email, req.Password); err != nil {
-		writeError(w, http.StatusInternalServerError, "REGISTER_FAILED", "não foi possível criar o usuário")
-		return
+		switch {
+		case errors.Is(err, ErrInvalidRegisterData):
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "dados de cadastro inválidos")
+			return
+		case errors.Is(err, ErrEmailAlreadyExists):
+			writeError(w, http.StatusConflict, "EMAIL_ALREADY_EXISTS", "já existe um usuário com este e-mail")
+			return
+		default:
+			writeError(w, http.StatusInternalServerError, "REGISTER_FAILED", "não foi possível criar o usuário")
+			return
+		}
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]any{
@@ -57,9 +71,14 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	var req loginRequest
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_BODY", "corpo da requisição inválido")
 		return
 	}
@@ -73,8 +92,17 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := h.service.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "credenciais inválidas")
-		return
+		switch {
+		case errors.Is(err, ErrInvalidLoginData):
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "dados de login inválidos")
+			return
+		case errors.Is(err, ErrInvalidCredentials):
+			writeError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "credenciais inválidas")
+			return
+		default:
+			writeError(w, http.StatusInternalServerError, "LOGIN_FAILED", "não foi possível realizar o login")
+			return
+		}
 	}
 
 	token, err := h.jwt.Generate(userID)
@@ -114,14 +142,16 @@ func (r *registerRequest) validate() error {
 		return errors.New("nome é obrigatório")
 	case len([]rune(r.Name)) < 2:
 		return errors.New("nome deve ter pelo menos 2 caracteres")
+	case len([]rune(r.Name)) > 120:
+		return errors.New("nome deve ter no máximo 120 caracteres")
 	case r.Email == "":
 		return errors.New("email é obrigatório")
 	case !isValidEmail(r.Email):
 		return errors.New("email inválido")
 	case r.Password == "":
 		return errors.New("senha é obrigatória")
-	case len(r.Password) < 6:
-		return errors.New("senha deve ter pelo menos 6 caracteres")
+	case len(r.Password) < 8:
+		return errors.New("senha deve ter pelo menos 8 caracteres")
 	default:
 		return nil
 	}
@@ -153,7 +183,10 @@ func isValidEmail(email string) bool {
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {

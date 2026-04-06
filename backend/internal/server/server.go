@@ -7,16 +7,16 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/rafa/fiscal-platform/backend/internal/auth"
-	"github.com/rafa/fiscal-platform/backend/internal/catalog"
-	"github.com/rafa/fiscal-platform/backend/internal/companies"
-	"github.com/rafa/fiscal-platform/backend/internal/config"
-	"github.com/rafa/fiscal-platform/backend/internal/fiscaloperations"
-	"github.com/rafa/fiscal-platform/backend/internal/invoices"
-	"github.com/rafa/fiscal-platform/backend/internal/legalbasis"
-	"github.com/rafa/fiscal-platform/backend/internal/ncm"
-	"github.com/rafa/fiscal-platform/backend/internal/organizations"
-	"github.com/rafa/fiscal-platform/backend/internal/tax"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/auth"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/catalog"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/companies"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/config"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/fiscaloperations"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/invoices"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/legalbasis"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/ncm"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/organizations"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/tax"
 )
 
 type Server struct {
@@ -28,10 +28,12 @@ type Server struct {
 
 func New(cfg config.Config, db *pgxpool.Pool) http.Handler {
 	s := &Server{
-		cfg:  cfg,
-		db:   db,
-		mux:  http.NewServeMux(),
-		cors: buildAllowedOriginsMap(cfg.AllowedOrigins),
+		cfg: cfg,
+		db:  db,
+		mux: http.NewServeMux(),
+		cors: map[string]struct{}{
+			"http://localhost:4321": {},
+		},
 	}
 
 	s.registerRoutes()
@@ -40,8 +42,16 @@ func New(cfg config.Config, db *pgxpool.Pool) http.Handler {
 }
 
 func (s *Server) registerRoutes() {
-	s.mux.HandleFunc("GET /health", s.handleHealth)
+	s.registerHealthRoutes()
+	s.registerPublicRoutes()
+	s.registerProtectedRoutes()
+}
 
+func (s *Server) registerHealthRoutes() {
+	s.mux.HandleFunc("GET /health", s.handleHealth)
+}
+
+func (s *Server) registerPublicRoutes() {
 	// auth
 	authRepo := auth.NewRepository(s.db)
 	authService := auth.NewService(authRepo)
@@ -51,49 +61,51 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /auth/register", authHandler.Register)
 	s.mux.HandleFunc("POST /auth/login", authHandler.Login)
 
-	// consulta pública CNPJ
+	// companies
 	companyClient := companies.NewClient()
 	companyService := companies.NewService(companyClient)
 	companyHandler := companies.NewHandler(companyService)
 	s.mux.HandleFunc("GET /companies/lookup", companyHandler.Lookup)
 
-	// operações fiscais
+	// fiscal operations
 	fiscalOpRepo := fiscaloperations.NewRepository(s.db)
 	fiscalOpService := fiscaloperations.NewService(fiscalOpRepo)
 	fiscalOpHandler := fiscaloperations.NewHandler(fiscalOpService)
 	s.mux.HandleFunc("GET /fiscal-operations", fiscalOpHandler.List)
 
-	// catálogo NCM
+	// ncm
 	ncmRepo := ncm.NewRepository(s.db)
 	ncmService := ncm.NewService(ncmRepo)
 	ncmHandler := ncm.NewHandler(ncmService)
+
 	s.mux.HandleFunc("GET /ncm", ncmHandler.List)
 	s.mux.HandleFunc("GET /ncm/find", ncmHandler.GetByCode)
 	s.mux.HandleFunc("GET /ncm/search", ncmHandler.Search)
 
-	// base legal
+	// legal basis
 	legalRepo := legalbasis.NewRepository(s.db)
 	legalService := legalbasis.NewService(legalRepo)
 	legalHandler := legalbasis.NewHandler(legalService)
+
 	s.mux.HandleFunc("GET /legal-sources", legalHandler.ListLegalSources)
 	s.mux.HandleFunc("POST /legal-sources", legalHandler.CreateLegalSource)
 	s.mux.HandleFunc("GET /legal-rules", legalHandler.ListLegalRuleMappings)
 	s.mux.HandleFunc("POST /legal-rules", legalHandler.CreateLegalRuleMapping)
+}
 
-	// protected routes
+func (s *Server) registerProtectedRoutes() {
 	protectedMux := http.NewServeMux()
 
-	protectedMux.HandleFunc("GET /auth/me", authHandler.Me)
+	// dependencies
+	authRepo := auth.NewRepository(s.db)
+	authService := auth.NewService(authRepo)
+	jwtService := auth.NewJWT(s.cfg.JWTSecret)
+	authHandler := auth.NewHandler(authService, jwtService)
 
-	// organizations
 	orgRepo := organizations.NewRepository(s.db)
 	orgService := organizations.NewService(orgRepo)
 	orgHandler := organizations.NewHandler(orgService)
 
-	protectedMux.HandleFunc("POST /organizations", orgHandler.Create)
-	protectedMux.HandleFunc("GET /organizations", orgHandler.List)
-
-	// catálogo / invoices
 	catalogRepo := catalog.NewRepository(s.db)
 	catalogService := catalog.NewService(catalogRepo)
 
@@ -101,24 +113,31 @@ func (s *Server) registerRoutes() {
 	invoiceService := invoices.NewService(invoiceRepo, catalogService)
 	invoiceHandler := invoices.NewHandler(invoiceService, orgService)
 
-	protectedMux.HandleFunc("POST /invoices/upload", invoiceHandler.Upload)
-	protectedMux.HandleFunc("GET /invoices", invoiceHandler.List)
-	protectedMux.HandleFunc("GET /invoices/", invoiceHandler.GetByID)
+	fiscalOpRepo := fiscaloperations.NewRepository(s.db)
+	fiscalOpService := fiscaloperations.NewService(fiscalOpRepo)
 
-	// tax engine
+	legalRepo := legalbasis.NewRepository(s.db)
+	legalService := legalbasis.NewService(legalRepo)
+
 	taxRepo := tax.NewRepository(s.db)
 	taxService := tax.NewService(taxRepo, fiscalOpService, legalService)
 	taxHandler := tax.NewHandler(taxService, orgService)
+
+	// routes
+	protectedMux.HandleFunc("GET /auth/me", authHandler.Me)
+
+	protectedMux.HandleFunc("POST /organizations", orgHandler.Create)
+	protectedMux.HandleFunc("GET /organizations", orgHandler.List)
+
+	protectedMux.HandleFunc("POST /invoices/upload", invoiceHandler.Upload)
+	protectedMux.HandleFunc("GET /invoices", invoiceHandler.List)
+	protectedMux.HandleFunc("GET /invoices/", invoiceHandler.GetByID)
 
 	protectedMux.HandleFunc("POST /tax/suggest", taxHandler.Suggest)
 
 	protected := auth.AuthMiddleware(jwtService, protectedMux)
 
-	s.mux.Handle("/auth/me", protected)
-	s.mux.Handle("/organizations", protected)
-	s.mux.Handle("/invoices", protected)
-	s.mux.Handle("/invoices/", protected)
-	s.mux.Handle("/tax/suggest", protected)
+	s.mux.Handle("/", protected)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -149,6 +168,7 @@ func (s *Server) withCORS(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Organization-ID")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		}
 
 		if r.Method == http.MethodOptions {
@@ -170,16 +190,11 @@ func (s *Server) isAllowedOrigin(origin string) bool {
 	return ok
 }
 
-func buildAllowedOriginsMap(origins []string) map[string]struct{} {
-	allowed := make(map[string]struct{}, len(origins))
-	for _, origin := range origins {
-		allowed[origin] = struct{}{}
-	}
-	return allowed
-}
-
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }

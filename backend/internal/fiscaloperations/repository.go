@@ -2,8 +2,11 @@ package fiscaloperations
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -37,7 +40,7 @@ func (r *Repository) ListActive(ctx context.Context) ([]FiscalOperation, error) 
 			active
 		FROM fiscal_operations
 		WHERE active = TRUE
-		ORDER BY is_default DESC, name ASC
+		ORDER BY is_default DESC, name ASC, code ASC
 	`
 
 	rows, err := r.db.Query(ctx, query)
@@ -46,10 +49,11 @@ func (r *Repository) ListActive(ctx context.Context) ([]FiscalOperation, error) 
 	}
 	defer rows.Close()
 
-	var items []FiscalOperation
+	items := make([]FiscalOperation, 0)
 
 	for rows.Next() {
 		var item FiscalOperation
+
 		if err := rows.Scan(
 			&item.ID,
 			&item.Code,
@@ -61,6 +65,12 @@ func (r *Repository) ListActive(ctx context.Context) ([]FiscalOperation, error) 
 		); err != nil {
 			return nil, fmt.Errorf("scan fiscal operation: %w", err)
 		}
+
+		item.Code = strings.TrimSpace(item.Code)
+		item.Name = strings.TrimSpace(item.Name)
+		item.Direction = strings.TrimSpace(item.Direction)
+		item.DefaultCFOP = strings.TrimSpace(item.DefaultCFOP)
+
 		items = append(items, item)
 	}
 
@@ -83,11 +93,13 @@ func (r *Repository) FindByCode(ctx context.Context, code string) (*FiscalOperat
 			active
 		FROM fiscal_operations
 		WHERE code = $1
+		  AND active = TRUE
 		LIMIT 1
 	`
 
 	var item FiscalOperation
-	err := r.db.QueryRow(ctx, query, code).Scan(
+
+	err := r.db.QueryRow(ctx, query, strings.TrimSpace(code)).Scan(
 		&item.ID,
 		&item.Code,
 		&item.Name,
@@ -97,8 +109,16 @@ func (r *Repository) FindByCode(ctx context.Context, code string) (*FiscalOperat
 		&item.Active,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrOperationNotFound
+		}
 		return nil, fmt.Errorf("find fiscal operation by code: %w", err)
 	}
+
+	item.Code = strings.TrimSpace(item.Code)
+	item.Name = strings.TrimSpace(item.Name)
+	item.Direction = strings.TrimSpace(item.Direction)
+	item.DefaultCFOP = strings.TrimSpace(item.DefaultCFOP)
 
 	return &item, nil
 }
@@ -115,10 +135,12 @@ func (r *Repository) FindDefault(ctx context.Context) (*FiscalOperation, error) 
 			active
 		FROM fiscal_operations
 		WHERE is_default = TRUE
+		  AND active = TRUE
 		LIMIT 1
 	`
 
 	var item FiscalOperation
+
 	err := r.db.QueryRow(ctx, query).Scan(
 		&item.ID,
 		&item.Code,
@@ -129,8 +151,16 @@ func (r *Repository) FindDefault(ctx context.Context) (*FiscalOperation, error) 
 		&item.Active,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrOperationNotFound
+		}
 		return nil, fmt.Errorf("find default fiscal operation: %w", err)
 	}
+
+	item.Code = strings.TrimSpace(item.Code)
+	item.Name = strings.TrimSpace(item.Name)
+	item.Direction = strings.TrimSpace(item.Direction)
+	item.DefaultCFOP = strings.TrimSpace(item.DefaultCFOP)
 
 	return &item, nil
 }

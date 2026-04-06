@@ -2,8 +2,11 @@ package invoices
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -84,23 +87,22 @@ func (r *Repository) CreateInvoice(ctx context.Context, p CreateInvoiceParams) (
 	err := r.db.QueryRow(
 		ctx,
 		query,
-		p.OrganizationID,
-		p.AccessKey,
-		p.Number,
-		p.Series,
-		p.IssuedAt,
-		p.EmitterName,
-		p.EmitterCNPJ,
-		p.EmitterUF,
-		p.RecipientName,
-		p.RecipientCNPJ,
-		p.RecipientUF,
-		p.OperationNature,
-		p.TotalAmount,
-		p.XMLRaw,
-		p.Status,
+		strings.TrimSpace(p.OrganizationID),
+		strings.TrimSpace(p.AccessKey),
+		strings.TrimSpace(p.Number),
+		strings.TrimSpace(p.Series),
+		strings.TrimSpace(p.IssuedAt),
+		strings.TrimSpace(p.EmitterName),
+		strings.TrimSpace(p.EmitterCNPJ),
+		strings.ToUpper(strings.TrimSpace(p.EmitterUF)),
+		strings.TrimSpace(p.RecipientName),
+		strings.TrimSpace(p.RecipientCNPJ),
+		strings.ToUpper(strings.TrimSpace(p.RecipientUF)),
+		strings.TrimSpace(p.OperationNature),
+		strings.TrimSpace(p.TotalAmount),
+		strings.TrimSpace(p.XMLRaw),
+		strings.TrimSpace(p.Status),
 	).Scan(&invoiceID)
-
 	if err != nil {
 		return "", fmt.Errorf("create invoice: %w", err)
 	}
@@ -144,25 +146,24 @@ func (r *Repository) CreateInvoiceItem(ctx context.Context, p CreateInvoiceItemP
 	_, err := r.db.Exec(
 		ctx,
 		query,
-		p.InvoiceID,
+		strings.TrimSpace(p.InvoiceID),
 		p.ItemNumber,
-		p.ProductCode,
-		p.GTIN,
-		p.GTINTributable,
-		p.Description,
-		p.NCM,
-		p.CEST,
-		p.CFOP,
-		p.Unit,
-		p.Quantity,
-		p.UnitValue,
-		p.TotalValue,
-		p.ICMSValue,
-		p.IPIValue,
-		p.PISValue,
-		p.COFINSValue,
+		strings.TrimSpace(p.ProductCode),
+		strings.TrimSpace(p.GTIN),
+		strings.TrimSpace(p.GTINTributable),
+		strings.TrimSpace(p.Description),
+		strings.TrimSpace(p.NCM),
+		strings.TrimSpace(p.CEST),
+		strings.TrimSpace(p.CFOP),
+		strings.TrimSpace(p.Unit),
+		strings.TrimSpace(p.Quantity),
+		strings.TrimSpace(p.UnitValue),
+		strings.TrimSpace(p.TotalValue),
+		strings.TrimSpace(p.ICMSValue),
+		strings.TrimSpace(p.IPIValue),
+		strings.TrimSpace(p.PISValue),
+		strings.TrimSpace(p.COFINSValue),
 	)
-
 	if err != nil {
 		return fmt.Errorf("create invoice item: %w", err)
 	}
@@ -192,19 +193,20 @@ func (r *Repository) ListInvoices(ctx context.Context, organizationID string) ([
 			COALESCE(status, '')
 		FROM invoices
 		WHERE organization_id = $1
-		ORDER BY created_at DESC
+		ORDER BY created_at DESC, id DESC
 	`
 
-	rows, err := r.db.Query(ctx, query, organizationID)
+	rows, err := r.db.Query(ctx, query, strings.TrimSpace(organizationID))
 	if err != nil {
 		return nil, fmt.Errorf("list invoices: %w", err)
 	}
 	defer rows.Close()
 
-	var invoices []InvoiceListItem
+	invoices := make([]InvoiceListItem, 0)
 
 	for rows.Next() {
 		var item InvoiceListItem
+
 		if err := rows.Scan(
 			&item.ID,
 			&item.Number,
@@ -216,6 +218,7 @@ func (r *Repository) ListInvoices(ctx context.Context, organizationID string) ([
 		); err != nil {
 			return nil, fmt.Errorf("scan invoice list item: %w", err)
 		}
+
 		invoices = append(invoices, item)
 	}
 
@@ -279,7 +282,12 @@ func (r *Repository) GetInvoiceByID(ctx context.Context, organizationID, invoice
 
 	var detail InvoiceDetail
 
-	err := r.db.QueryRow(ctx, queryInvoice, invoiceID, organizationID).Scan(
+	err := r.db.QueryRow(
+		ctx,
+		queryInvoice,
+		strings.TrimSpace(invoiceID),
+		strings.TrimSpace(organizationID),
+	).Scan(
 		&detail.ID,
 		&detail.Number,
 		&detail.Series,
@@ -293,6 +301,9 @@ func (r *Repository) GetInvoiceByID(ctx context.Context, organizationID, invoice
 		&detail.Status,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrInvoiceNotFound
+		}
 		return nil, fmt.Errorf("get invoice by id: %w", err)
 	}
 
@@ -318,14 +329,17 @@ func (r *Repository) GetInvoiceByID(ctx context.Context, organizationID, invoice
 		ORDER BY item_number ASC
 	`
 
-	rows, err := r.db.Query(ctx, queryItems, invoiceID)
+	rows, err := r.db.Query(ctx, queryItems, strings.TrimSpace(invoiceID))
 	if err != nil {
 		return nil, fmt.Errorf("get invoice items: %w", err)
 	}
 	defer rows.Close()
 
+	detail.Items = make([]InvoiceItemDetail, 0)
+
 	for rows.Next() {
 		var item InvoiceItemDetail
+
 		if err := rows.Scan(
 			&item.ItemNumber,
 			&item.ProductCode,

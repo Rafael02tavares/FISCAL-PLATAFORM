@@ -8,34 +8,34 @@ import (
 
 type contextKey string
 
-const UserIDContextKey contextKey = "user_id"
+const userIDContextKey contextKey = "user_id"
 
-func AuthMiddleware(jwt *JWT, next http.Handler) http.Handler {
+func AuthMiddleware(jwtService *JWT, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
+		authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
 		if authHeader == "" {
-			http.Error(w, "authorization header is required", http.StatusUnauthorized)
+			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "header de autorização é obrigatório")
 			return
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, "invalid authorization header", http.StatusUnauthorized)
+		tokenType, tokenString, ok := strings.Cut(authHeader, " ")
+		if !ok || tokenType != "Bearer" || strings.TrimSpace(tokenString) == "" {
+			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "header de autorização inválido")
 			return
 		}
 
-		userID, err := jwt.Parse(parts[1])
+		userID, err := jwtService.Parse(strings.TrimSpace(tokenString))
 		if err != nil {
-			http.Error(w, "invalid token", http.StatusUnauthorized)
+			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "token inválido")
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), UserIDContextKey, userID)
+		ctx := context.WithValue(r.Context(), userIDContextKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func UserIDFromContext(ctx context.Context) string {
-	userID, _ := ctx.Value(UserIDContextKey).(string)
+	userID, _ := ctx.Value(userIDContextKey).(string)
 	return userID
 }

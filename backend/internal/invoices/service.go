@@ -3,12 +3,21 @@ package invoices
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
-	"github.com/rafa/fiscal-platform/backend/internal/catalog"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/catalog"
 )
+
+var (
+	ErrInvalidInvoiceData = errors.New("invalid invoice data")
+	ErrInvoiceNotFound    = errors.New("invoice not found")
+)
+
+const processedInvoiceStatus = "processed"
 
 type Service struct {
 	repo           *Repository
@@ -28,59 +37,68 @@ type UploadResult struct {
 }
 
 func (s *Service) ProcessXML(ctx context.Context, organizationID string, xmlRaw string, file io.Reader) (*UploadResult, error) {
+	organizationID = strings.TrimSpace(organizationID)
+	xmlRaw = strings.TrimSpace(xmlRaw)
+
+	if organizationID == "" || file == nil || xmlRaw == "" {
+		return nil, ErrInvalidInvoiceData
+	}
+
 	doc, err := ParseXML(file)
 	if err != nil {
 		return nil, fmt.Errorf("parse xml: %w", err)
 	}
 
-	recipientCNPJ := doc.NFe.InfNFe.Dest.CNPJ
+	recipientCNPJ := strings.TrimSpace(doc.NFe.InfNFe.Dest.CNPJ)
 	if recipientCNPJ == "" {
-		recipientCNPJ = doc.NFe.InfNFe.Dest.CPF
+		recipientCNPJ = strings.TrimSpace(doc.NFe.InfNFe.Dest.CPF)
 	}
+
+	accessKey := strings.TrimPrefix(strings.TrimSpace(doc.NFe.InfNFe.ID), "NFe")
 
 	invoiceID, err := s.repo.CreateInvoice(ctx, CreateInvoiceParams{
 		OrganizationID:  organizationID,
-		AccessKey:       doc.NFe.InfNFe.ID,
-		Number:          doc.NFe.InfNFe.Ide.NNF,
-		Series:          doc.NFe.InfNFe.Ide.Serie,
+		AccessKey:       accessKey,
+		Number:          strings.TrimSpace(doc.NFe.InfNFe.Ide.NNF),
+		Series:          strings.TrimSpace(doc.NFe.InfNFe.Ide.Serie),
 		IssuedAt:        normalizeTimestamp(doc.NFe.InfNFe.Ide.DhEmi),
-		EmitterName:     doc.NFe.InfNFe.Emit.XNome,
-		EmitterCNPJ:     doc.NFe.InfNFe.Emit.CNPJ,
-		EmitterUF:       doc.NFe.InfNFe.Emit.Ender.UF,
-		RecipientName:   doc.NFe.InfNFe.Dest.XNome,
+		EmitterName:     strings.TrimSpace(doc.NFe.InfNFe.Emit.XNome),
+		EmitterCNPJ:     strings.TrimSpace(doc.NFe.InfNFe.Emit.CNPJ),
+		EmitterUF:       strings.ToUpper(strings.TrimSpace(doc.NFe.InfNFe.Emit.Ender.UF)),
+		RecipientName:   strings.TrimSpace(doc.NFe.InfNFe.Dest.XNome),
 		RecipientCNPJ:   recipientCNPJ,
-		RecipientUF:     doc.NFe.InfNFe.Dest.Ender.UF,
-		OperationNature: doc.NFe.InfNFe.Ide.NatOp,
-		TotalAmount:     doc.NFe.InfNFe.Total.ICMSTot.VNF,
+		RecipientUF:     strings.ToUpper(strings.TrimSpace(doc.NFe.InfNFe.Dest.Ender.UF)),
+		OperationNature: strings.TrimSpace(doc.NFe.InfNFe.Ide.NatOp),
+		TotalAmount:     strings.TrimSpace(doc.NFe.InfNFe.Total.ICMSTot.VNF),
 		XMLRaw:          xmlRaw,
-		Status:          "processed",
+		Status:          processedInvoiceStatus,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	for _, item := range doc.NFe.InfNFe.Det {
-		itemNumber, _ := strconv.Atoi(item.NItem)
+		itemNumber, _ := strconv.Atoi(strings.TrimSpace(item.NItem))
 
-		icmsValue := extractICMSValue(item.Imposto.ICMS.InnerXML)
-		ipiValue := extractIPIValue(item.Imposto.IPI)
-		pisValue := extractPISValue(item.Imposto.PIS)
-		cofinsValue := extractCOFINSValue(item.Imposto.COFINS)
+		icmsValue := strings.TrimSpace(extractICMSValue(item.Imposto.ICMS.InnerXML))
+		ipiValue := strings.TrimSpace(extractIPIValue(item.Imposto.IPI))
+		pisValue := strings.TrimSpace(extractPISValue(item.Imposto.PIS))
+		cofinsValue := strings.TrimSpace(extractCOFINSValue(item.Imposto.COFINS))
 
 		err := s.repo.CreateInvoiceItem(ctx, CreateInvoiceItemParams{
 			InvoiceID:      invoiceID,
 			ItemNumber:     itemNumber,
-			ProductCode:    item.Prod.CProd,
-			GTIN:           item.Prod.CEAN,
-			GTINTributable: item.Prod.CEANTrib,
-			Description:    item.Prod.XProd,
-			NCM:            item.Prod.NCM,
-			CEST:           item.Prod.CEST,
-			CFOP:           item.Prod.CFOP,
-			Unit:           item.Prod.UCom,
-			Quantity:       item.Prod.QCom,
-			UnitValue:      item.Prod.VUnCom,
-			TotalValue:     item.Prod.VProd,
+			ProductCode:    strings.TrimSpace(item.Prod.CProd),
+			GTIN:           normalizeGTIN(item.Prod.CEAN),
+			GTINTributable: normalizeGTIN(item.Prod.CEANTrib),
+			Description:    strings.TrimSpace(item.Prod.XProd),
+			NCM:            onlyDigits(item.Prod.NCM),
+			CEST:           onlyDigits(item.Prod.CEST),
+			CFOP:           onlyDigits(item.Prod.CFOP),
+			Unit:           strings.TrimSpace(item.Prod.UCom),
+			Quantity:       strings.TrimSpace(item.Prod.QCom),
+			UnitValue:      strings.TrimSpace(item.Prod.VUnCom),
+			TotalValue:     strings.TrimSpace(item.Prod.VProd),
 			ICMSValue:      icmsValue,
 			IPIValue:       ipiValue,
 			PISValue:       pisValue,
@@ -94,21 +112,18 @@ func (s *Service) ProcessXML(ctx context.Context, organizationID string, xmlRaw 
 			_ = s.catalogService.RegisterObservedItem(ctx, catalog.RegisterObservedItemParams{
 				OrganizationID:  organizationID,
 				SourceInvoiceID: invoiceID,
-
-				GTIN:        item.Prod.CEAN,
-				Description: item.Prod.XProd,
-
-				NCM:         item.Prod.NCM,
-				CEST:        item.Prod.CEST,
-				CFOP:        item.Prod.CFOP,
-				ICMSValue:   icmsValue,
-				IPIValue:    ipiValue,
-				PISValue:    pisValue,
-				COFINSValue: cofinsValue,
-
-				EmitterUF:       doc.NFe.InfNFe.Emit.Ender.UF,
-				RecipientUF:     doc.NFe.InfNFe.Dest.Ender.UF,
-				OperationNature: doc.NFe.InfNFe.Ide.NatOp,
+				GTIN:            normalizeGTIN(item.Prod.CEAN),
+				Description:     strings.TrimSpace(item.Prod.XProd),
+				NCM:             onlyDigits(item.Prod.NCM),
+				CEST:            onlyDigits(item.Prod.CEST),
+				CFOP:            onlyDigits(item.Prod.CFOP),
+				ICMSValue:       icmsValue,
+				IPIValue:        ipiValue,
+				PISValue:        pisValue,
+				COFINSValue:     cofinsValue,
+				EmitterUF:       strings.ToUpper(strings.TrimSpace(doc.NFe.InfNFe.Emit.Ender.UF)),
+				RecipientUF:     strings.ToUpper(strings.TrimSpace(doc.NFe.InfNFe.Dest.Ender.UF)),
+				OperationNature: strings.TrimSpace(doc.NFe.InfNFe.Ide.NatOp),
 			})
 		}
 	}
@@ -119,8 +134,40 @@ func (s *Service) ProcessXML(ctx context.Context, organizationID string, xmlRaw 
 	}, nil
 }
 
+func (s *Service) ListInvoices(ctx context.Context, organizationID string) ([]InvoiceListItem, error) {
+	organizationID = strings.TrimSpace(organizationID)
+	if organizationID == "" {
+		return nil, ErrInvalidInvoiceData
+	}
+
+	return s.repo.ListInvoices(ctx, organizationID)
+}
+
+func (s *Service) GetInvoiceByID(ctx context.Context, organizationID, invoiceID string) (*InvoiceDetail, error) {
+	organizationID = strings.TrimSpace(organizationID)
+	invoiceID = strings.TrimSpace(invoiceID)
+
+	if organizationID == "" || invoiceID == "" {
+		return nil, ErrInvalidInvoiceData
+	}
+
+	invoice, err := s.repo.GetInvoiceByID(ctx, organizationID, invoiceID)
+	if err != nil {
+		if isNotFoundError(err) {
+			return nil, ErrInvoiceNotFound
+		}
+		return nil, err
+	}
+
+	if invoice == nil {
+		return nil, ErrInvoiceNotFound
+	}
+
+	return invoice, nil
+}
+
 func normalizeTimestamp(v string) string {
-	return v
+	return strings.TrimSpace(v)
 }
 
 func extractIPIValue(ipi IPI) string {
@@ -161,10 +208,34 @@ func extractICMSValue(innerXML []byte) string {
 	return holder.VICMS
 }
 
-func (s *Service) ListInvoices(ctx context.Context, organizationID string) ([]InvoiceListItem, error) {
-	return s.repo.ListInvoices(ctx, organizationID)
+func normalizeGTIN(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || value == "SEM GTIN" {
+		return ""
+	}
+	return value
 }
 
-func (s *Service) GetInvoiceByID(ctx context.Context, organizationID, invoiceID string) (*InvoiceDetail, error) {
-	return s.repo.GetInvoiceByID(ctx, organizationID, invoiceID)
+func onlyDigits(value string) string {
+	var b strings.Builder
+	b.Grow(len(value))
+
+	for _, r := range value {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+
+	return b.String()
+}
+
+func isNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	msg := strings.ToLower(err.Error())
+
+	return strings.Contains(msg, "not found") ||
+		strings.Contains(msg, "no rows")
 }

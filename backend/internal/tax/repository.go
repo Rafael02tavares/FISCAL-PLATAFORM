@@ -2,12 +2,14 @@ package tax
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/rafa/fiscal-platform/backend/internal/catalog"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/catalog"
 )
 
 type Repository struct {
@@ -67,7 +69,7 @@ func (r *Repository) FindBestMatch(ctx context.Context, gtin, description string
 		}
 	}
 
-	return nil, fmt.Errorf("no matching product found")
+	return nil, ErrSuggestionNotFound
 }
 
 func (r *Repository) findByGTIN(ctx context.Context, normalizedGTIN string) (*TaxMatch, error) {
@@ -123,6 +125,9 @@ func (r *Repository) findByGTIN(ctx context.Context, normalizedGTIN string) (*Ta
 		&item.CBSRate,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrSuggestionNotFound
+		}
 		return nil, fmt.Errorf("find tax profile by gtin: %w", err)
 	}
 
@@ -182,6 +187,9 @@ func (r *Repository) findByDescription(ctx context.Context, normalizedDescriptio
 		&item.CBSRate,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrSuggestionNotFound
+		}
 		return nil, fmt.Errorf("find tax profile by description: %w", err)
 	}
 
@@ -282,29 +290,29 @@ func (r *Repository) CreateSuggestionLog(ctx context.Context, p CreateSuggestion
 		ctx,
 		query,
 		strings.TrimSpace(p.OrganizationID),
-		p.GTIN,
-		p.Description,
-		p.OperationCode,
-		p.CClasTrib,
+		strings.TrimSpace(p.GTIN),
+		strings.TrimSpace(p.Description),
+		strings.TrimSpace(p.OperationCode),
+		strings.TrimSpace(p.CClasTrib),
 
-		p.SuggestedNCM,
-		p.SuggestedCEST,
-		p.SuggestedCFOP,
+		strings.TrimSpace(p.SuggestedNCM),
+		strings.TrimSpace(p.SuggestedCEST),
+		strings.TrimSpace(p.SuggestedCFOP),
 
-		p.SuggestedPISCST,
-		p.SuggestedCOFINSCST,
-		p.SuggestedPISRevCode,
-		p.SuggestedCOFINSRevCode,
+		strings.TrimSpace(p.SuggestedPISCST),
+		strings.TrimSpace(p.SuggestedCOFINSCST),
+		strings.TrimSpace(p.SuggestedPISRevCode),
+		strings.TrimSpace(p.SuggestedCOFINSRevCode),
 
-		p.SuggestedICMS,
-		p.SuggestedIPI,
-		p.SuggestedPIS,
-		p.SuggestedCOFINS,
+		strings.TrimSpace(p.SuggestedICMS),
+		strings.TrimSpace(p.SuggestedIPI),
+		strings.TrimSpace(p.SuggestedPIS),
+		strings.TrimSpace(p.SuggestedCOFINS),
 
-		p.SuggestedIBSRate,
-		p.SuggestedCBSRate,
+		strings.TrimSpace(p.SuggestedIBSRate),
+		strings.TrimSpace(p.SuggestedCBSRate),
 
-		p.MatchType,
+		strings.TrimSpace(p.MatchType),
 		p.ConfidenceScore,
 	).Scan(&id)
 	if err != nil {
@@ -313,6 +321,7 @@ func (r *Repository) CreateSuggestionLog(ctx context.Context, p CreateSuggestion
 
 	return id, nil
 }
+
 type CreateSuggestionLegalBasisParams struct {
 	SuggestionLogID string
 	LegalSourceID   string
@@ -342,11 +351,11 @@ func (r *Repository) CreateSuggestionLegalBasis(ctx context.Context, p CreateSug
 	_, err := r.db.Exec(
 		ctx,
 		query,
-		p.SuggestionLogID,
-		p.LegalSourceID,
-		p.TaxType,
-		p.AppliedReason,
-		p.Weight,
+		strings.TrimSpace(p.SuggestionLogID),
+		strings.TrimSpace(p.LegalSourceID),
+		strings.TrimSpace(p.TaxType),
+		strings.TrimSpace(p.AppliedReason),
+		strings.TrimSpace(p.Weight),
 	)
 	if err != nil {
 		return fmt.Errorf("create suggestion legal basis: %w", err)

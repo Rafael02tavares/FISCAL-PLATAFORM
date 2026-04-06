@@ -9,9 +9,11 @@ import (
 	"path"
 	"strings"
 
-	"github.com/rafa/fiscal-platform/backend/internal/auth"
-	"github.com/rafa/fiscal-platform/backend/internal/organizations"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/auth"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/organizations"
 )
+
+const maxUploadSize = 20 << 20 // 20 MB
 
 type Handler struct {
 	service             *Service
@@ -31,7 +33,7 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(20 << 20); err != nil {
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_MULTIPART_FORM", "formulário multipart inválido")
 		return
 	}
@@ -46,6 +48,11 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	filename := strings.TrimSpace(fileHeader.Filename)
 	if filename == "" {
 		writeError(w, http.StatusBadRequest, "INVALID_FILENAME", "nome do arquivo é obrigatório")
+		return
+	}
+
+	if !strings.HasSuffix(strings.ToLower(filename), ".xml") {
+		writeError(w, http.StatusBadRequest, "INVALID_FILE_TYPE", "o arquivo enviado deve ser um XML")
 		return
 	}
 
@@ -105,7 +112,12 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	invoice, err := h.service.GetInvoiceByID(r.Context(), orgID, invoiceID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "GET_INVOICE_FAILED", "não foi possível buscar a nota fiscal")
+		switch {
+		case errors.Is(err, ErrInvoiceNotFound):
+			writeError(w, http.StatusNotFound, "INVOICE_NOT_FOUND", "nota fiscal não encontrada")
+		default:
+			writeError(w, http.StatusInternalServerError, "GET_INVOICE_FAILED", "não foi possível buscar a nota fiscal")
+		}
 		return
 	}
 
@@ -158,7 +170,10 @@ func extractInvoiceID(urlPath string) (string, error) {
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rafa/fiscal-platform/backend/internal/auth"
-	"github.com/rafa/fiscal-platform/backend/internal/organizations"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/auth"
+	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/organizations"
 )
 
 type Handler struct {
@@ -23,6 +23,8 @@ func NewHandler(service *Service, orgService *organizations.Service) *Handler {
 }
 
 func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	userID := auth.UserIDFromContext(r.Context())
 	if userID == "" {
 		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "usuário não autenticado")
@@ -65,7 +67,14 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.service.Suggest(r.Context(), req)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "SUGGESTION_NOT_FOUND", "não foi possível sugerir perfil tributário para o contexto informado")
+		switch {
+		case errors.Is(err, ErrInvalidSuggestionInput):
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "dados insuficientes para gerar a sugestão")
+		case errors.Is(err, ErrSuggestionNotFound):
+			writeError(w, http.StatusNotFound, "SUGGESTION_NOT_FOUND", "não foi possível sugerir perfil tributário para o contexto informado")
+		default:
+			writeError(w, http.StatusInternalServerError, "SUGGESTION_FAILED", "não foi possível gerar a sugestão tributária")
+		}
 		return
 	}
 
@@ -78,7 +87,7 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (r *SuggestRequest) normalize() {
-	r.GTIN = strings.TrimSpace(r.GTIN)
+	r.GTIN = normalizeGTIN(r.GTIN)
 	r.Description = strings.TrimSpace(r.Description)
 	r.OperationCode = strings.TrimSpace(r.OperationCode)
 	r.TaxRegime = strings.TrimSpace(r.TaxRegime)
@@ -105,10 +114,21 @@ func (r *SuggestRequest) validate() error {
 	}
 }
 
+func normalizeGTIN(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || strings.EqualFold(value, "SEM GTIN") {
+		return ""
+	}
+	return value
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {
