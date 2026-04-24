@@ -1,17 +1,810 @@
 ---
-import DashboardLayout from "../layouts/DashboardLayout.astro";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import produtosScript from "../../scripts/produtos.ts?url";
 ---
 
 <DashboardLayout
-  title="Simulação tributária"
-  subtitle="Simule a tributação por NCM, UF, regime e operação"
+  title="Catalogo consultavel de produtos"
+  subtitle="Consulte e mantenha a memoria tributaria dos produtos sem depender da nota de origem"
 >
   <div class="page-header">
-    <h2>Simulação tributária</h2>
-    <p>Esta tela será o coração comercial do produto.</p>
+    <h2>Consulta fiscal de produtos</h2>
+    <p>
+      Esta tela agora prioriza consulta. O usuario localiza rapidamente a tributacao do item e a
+      equipe administrativa expande o cadastro apenas quando precisar enriquecer a memoria fiscal.
+    </p>
   </div>
 
-  <section class="card card--padded">
-    Em breve vamos ligar esta página ao motor tributário.
+  <section class="catalog-hero">
+    <div class="catalog-hero__copy">
+      <span class="catalog-badge">Catalogo consultavel</span>
+      <h3>Consulte o perfil tributario por descricao, GTIN, NCM ou codigo interno</h3>
+      <p>
+        O produto passa a ser tratado como ativo da plataforma. A memoria fiscal fica pronta para
+        consulta operacional, comparacao e reaproveitamento na sugestao tributaria.
+      </p>
+      <div class="catalog-hero__legend">
+        <span><i class="legend-dot legend-dot--teal"></i>Classificacao</span>
+        <span><i class="legend-dot legend-dot--amber"></i>Apuracao</span>
+        <span><i class="legend-dot legend-dot--sky"></i>Operacao</span>
+      </div>
+    </div>
+
+    <div class="catalog-hero__visual">
+      <div class="insight-card">
+        <span class="insight-card__label">Matriz de cobertura</span>
+        <div id="catalog-stats" class="insight-card__grid">
+          <div class="dashboard-note">Carregando indicadores do catalogo...</div>
+        </div>
+      </div>
+
+      <div class="catalog-illustration" aria-hidden="true">
+        <svg viewBox="0 0 360 220" role="img">
+          <defs>
+            <linearGradient id="catalogLineA" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#0f766e"></stop>
+              <stop offset="100%" stop-color="#0ea5e9"></stop>
+            </linearGradient>
+            <linearGradient id="catalogLineB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#f59e0b"></stop>
+              <stop offset="100%" stop-color="#fb7185"></stop>
+            </linearGradient>
+          </defs>
+          <rect x="18" y="18" width="324" height="184" rx="24" fill="#ffffff" stroke="#dbe4ee"></rect>
+          <rect x="42" y="42" width="98" height="18" rx="9" fill="#ccfbf1"></rect>
+          <rect x="42" y="74" width="152" height="11" rx="5.5" fill="#e2e8f0"></rect>
+          <rect x="42" y="96" width="124" height="11" rx="5.5" fill="#e2e8f0"></rect>
+          <rect x="42" y="148" width="94" height="26" rx="13" fill="#fef3c7"></rect>
+          <rect x="154" y="148" width="94" height="26" rx="13" fill="#e0f2fe"></rect>
+          <path d="M230 148 C252 118, 280 110, 310 84" fill="none" stroke="url(#catalogLineB)" stroke-width="10" stroke-linecap="round"></path>
+          <circle cx="232" cy="148" r="10" fill="#f59e0b"></circle>
+          <circle cx="310" cy="84" r="10" fill="#0ea5e9"></circle>
+          <circle cx="260" cy="84" r="42" fill="none" stroke="#e2e8f0" stroke-width="18"></circle>
+          <circle cx="260" cy="84" r="42" fill="none" stroke="url(#catalogLineA)" stroke-width="18" stroke-linecap="round" stroke-dasharray="184 80" transform="rotate(-90 260 84)"></circle>
+        </svg>
+      </div>
+    </div>
   </section>
+
+  <div class="catalog-grid">
+    <section class="card card--padded">
+      <div class="section-heading">
+        <div>
+          <span class="section-heading__eyebrow">Consulta principal</span>
+          <h3>Encontre a tributacao consolidada do produto</h3>
+        </div>
+        <p>Pesquise de forma simples e veja o perfil fiscal consolidado sem depender da nota de origem.</p>
+      </div>
+
+      <div class="consultation-shell">
+        <form id="catalog-search-form" class="catalog-search-panel">
+          <label for="catalog-product-filter">
+            <span class="catalog-search-panel__label">Busca unica</span>
+          </label>
+          <div class="catalog-search-row">
+            <input
+              id="catalog-product-filter"
+              class="catalog-search catalog-search--hero"
+              type="text"
+              placeholder="Digite descricao, GTIN, NCM, CFOP, CEST ou codigo interno..."
+            />
+            <button class="primary-button primary-button--ghost" type="submit">Consultar</button>
+          </div>
+          <span class="catalog-search-panel__hint">
+            Se nao preencher nada, a plataforma mostra toda a memoria tributaria da organizacao.
+          </span>
+        </form>
+
+        <div class="consultation-quick-actions">
+          <span class="quick-chip">Descricao do item</span>
+          <span class="quick-chip">Codigo de barras / GTIN</span>
+          <span class="quick-chip">NCM e NCM EX</span>
+          <span class="quick-chip">CFOP ou CSOSN</span>
+        </div>
+
+        <div id="catalog-search-summary" class="consultation-summary">
+          Preparando contexto de consulta...
+        </div>
+
+        <div id="catalog-products-result" class="dashboard-note">Carregando produtos tributarios...</div>
+      </div>
+    </section>
+
+    <section class="side-column">
+      <article class="card card--padded">
+        <div class="section-heading section-heading--tight">
+          <div>
+            <span class="section-heading__eyebrow">Consulta guiada</span>
+            <h3>Como interpretar a busca</h3>
+          </div>
+        </div>
+        <div class="governance-grid">
+          <article class="governance-card">
+            <h4>Consulta por descricao</h4>
+            <p>Encontre itens semelhantes e compare rapidamente a classificacao e a tributacao consolidada.</p>
+          </article>
+          <article class="governance-card">
+            <h4>Consulta por codigo</h4>
+            <p>Pesquise GTIN, NCM, CFOP, CEST ou codigo interno para localizar o produto certo em segundos.</p>
+          </article>
+          <article class="governance-card">
+            <h4>Leitura fiscal</h4>
+            <p>O card do produto mostra classificacao, CST, contribuicoes e tributos da reforma no mesmo painel.</p>
+          </article>
+        </div>
+      </article>
+
+      <article class="card card--padded">
+        <div class="section-heading section-heading--tight">
+          <div>
+            <span class="section-heading__eyebrow">Busca rapida</span>
+            <h3>Panorama da base</h3>
+          </div>
+        </div>
+        <div id="catalog-coverage" class="dashboard-note">Carregando comparativos...</div>
+      </article>
+
+      <article class="card card--padded">
+        <div class="section-heading section-heading--tight">
+          <div>
+            <span class="section-heading__eyebrow">Governanca</span>
+            <h3>Frentes tributarias</h3>
+          </div>
+        </div>
+        <div id="catalog-governance" class="governance-grid"></div>
+      </article>
+
+      <details class="card card--padded catalog-admin-panel">
+        <summary class="catalog-admin-panel__summary">
+          <div>
+            <span class="section-heading__eyebrow">Manutencao especializada</span>
+            <h3>Cadastro tributario do produto</h3>
+          </div>
+          <p>Abra apenas quando precisar complementar a memoria fiscal manualmente.</p>
+        </summary>
+
+        <form id="catalog-product-form" class="catalog-form">
+          <label>
+            Codigo interno
+            <input name="product_code" type="text" placeholder="SKU-001" />
+          </label>
+
+          <label>
+            GTIN
+            <input name="gtin" type="text" placeholder="7890000000000" />
+          </label>
+
+          <label class="full-width">
+            Descricao
+            <input name="description" type="text" placeholder="Detergente liquido 500ml" required />
+          </label>
+
+          <label>
+            NCM
+            <input name="ncm" type="text" placeholder="34025000" />
+          </label>
+
+          <label>
+            NCM EX
+            <input name="ncm_ex" type="text" placeholder="001" />
+          </label>
+
+          <label>
+            CEST
+            <input name="cest" type="text" placeholder="2804700" />
+          </label>
+
+          <label>
+            cClasTrib
+            <input name="cclas_trib" type="text" placeholder="123" />
+          </label>
+
+          <label>
+            CFOP
+            <input name="cfop" type="text" placeholder="5102" />
+          </label>
+
+          <label>
+            CSOSN
+            <input name="csosn" type="text" placeholder="102" />
+          </label>
+
+          <label>
+            ICMS CST
+            <input name="icms_cst" type="text" placeholder="00" />
+          </label>
+
+          <label>
+            PIS CST
+            <input name="pis_cst" type="text" placeholder="01" />
+          </label>
+
+          <label>
+            COFINS CST
+            <input name="cofins_cst" type="text" placeholder="01" />
+          </label>
+
+          <label>
+            Cod. rec. PIS
+            <input name="pis_revenue_code" type="text" placeholder="8109" />
+          </label>
+
+          <label>
+            Cod. rec. COFINS
+            <input name="cofins_revenue_code" type="text" placeholder="2172" />
+          </label>
+
+          <label>
+            cBenef
+            <input name="cbenef" type="text" placeholder="SP000001" />
+          </label>
+
+          <label>
+            Valor ICMS
+            <input name="icms_value" type="text" placeholder="18.00" />
+          </label>
+
+          <label>
+            Valor IPI
+            <input name="ipi_value" type="text" placeholder="0.00" />
+          </label>
+
+          <label>
+            Valor PIS
+            <input name="pis_value" type="text" placeholder="1.65" />
+          </label>
+
+          <label>
+            Valor COFINS
+            <input name="cofins_value" type="text" placeholder="7.60" />
+          </label>
+
+          <label>
+            Aliquota PIS
+            <input name="pis_rate" type="text" placeholder="1.65" />
+          </label>
+
+          <label>
+            Aliquota COFINS
+            <input name="cofins_rate" type="text" placeholder="7.60" />
+          </label>
+
+          <label>
+            Aliquota ICMS
+            <input name="icms_rate" type="text" placeholder="18.00" />
+          </label>
+
+          <label>
+            Red. base ICMS
+            <input name="icms_base_reduction" type="text" placeholder="0.00" />
+          </label>
+
+          <label>
+            FCP
+            <input name="fcp_rate" type="text" placeholder="2.00" />
+          </label>
+
+          <label>
+            ICMS ST
+            <input name="icms_st_rate" type="text" placeholder="0.00" />
+          </label>
+
+          <label>
+            IBS
+            <input name="ibs_rate" type="text" placeholder="0.00" />
+          </label>
+
+          <label>
+            CBS
+            <input name="cbs_rate" type="text" placeholder="0.00" />
+          </label>
+
+          <label>
+            Imposto seletivo
+            <input name="selective_tax_code" type="text" placeholder="IS-01" />
+          </label>
+
+          <label>
+            Aliq. seletivo
+            <input name="selective_tax_rate" type="text" placeholder="0.00" />
+          </label>
+
+          <label>
+            Operacao
+            <input name="operation_code" type="text" placeholder="VENDA_ESTADUAL" />
+          </label>
+
+          <label>
+            UF emitente
+            <input name="emitter_uf" type="text" maxlength="2" placeholder="SP" />
+          </label>
+
+          <label>
+            UF destinatario
+            <input name="recipient_uf" type="text" maxlength="2" placeholder="RJ" />
+          </label>
+
+          <label class="full-width">
+            Natureza da operacao
+            <input name="operation_nature" type="text" placeholder="Venda para contribuinte" />
+          </label>
+
+          <div class="form-actions full-width">
+            <button class="primary-button" type="submit">Salvar produto tributario</button>
+            <p class="form-hint">O cadastro fica disponivel para sugestao fiscal e simulacao sem depender da nota original.</p>
+          </div>
+        </form>
+
+        <div id="catalog-form-message" class="dashboard-note">Preparando cadastro tributario...</div>
+      </details>
+    </section>
+  </div>
+
+  <script type="module" src={produtosScript}></script>
+
+  <style>
+    .catalog-hero,
+    .catalog-grid {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .catalog-hero {
+      grid-template-columns: 1.1fr 0.9fr;
+      padding: 24px;
+      border: 1px solid #dbe4ee;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.14), transparent 30%),
+        linear-gradient(135deg, #fffef8, #f8fbff);
+    }
+
+    .catalog-grid {
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+      align-items: start;
+    }
+
+    .catalog-badge,
+    .section-heading__eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .catalog-hero__copy h3 {
+      margin: 10px 0;
+      font-size: clamp(26px, 3vw, 38px);
+    }
+
+    .catalog-hero__copy p,
+    .section-heading p,
+    .product-card__meta,
+    .metric-card p {
+      margin: 0;
+      color: #475569;
+    }
+
+    .catalog-hero__legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 18px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .catalog-hero__legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .legend-dot--teal { background: #0f766e; }
+    .legend-dot--amber { background: #f59e0b; }
+    .legend-dot--sky { background: #0ea5e9; }
+
+    .catalog-hero__visual,
+    .side-column {
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .insight-card,
+    .catalog-illustration {
+      border: 1px solid #dbe4ee;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 18px;
+    }
+
+    .insight-card__label {
+      display: inline-flex;
+      margin-bottom: 12px;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .insight-card__grid,
+    .governance-grid,
+    .catalog-products-list,
+    .catalog-field-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .insight-card__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .catalog-illustration svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .section-heading--tight {
+      align-items: start;
+    }
+
+    .section-heading h3 {
+      margin: 6px 0 0;
+    }
+
+    .catalog-form {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .catalog-form label {
+      display: grid;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .catalog-form input,
+    .catalog-search {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font: inherit;
+      background: white;
+    }
+
+    .consultation-shell {
+      display: grid;
+      gap: 18px;
+    }
+
+    .catalog-search-panel {
+      display: grid;
+      gap: 10px;
+      padding: 20px;
+      border: 1px solid #dbe4ee;
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.1), transparent 25%),
+        linear-gradient(135deg, #f8fbff, #fffef8);
+    }
+
+    .catalog-search-panel__label {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #0f766e;
+    }
+
+    .catalog-search-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .catalog-search--hero {
+      padding: 16px 18px;
+      font-size: 16px;
+      border-radius: 18px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    }
+
+    .catalog-search-panel__hint {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .consultation-quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .quick-chip {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #f8fafc;
+      border: 1px solid #dbe4ee;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .consultation-summary {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid #dbe4ee;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      color: #0f172a;
+    }
+
+    .consultation-summary strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .primary-button {
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      padding: 12px 18px;
+      cursor: pointer;
+      box-shadow: 0 16px 30px rgba(15, 118, 110, 0.18);
+    }
+
+    .primary-button--ghost {
+      white-space: nowrap;
+      box-shadow: none;
+    }
+
+    .form-hint {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .metric-card,
+    .coverage-card,
+    .governance-card,
+    .product-card,
+    .tax-pill {
+      border: 1px solid #dbe4ee;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .metric-card {
+      padding: 14px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .metric-card strong {
+      font-size: 24px;
+      color: #0f172a;
+      line-height: 1;
+    }
+
+    .metric-card--teal { background: #f0fdfa; }
+    .metric-card--amber { background: #fffbeb; }
+    .metric-card--sky { background: #eff6ff; }
+    .metric-card--rose { background: #fff1f2; }
+
+    .coverage-card,
+    .governance-card {
+      padding: 16px;
+    }
+
+    .coverage-card__bar {
+      height: 10px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .coverage-card__fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+    }
+
+    .governance-card h4,
+    .product-card h4 {
+      margin: 0 0 8px;
+    }
+
+    .governance-card p,
+    .product-card p {
+      margin: 0;
+      color: #64748b;
+    }
+
+    .product-card {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 30%),
+        linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .catalog-admin-panel {
+      overflow: hidden;
+    }
+
+    .catalog-admin-panel[open] {
+      border-color: #cbd5e1;
+    }
+
+    .catalog-admin-panel__summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .catalog-admin-panel__summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .catalog-admin-panel__summary h3 {
+      margin: 6px 0 0;
+    }
+
+    .catalog-admin-panel__summary p {
+      margin: 0;
+      max-width: 220px;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .catalog-admin-panel[open] .catalog-form {
+      margin-top: 18px;
+    }
+
+    .catalog-admin-panel[open] #catalog-form-message {
+      margin-top: 16px;
+    }
+
+    .product-card__top,
+    .product-card__footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: start;
+    }
+
+    .product-card__top h4 {
+      margin: 6px 0;
+      color: #0f172a;
+      font-size: 20px;
+    }
+
+    .product-chip {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e0f2fe;
+      color: #075985;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .product-chip--source {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .catalog-field-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .tax-pill {
+      padding: 14px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .tax-pill span {
+      color: #64748b;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tax-pill strong {
+      color: #0f172a;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .tax-pill--teal { background: #f0fdfa; }
+    .tax-pill--amber { background: #fffbeb; }
+    .tax-pill--sky { background: #eff6ff; }
+    .tax-pill--rose { background: #fff1f2; }
+
+    @media (max-width: 1200px) {
+      .catalog-form,
+      .catalog-field-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 980px) {
+      .catalog-hero,
+      .catalog-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .catalog-form,
+      .catalog-field-grid,
+      .insight-card__grid {
+        grid-template-columns: 1fr;
+      }
+
+      .catalog-search-row {
+        grid-template-columns: 1fr;
+      }
+
+      .catalog-admin-panel__summary {
+        display: grid;
+      }
+    }
+  </style>
 </DashboardLayout>

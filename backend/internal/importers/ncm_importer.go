@@ -196,7 +196,7 @@ func parseNCMRowPT(record []string, indexes map[string]int) NCMImportRow {
 
 	row := NCMImportRow{
 		Code:           normCode,
-		ExCode:         get("ex"),
+		ExCode:         normalizeEXCode(get("ex")),
 		Description:    cleanText(get("descricao")),
 		Aliquota:       cleanText(get("aliquota(%)")),
 		LegalSource:    "TIPI",
@@ -230,6 +230,27 @@ func normalizeNCMCode(v string) string {
 	v = strings.ReplaceAll(v, ".", "")
 	v = strings.ReplaceAll(v, " ", "")
 	return v
+}
+
+func normalizeEXCode(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return ""
+	}
+
+	var b strings.Builder
+	for _, r := range v {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+
+	normalized := b.String()
+	if len(normalized) > 3 {
+		normalized = normalized[:3]
+	}
+
+	return normalized
 }
 
 func chapterCodeFromNCM(code string) string {
@@ -351,17 +372,14 @@ func (i *NCMImporter) upsertNCM(
 	batchID string,
 	row NCMImportRow,
 ) error {
-	disableQuery := `
-		UPDATE ncm_catalog
-		SET is_active = FALSE,
-		    updated_at = NOW()
+	deleteQuery := `
+		DELETE FROM ncm_catalog
 		WHERE code = $1
 		  AND COALESCE(ex_code, '') = COALESCE($2, '')
-		  AND is_active = TRUE
 	`
-	_, err := i.db.Exec(ctx, disableQuery, row.Code, emptyToNil(row.ExCode))
+	_, err := i.db.Exec(ctx, deleteQuery, row.Code, emptyToNil(row.ExCode))
 	if err != nil {
-		return fmt.Errorf("disable previous ncm version: %w", err)
+		return fmt.Errorf("delete previous ncm version: %w", err)
 	}
 
 	insertQuery := `

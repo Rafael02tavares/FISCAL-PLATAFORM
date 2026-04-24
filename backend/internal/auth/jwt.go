@@ -1,26 +1,14 @@
 package auth
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var (
-	ErrInvalidToken = errors.New("invalid token")
-)
-
-const tokenTTL = 24 * time.Hour
-
 type JWT struct {
 	Secret string
-}
-
-type Claims struct {
-	UserID string `json:"user_id"`
-	jwt.RegisteredClaims
 }
 
 func NewJWT(secret string) *JWT {
@@ -28,62 +16,34 @@ func NewJWT(secret string) *JWT {
 }
 
 func (j *JWT) Generate(userID string) (string, error) {
-	if j.Secret == "" {
-		return "", fmt.Errorf("jwt secret is required")
-	}
-
-	if userID == "" {
-		return "", fmt.Errorf("user id is required")
-	}
-
-	now := time.Now()
-
-	claims := Claims{
-		UserID: userID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID,
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(tokenTTL)),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": userID,
+		"exp":     time.Now().Add(24 * time.Hour).Unix(),
+	})
 
 	return token.SignedString([]byte(j.Secret))
 }
 
 func (j *JWT) Parse(tokenString string) (string, error) {
-	if j.Secret == "" {
-		return "", fmt.Errorf("jwt secret is required")
-	}
-
-	if tokenString == "" {
-		return "", ErrInvalidToken
-	}
-
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
-		if token.Method == nil {
-			return nil, ErrInvalidToken
-		}
-
-		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
-
 		return []byte(j.Secret), nil
 	})
 	if err != nil {
-		return "", ErrInvalidToken
+		return "", err
 	}
 
-	claims, ok := token.Claims.(*Claims)
+	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return "", ErrInvalidToken
+		return "", fmt.Errorf("invalid token")
 	}
 
-	if claims.UserID == "" {
-		return "", ErrInvalidToken
+	userID, ok := claims["user_id"].(string)
+	if !ok || userID == "" {
+		return "", fmt.Errorf("user_id missing in token")
 	}
 
-	return claims.UserID, nil
+	return userID, nil
 }

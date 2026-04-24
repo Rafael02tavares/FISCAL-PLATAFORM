@@ -2,11 +2,8 @@ package invoices
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -50,6 +47,13 @@ type CreateInvoiceItemParams struct {
 	Quantity       string
 	UnitValue      string
 	TotalValue     string
+	ICMSCST        string
+	CSOSN          string
+	ICMSRate       string
+	PISCST         string
+	PISRate        string
+	COFINSCST      string
+	COFINSRate     string
 	ICMSValue      string
 	IPIValue       string
 	PISValue       string
@@ -87,22 +91,23 @@ func (r *Repository) CreateInvoice(ctx context.Context, p CreateInvoiceParams) (
 	err := r.db.QueryRow(
 		ctx,
 		query,
-		strings.TrimSpace(p.OrganizationID),
-		strings.TrimSpace(p.AccessKey),
-		strings.TrimSpace(p.Number),
-		strings.TrimSpace(p.Series),
-		strings.TrimSpace(p.IssuedAt),
-		strings.TrimSpace(p.EmitterName),
-		strings.TrimSpace(p.EmitterCNPJ),
-		strings.ToUpper(strings.TrimSpace(p.EmitterUF)),
-		strings.TrimSpace(p.RecipientName),
-		strings.TrimSpace(p.RecipientCNPJ),
-		strings.ToUpper(strings.TrimSpace(p.RecipientUF)),
-		strings.TrimSpace(p.OperationNature),
-		strings.TrimSpace(p.TotalAmount),
-		strings.TrimSpace(p.XMLRaw),
-		strings.TrimSpace(p.Status),
+		p.OrganizationID,
+		p.AccessKey,
+		p.Number,
+		p.Series,
+		p.IssuedAt,
+		p.EmitterName,
+		p.EmitterCNPJ,
+		p.EmitterUF,
+		p.RecipientName,
+		p.RecipientCNPJ,
+		p.RecipientUF,
+		p.OperationNature,
+		p.TotalAmount,
+		p.XMLRaw,
+		p.Status,
 	).Scan(&invoiceID)
+
 	if err != nil {
 		return "", fmt.Errorf("create invoice: %w", err)
 	}
@@ -111,59 +116,147 @@ func (r *Repository) CreateInvoice(ctx context.Context, p CreateInvoiceParams) (
 }
 
 func (r *Repository) CreateInvoiceItem(ctx context.Context, p CreateInvoiceItemParams) error {
-	query := `
-		INSERT INTO invoice_items (
-			invoice_id,
-			item_number,
-			product_code,
-			gtin,
-			gtin_tributable,
-			description,
-			ncm,
-			cest,
-			cfop,
-			unit,
-			quantity,
-			unit_value,
-			total_value,
-			icms_value,
-			ipi_value,
-			pis_value,
-			cofins_value
-		)
-		VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-			NULLIF($11, '')::numeric,
-			NULLIF($12, '')::numeric,
-			NULLIF($13, '')::numeric,
-			NULLIF($14, '')::numeric,
-			NULLIF($15, '')::numeric,
-			NULLIF($16, '')::numeric,
-			NULLIF($17, '')::numeric
-		)
-	`
+	extended, err := r.hasExtendedInvoiceItemTaxFields(ctx)
+	if err != nil {
+		return fmt.Errorf("check invoice_items extended tax fields: %w", err)
+	}
 
-	_, err := r.db.Exec(
-		ctx,
-		query,
-		strings.TrimSpace(p.InvoiceID),
-		p.ItemNumber,
-		strings.TrimSpace(p.ProductCode),
-		strings.TrimSpace(p.GTIN),
-		strings.TrimSpace(p.GTINTributable),
-		strings.TrimSpace(p.Description),
-		strings.TrimSpace(p.NCM),
-		strings.TrimSpace(p.CEST),
-		strings.TrimSpace(p.CFOP),
-		strings.TrimSpace(p.Unit),
-		strings.TrimSpace(p.Quantity),
-		strings.TrimSpace(p.UnitValue),
-		strings.TrimSpace(p.TotalValue),
-		strings.TrimSpace(p.ICMSValue),
-		strings.TrimSpace(p.IPIValue),
-		strings.TrimSpace(p.PISValue),
-		strings.TrimSpace(p.COFINSValue),
-	)
+	var query string
+	var args []any
+
+	if extended {
+		query = `
+			INSERT INTO invoice_items (
+				invoice_id,
+				item_number,
+				product_code,
+				gtin,
+				gtin_tributable,
+				description,
+				ncm,
+				cest,
+				cfop,
+				unit,
+				quantity,
+				unit_value,
+				total_value,
+				icms_cst,
+				csosn,
+				icms_rate,
+				pis_cst,
+				pis_rate,
+				cofins_cst,
+				cofins_rate,
+				icms_value,
+				ipi_value,
+				pis_value,
+				cofins_value
+			)
+			VALUES (
+				$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+				NULLIF($11, '')::numeric,
+				NULLIF($12, '')::numeric,
+				NULLIF($13, '')::numeric,
+				$14,
+				$15,
+				NULLIF($16, '')::numeric,
+				$17,
+				NULLIF($18, '')::numeric,
+				$19,
+				NULLIF($20, '')::numeric,
+				NULLIF($21, '')::numeric,
+				NULLIF($22, '')::numeric,
+				NULLIF($23, '')::numeric,
+				NULLIF($24, '')::numeric
+			)
+		`
+
+		args = []any{
+			p.InvoiceID,
+			p.ItemNumber,
+			p.ProductCode,
+			p.GTIN,
+			p.GTINTributable,
+			p.Description,
+			p.NCM,
+			p.CEST,
+			p.CFOP,
+			p.Unit,
+			p.Quantity,
+			p.UnitValue,
+			p.TotalValue,
+			p.ICMSCST,
+			p.CSOSN,
+			p.ICMSRate,
+			p.PISCST,
+			p.PISRate,
+			p.COFINSCST,
+			p.COFINSRate,
+			p.ICMSValue,
+			p.IPIValue,
+			p.PISValue,
+			p.COFINSValue,
+		}
+	} else {
+		query = `
+			INSERT INTO invoice_items (
+				invoice_id,
+				item_number,
+				product_code,
+				gtin,
+				gtin_tributable,
+				description,
+				ncm,
+				cest,
+				cfop,
+				cst,
+				csosn,
+				unit,
+				quantity,
+				unit_value,
+				total_value,
+				icms_value,
+				ipi_value,
+				pis_value,
+				cofins_value
+			)
+			VALUES (
+				$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+				NULLIF($13, '')::numeric,
+				NULLIF($14, '')::numeric,
+				NULLIF($15, '')::numeric,
+				NULLIF($16, '')::numeric,
+				NULLIF($17, '')::numeric,
+				NULLIF($18, '')::numeric,
+				NULLIF($19, '')::numeric
+			)
+		`
+
+		args = []any{
+			p.InvoiceID,
+			p.ItemNumber,
+			p.ProductCode,
+			p.GTIN,
+			p.GTINTributable,
+			p.Description,
+			p.NCM,
+			p.CEST,
+			p.CFOP,
+			p.ICMSCST,
+			p.CSOSN,
+			p.Unit,
+			p.Quantity,
+			p.UnitValue,
+			p.TotalValue,
+			p.ICMSValue,
+			p.IPIValue,
+			p.PISValue,
+			p.COFINSValue,
+		}
+	}
+
+	_, err = r.db.Exec(ctx, query, args...)
+
 	if err != nil {
 		return fmt.Errorf("create invoice item: %w", err)
 	}
@@ -193,20 +286,19 @@ func (r *Repository) ListInvoices(ctx context.Context, organizationID string) ([
 			COALESCE(status, '')
 		FROM invoices
 		WHERE organization_id = $1
-		ORDER BY created_at DESC, id DESC
+		ORDER BY created_at DESC
 	`
 
-	rows, err := r.db.Query(ctx, query, strings.TrimSpace(organizationID))
+	rows, err := r.db.Query(ctx, query, organizationID)
 	if err != nil {
 		return nil, fmt.Errorf("list invoices: %w", err)
 	}
 	defer rows.Close()
 
-	invoices := make([]InvoiceListItem, 0)
+	var invoices []InvoiceListItem
 
 	for rows.Next() {
 		var item InvoiceListItem
-
 		if err := rows.Scan(
 			&item.ID,
 			&item.Number,
@@ -218,7 +310,6 @@ func (r *Repository) ListInvoices(ctx context.Context, organizationID string) ([
 		); err != nil {
 			return nil, fmt.Errorf("scan invoice list item: %w", err)
 		}
-
 		invoices = append(invoices, item)
 	}
 
@@ -241,6 +332,13 @@ type InvoiceItemDetail struct {
 	Quantity    string `json:"quantity"`
 	UnitValue   string `json:"unit_value"`
 	TotalValue  string `json:"total_value"`
+	ICMSCST     string `json:"icms_cst"`
+	CSOSN       string `json:"csosn"`
+	ICMSRate    string `json:"icms_rate"`
+	PISCST      string `json:"pis_cst"`
+	PISRate     string `json:"pis_rate"`
+	COFINSCST   string `json:"cofins_cst"`
+	COFINSRate  string `json:"cofins_rate"`
 	ICMSValue   string `json:"icms_value"`
 	IPIValue    string `json:"ipi_value"`
 	PISValue    string `json:"pis_value"`
@@ -254,8 +352,10 @@ type InvoiceDetail struct {
 	IssuedAt        string              `json:"issued_at"`
 	EmitterName     string              `json:"emitter_name"`
 	EmitterCNPJ     string              `json:"emitter_cnpj"`
+	EmitterUF       string              `json:"emitter_uf"`
 	RecipientName   string              `json:"recipient_name"`
 	RecipientCNPJ   string              `json:"recipient_cnpj"`
+	RecipientUF     string              `json:"recipient_uf"`
 	OperationNature string              `json:"operation_nature"`
 	TotalAmount     string              `json:"total_amount"`
 	Status          string              `json:"status"`
@@ -271,8 +371,10 @@ func (r *Repository) GetInvoiceByID(ctx context.Context, organizationID, invoice
 			COALESCE(issued_at::text, ''),
 			COALESCE(emitter_name, ''),
 			COALESCE(emitter_cnpj, ''),
+			COALESCE(emitter_uf, ''),
 			COALESCE(recipient_name, ''),
 			COALESCE(recipient_cnpj, ''),
+			COALESCE(recipient_uf, ''),
 			COALESCE(operation_nature, ''),
 			COALESCE(total_amount::text, ''),
 			COALESCE(status, '')
@@ -282,64 +384,99 @@ func (r *Repository) GetInvoiceByID(ctx context.Context, organizationID, invoice
 
 	var detail InvoiceDetail
 
-	err := r.db.QueryRow(
-		ctx,
-		queryInvoice,
-		strings.TrimSpace(invoiceID),
-		strings.TrimSpace(organizationID),
-	).Scan(
+	err := r.db.QueryRow(ctx, queryInvoice, invoiceID, organizationID).Scan(
 		&detail.ID,
 		&detail.Number,
 		&detail.Series,
 		&detail.IssuedAt,
 		&detail.EmitterName,
 		&detail.EmitterCNPJ,
+		&detail.EmitterUF,
 		&detail.RecipientName,
 		&detail.RecipientCNPJ,
+		&detail.RecipientUF,
 		&detail.OperationNature,
 		&detail.TotalAmount,
 		&detail.Status,
 	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrInvoiceNotFound
-		}
 		return nil, fmt.Errorf("get invoice by id: %w", err)
 	}
 
-	queryItems := `
-		SELECT
-			item_number,
-			COALESCE(product_code, ''),
-			COALESCE(gtin, ''),
-			COALESCE(description, ''),
-			COALESCE(ncm, ''),
-			COALESCE(cest, ''),
-			COALESCE(cfop, ''),
-			COALESCE(unit, ''),
-			COALESCE(quantity::text, ''),
-			COALESCE(unit_value::text, ''),
-			COALESCE(total_value::text, ''),
-			COALESCE(icms_value::text, ''),
-			COALESCE(ipi_value::text, ''),
-			COALESCE(pis_value::text, ''),
-			COALESCE(cofins_value::text, '')
-		FROM invoice_items
-		WHERE invoice_id = $1
-		ORDER BY item_number ASC
-	`
+	extended, err := r.hasExtendedInvoiceItemTaxFields(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("check invoice_items extended tax fields: %w", err)
+	}
 
-	rows, err := r.db.Query(ctx, queryItems, strings.TrimSpace(invoiceID))
+	var queryItems string
+	if extended {
+		queryItems = `
+			SELECT
+				item_number,
+				COALESCE(product_code, ''),
+				COALESCE(gtin, ''),
+				COALESCE(description, ''),
+				COALESCE(ncm, ''),
+				COALESCE(cest, ''),
+				COALESCE(cfop, ''),
+				COALESCE(unit, ''),
+				COALESCE(quantity::text, ''),
+				COALESCE(unit_value::text, ''),
+				COALESCE(total_value::text, ''),
+				COALESCE(icms_cst, COALESCE(cst, ''), ''),
+				COALESCE(csosn, ''),
+				COALESCE(icms_rate::text, ''),
+				COALESCE(pis_cst, ''),
+				COALESCE(pis_rate::text, ''),
+				COALESCE(cofins_cst, ''),
+				COALESCE(cofins_rate::text, ''),
+				COALESCE(icms_value::text, ''),
+				COALESCE(ipi_value::text, ''),
+				COALESCE(pis_value::text, ''),
+				COALESCE(cofins_value::text, '')
+			FROM invoice_items
+			WHERE invoice_id = $1
+			ORDER BY item_number ASC
+		`
+	} else {
+		queryItems = `
+			SELECT
+				item_number,
+				COALESCE(product_code, ''),
+				COALESCE(gtin, ''),
+				COALESCE(description, ''),
+				COALESCE(ncm, ''),
+				COALESCE(cest, ''),
+				COALESCE(cfop, ''),
+				COALESCE(unit, ''),
+				COALESCE(quantity::text, ''),
+				COALESCE(unit_value::text, ''),
+				COALESCE(total_value::text, ''),
+				COALESCE(cst, ''),
+				COALESCE(csosn, ''),
+				'',
+				'',
+				'',
+				'',
+				'',
+				COALESCE(icms_value::text, ''),
+				COALESCE(ipi_value::text, ''),
+				COALESCE(pis_value::text, ''),
+				COALESCE(cofins_value::text, '')
+			FROM invoice_items
+			WHERE invoice_id = $1
+			ORDER BY item_number ASC
+		`
+	}
+
+	rows, err := r.db.Query(ctx, queryItems, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("get invoice items: %w", err)
 	}
 	defer rows.Close()
 
-	detail.Items = make([]InvoiceItemDetail, 0)
-
 	for rows.Next() {
 		var item InvoiceItemDetail
-
 		if err := rows.Scan(
 			&item.ItemNumber,
 			&item.ProductCode,
@@ -352,6 +489,13 @@ func (r *Repository) GetInvoiceByID(ctx context.Context, organizationID, invoice
 			&item.Quantity,
 			&item.UnitValue,
 			&item.TotalValue,
+			&item.ICMSCST,
+			&item.CSOSN,
+			&item.ICMSRate,
+			&item.PISCST,
+			&item.PISRate,
+			&item.COFINSCST,
+			&item.COFINSRate,
 			&item.ICMSValue,
 			&item.IPIValue,
 			&item.PISValue,
@@ -368,4 +512,20 @@ func (r *Repository) GetInvoiceByID(ctx context.Context, organizationID, invoice
 	}
 
 	return &detail, nil
+}
+
+func (r *Repository) hasExtendedInvoiceItemTaxFields(ctx context.Context) (bool, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM information_schema.columns
+		WHERE table_name = 'invoice_items'
+		  AND column_name IN ('icms_cst', 'icms_rate', 'pis_cst', 'pis_rate', 'cofins_cst', 'cofins_rate')
+	`
+
+	var count int
+	if err := r.db.QueryRow(ctx, query).Scan(&count); err != nil {
+		return false, err
+	}
+
+	return count == 6, nil
 }

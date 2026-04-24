@@ -1,0 +1,493 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import adminCBenefScript from "../../../scripts/admin-cbenef.ts?url";
+---
+
+<DashboardLayout
+  title="cBenef"
+  subtitle="Gerencie regras de codigo de beneficio fiscal por operacao, UF e classificacao"
+>
+  <div class="page-header">
+    <h2>Governanca de cBenef</h2>
+    <p>
+      Cadastre regras de `cBenef` ligadas a base legal, contexto de ICMS, classificacao fiscal e
+      operacao, para alimentar a sugestao tributaria com mais seguranca.
+    </p>
+  </div>
+
+  <section class="cbenef-hero">
+    <div class="cbenef-hero__copy">
+      <span class="cbenef-hero__eyebrow">Beneficio fiscal</span>
+      <h3>Painel operacional para codigos de beneficio por contexto</h3>
+      <p>
+        Use esta area para controlar quando um `cBenef` deve ser sugerido, considerando CST de ICMS,
+        CSOSN, NCM, CFOP, cClasTrib e filtros territoriais.
+      </p>
+      <div class="cbenef-hero__legend">
+        <span><i class="legend-dot legend-dot--amber"></i>Beneficio</span>
+        <span><i class="legend-dot legend-dot--sky"></i>ICMS</span>
+        <span><i class="legend-dot legend-dot--teal"></i>Base legal</span>
+      </div>
+    </div>
+
+    <div id="cbenef-stats" class="cbenef-stats">
+      <div class="dashboard-note">Carregando indicadores de cBenef...</div>
+    </div>
+  </section>
+
+  <div class="cbenef-grid">
+    <section class="card card--padded">
+      <div class="section-heading section-heading--tight">
+        <div>
+          <span class="section-heading__eyebrow">Cadastro guiado</span>
+          <h3>Nova regra de cBenef</h3>
+        </div>
+        <a class="secondary-link" href="/admin/legal-rules">Abrir tela completa de regras</a>
+      </div>
+
+      <form id="cbenef-rule-form" class="cbenef-form">
+        <label>
+          Fonte legal
+          <select id="cbenef-legal-source" name="legal_source_id">
+            <option value="">Carregando fontes legais...</option>
+          </select>
+        </label>
+
+        <label>
+          Operacao fiscal
+          <input name="operation_code" type="text" placeholder="Ex.: VENDA_ESTADUAL" />
+        </label>
+
+        <label>
+          Regime tributario
+          <select name="tax_regime">
+            <option value="">Todos</option>
+            <option value="simples_nacional">Simples Nacional</option>
+            <option value="lucro_presumido">Lucro Presumido</option>
+            <option value="lucro_real">Lucro Real</option>
+          </select>
+        </label>
+
+        <label>
+          NCM
+          <input name="ncm_code" type="text" placeholder="22021000" />
+        </label>
+
+        <label>
+          CEST
+          <input name="cest" type="text" placeholder="2804700" />
+        </label>
+
+        <label>
+          CFOP
+          <input name="cfop" type="text" placeholder="5102" />
+        </label>
+
+        <label>
+          cClasTrib
+          <input name="cclas_trib" type="text" placeholder="123" />
+        </label>
+
+        <label>
+          ICMS CST
+          <input name="icms_cst" type="text" placeholder="00" />
+        </label>
+
+        <label>
+          CSOSN
+          <input name="csosn" type="text" placeholder="102" />
+        </label>
+
+        <label>
+          cBenef atual
+          <input name="input_cbenef" type="text" placeholder="SP000001" />
+        </label>
+
+        <label>
+          cBenef sugerido
+          <input name="suggested_cbenef" type="text" placeholder="SP000999" />
+        </label>
+
+        <label>
+          UF emitente
+          <input name="emitter_uf" type="text" maxlength="2" placeholder="SP" />
+        </label>
+
+        <label>
+          UF destinatario
+          <input name="recipient_uf" type="text" maxlength="2" placeholder="RJ" />
+        </label>
+
+        <label>
+          Prioridade
+          <input name="priority" type="number" min="1" value="100" />
+        </label>
+
+        <label>
+          Confianca base
+          <input name="confidence_base" type="text" value="0.78" />
+        </label>
+
+        <label>
+          Vigencia inicial
+          <input name="effective_from" type="date" />
+        </label>
+
+        <label>
+          Vigencia final
+          <input name="effective_to" type="date" />
+        </label>
+
+        <div class="full-width cbenef-preview">
+          <div class="cbenef-preview__head">
+            <strong>JSON aplicado na sugestao</strong>
+            <span>Compatível com a logica atual do motor tributario</span>
+          </div>
+          <pre id="cbenef-json-preview">{}</pre>
+        </div>
+
+        <div class="full-width form-actions">
+          <button class="primary-button" type="submit">Salvar regra</button>
+        </div>
+      </form>
+
+      <div id="cbenef-feedback" class="dashboard-note">
+        Preencha o contexto fiscal e o cBenef sugerido para cadastrar a regra.
+      </div>
+    </section>
+
+    <section class="card card--padded">
+      <div class="section-heading section-heading--tight">
+        <div>
+          <span class="section-heading__eyebrow">Mapa de beneficios</span>
+          <h3>Regras cadastradas</h3>
+        </div>
+        <p>Exibe regras que realmente carregam `cbenef` no `value_content`.</p>
+      </div>
+
+      <div id="cbenef-rules-list" class="dashboard-note">Carregando regras...</div>
+    </section>
+  </div>
+
+  <script type="module" src={adminCBenefScript}></script>
+
+  <style>
+    .cbenef-hero,
+    .cbenef-grid {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .cbenef-hero {
+      grid-template-columns: 1.1fr 0.9fr;
+      padding: 24px;
+      border: 1px solid #dbe4ee;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.12), transparent 30%),
+        linear-gradient(135deg, #fffef9, #f8fbff);
+    }
+
+    .cbenef-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 0.95fr);
+      align-items: start;
+    }
+
+    .cbenef-hero__eyebrow,
+    .section-heading__eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .cbenef-hero__copy h3 {
+      margin: 10px 0;
+      font-size: clamp(26px, 3vw, 38px);
+    }
+
+    .cbenef-hero__copy p,
+    .section-heading p {
+      margin: 0;
+      color: #475569;
+    }
+
+    .cbenef-hero__legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 18px;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .cbenef-hero__legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .legend-dot--amber { background: #f59e0b; }
+    .legend-dot--sky { background: #0ea5e9; }
+    .legend-dot--teal { background: #0f766e; }
+
+    .cbenef-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-content: start;
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .section-heading--tight {
+      align-items: start;
+    }
+
+    .section-heading h3 {
+      margin: 6px 0 0;
+    }
+
+    .secondary-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-decoration: none;
+      background: white;
+      font-weight: 700;
+    }
+
+    .cbenef-form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .cbenef-form label {
+      display: grid;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .cbenef-form input,
+    .cbenef-form select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+      background: white;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .cbenef-preview {
+      border: 1px solid #dbe4ee;
+      border-radius: 18px;
+      background: #f8fafc;
+      padding: 16px;
+    }
+
+    .cbenef-preview__head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .cbenef-preview__head span {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .cbenef-preview pre,
+    .rule-card__json {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      line-height: 1.55;
+      color: #0f172a;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .primary-button {
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #b45309, #0f766e);
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      padding: 12px 18px;
+      cursor: pointer;
+      box-shadow: 0 16px 30px rgba(180, 83, 9, 0.16);
+    }
+
+    .stat-card,
+    .rule-card {
+      border: 1px solid #dbe4ee;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .stat-card {
+      padding: 14px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .stat-card span {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .stat-card strong {
+      font-size: 24px;
+      color: #0f172a;
+      line-height: 1;
+    }
+
+    .stat-card--amber { background: #fffbeb; }
+    .stat-card--sky { background: #eff6ff; }
+    .stat-card--teal { background: #f0fdfa; }
+
+    .rule-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .rule-card {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.08), transparent 24%),
+        linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .rule-card__top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .rule-card__tag,
+    .rule-card__badge {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .rule-card__tag {
+      background: #fff7ed;
+      color: #9a3412;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .rule-card__badge {
+      background: #ecfeff;
+      color: #155e75;
+    }
+
+    .rule-card h3 {
+      margin: 8px 0 4px;
+      font-size: 20px;
+    }
+
+    .rule-card p {
+      margin: 0;
+      color: #475569;
+    }
+
+    .rule-card__grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 14px;
+    }
+
+    .dashboard-empty {
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      background: var(--surface-soft);
+    }
+
+    .dashboard-empty--error {
+      border-color: #fecaca;
+      background: #fff7f7;
+    }
+
+    .feedback {
+      margin-top: 16px;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .feedback--success {
+      background: #ecfdf5;
+      color: #166534;
+    }
+
+    .feedback--error {
+      background: #fff1f2;
+      color: #b91c1c;
+    }
+
+    @media (max-width: 1080px) {
+      .cbenef-hero,
+      .cbenef-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .cbenef-form,
+      .cbenef-stats,
+      .rule-card__grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</DashboardLayout>

@@ -1,5 +1,5 @@
 ---
-import "../styles/globals.css";
+import "../components/styles/global.css";
 import AppShell from "../components/layout/AppShell.astro";
 
 interface Props {
@@ -20,5 +20,24 @@ const { title, subtitle } = Astro.props;
     <AppShell title={title} subtitle={subtitle}>
       <slot />
     </AppShell>
+    <script type="module">
+      import { clearSession, getCurrentUser, isAuthenticated } from "../lib/auth";
+
+      async function validateSession() {
+        if (!isAuthenticated()) {
+          window.location.href = "/login";
+          return;
+        }
+
+        try {
+          await getCurrentUser();
+        } catch {
+          clearSession();
+          window.location.href = "/login";
+        }
+      }
+
+      void validateSession();
+    </script>
   </body>
 </html>

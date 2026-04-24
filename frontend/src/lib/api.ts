@@ -1,4 +1,5 @@
 const API_URL = (import.meta.env.PUBLIC_API_URL || "http://localhost:8081").replace(/\/+$/, "");
+const LOGIN_PATH = "/login";
 
 type APIErrorPayload = {
   error?: {
@@ -35,6 +36,32 @@ function getStoredValue(key: string): string | null {
   } catch {
     return null;
   }
+}
+
+function clearStoredSession(): void {
+  if (!isBrowser()) {
+    return;
+  }
+
+  try {
+    localStorage.removeItem("token");
+    localStorage.removeItem("organization_id");
+    localStorage.removeItem("organization_role");
+  } catch {
+    // evita quebrar a aplicacao em caso de storage indisponivel
+  }
+}
+
+function redirectToLogin(): void {
+  if (!isBrowser()) {
+    return;
+  }
+
+  if (window.location.pathname === LOGIN_PATH) {
+    return;
+  }
+
+  window.location.href = LOGIN_PATH;
 }
 
 function buildHeaders(options: RequestInit): Headers {
@@ -98,8 +125,13 @@ export async function apiFetch<T = unknown>(path: string, options: RequestInit =
   if (!response.ok) {
     const { message, code } = extractErrorMessage(
       payload,
-      `Erro na requisição (${response.status})`
+      `Erro na requisicao (${response.status})`
     );
+
+    if (response.status === 401) {
+      clearStoredSession();
+      redirectToLogin();
+    }
 
     throw new APIRequestError(message, response.status, code, payload);
   }

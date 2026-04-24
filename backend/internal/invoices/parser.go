@@ -91,28 +91,38 @@ type IPITrib struct {
 }
 
 type PIS struct {
+	InnerXML []byte   `xml:",innerxml"`
 	PISAliq *PISAliq `xml:"PISAliq"`
 	PISOutr *PISOutr `xml:"PISOutr"`
 }
 
 type PISAliq struct {
+	CST  string `xml:"CST"`
+	PPIS string `xml:"pPIS"`
 	VPIS string `xml:"vPIS"`
 }
 
 type PISOutr struct {
+	CST  string `xml:"CST"`
+	PPIS string `xml:"pPIS"`
 	VPIS string `xml:"vPIS"`
 }
 
 type COFINS struct {
+	InnerXML    []byte       `xml:",innerxml"`
 	COFINSAliq *COFINSAliq `xml:"COFINSAliq"`
 	COFINSOutr *COFINSOutr `xml:"COFINSOutr"`
 }
 
 type COFINSAliq struct {
+	CST      string `xml:"CST"`
+	PCOFINS  string `xml:"pCOFINS"`
 	VCOFINS string `xml:"vCOFINS"`
 }
 
 type COFINSOutr struct {
+	CST      string `xml:"CST"`
+	PCOFINS  string `xml:"pCOFINS"`
 	VCOFINS string `xml:"vCOFINS"`
 }
 

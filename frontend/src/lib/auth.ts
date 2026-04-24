@@ -16,6 +16,9 @@ type MeResponse = {
 
 const TOKEN_KEY = "token";
 const ORGANIZATION_ID_KEY = "organization_id";
+const ORGANIZATION_ROLE_KEY = "organization_role";
+const ORGANIZATION_TAX_REGIME_KEY = "organization_tax_regime";
+const ORGANIZATION_CRT_KEY = "organization_crt";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -58,6 +61,8 @@ function safeRemoveItem(key: string): void {
 }
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
+  clearSession();
+
   const response = await apiFetch<LoginResponse>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
@@ -111,6 +116,47 @@ export function removeOrganizationId(): void {
   safeRemoveItem(ORGANIZATION_ID_KEY);
 }
 
+export function saveOrganizationRole(role: string): void {
+  safeSetItem(ORGANIZATION_ROLE_KEY, role);
+}
+
+export function getOrganizationRole(): string | null {
+  return safeGetItem(ORGANIZATION_ROLE_KEY);
+}
+
+export function removeOrganizationRole(): void {
+  safeRemoveItem(ORGANIZATION_ROLE_KEY);
+}
+
+export function saveOrganizationTaxRegime(taxRegime: string): void {
+  safeSetItem(ORGANIZATION_TAX_REGIME_KEY, taxRegime);
+}
+
+export function getOrganizationTaxRegime(): string | null {
+  return safeGetItem(ORGANIZATION_TAX_REGIME_KEY);
+}
+
+export function removeOrganizationTaxRegime(): void {
+  safeRemoveItem(ORGANIZATION_TAX_REGIME_KEY);
+}
+
+export function saveOrganizationCRT(crt: string): void {
+  safeSetItem(ORGANIZATION_CRT_KEY, crt);
+}
+
+export function getOrganizationCRT(): string | null {
+  return safeGetItem(ORGANIZATION_CRT_KEY);
+}
+
+export function removeOrganizationCRT(): void {
+  safeRemoveItem(ORGANIZATION_CRT_KEY);
+}
+
+export function hasAdminAreaAccess(): boolean {
+  const role = String(getOrganizationRole() || "").trim().toLowerCase();
+  return role === "owner" || role === "admin" || role === "analyst";
+}
+
 export function isAuthenticated(): boolean {
   const token = getToken();
   return typeof token === "string" && token.trim() !== "";
@@ -119,6 +165,9 @@ export function isAuthenticated(): boolean {
 export function clearSession(): void {
   removeToken();
   removeOrganizationId();
+  removeOrganizationRole();
+  removeOrganizationTaxRegime();
+  removeOrganizationCRT();
 }
 
 export function logout(): void {

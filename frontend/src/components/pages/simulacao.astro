@@ -1,17 +1,1001 @@
 ---
-import DashboardLayout from "../layouts/DashboardLayout.astro";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
 ---
 
 <DashboardLayout
-  title="Simulação tributária"
-  subtitle="Simule a tributação por NCM, UF, regime e operação"
+  title="Consulta tributaria"
+  subtitle="Consulte a sugestao fiscal completa por descricao, GTIN, NCM e contexto operacional"
 >
   <div class="page-header">
-    <h2>Simulação tributária</h2>
-    <p>Esta tela será o coração comercial do produto.</p>
+    <h2>Consulta tributaria assistida</h2>
+    <p>
+      Informe o item e consulte. Se voce nao preencher operacao e UFs, a plataforma usa venda a
+      consumidor final na UF da organizacao ativa.
+    </p>
+  </div>
+
+  <section class="simulation-hero">
+    <div>
+      <span class="simulation-badge">Consulta principal</span>
+      <h3>Encontre a tributacao sugerida com leitura tecnica e comparativos claros</h3>
+      <p>
+        O motor cruza catalogo de produtos, operacao fiscal, CFOP sugerido e base legal para
+        entregar uma sugestao pronta para analise.
+      </p>
+      <div class="simulation-legend">
+        <span><i class="legend-dot legend-dot--teal"></i>Cadastro fiscal</span>
+        <span><i class="legend-dot legend-dot--amber"></i>Aliquotas e incidencia</span>
+        <span><i class="legend-dot legend-dot--sky"></i>Fluxo operacional</span>
+      </div>
+    </div>
+
+    <div class="simulation-hero__visual">
+        <div class="simulation-score-card">
+        <span>Leitura da consulta</span>
+        <strong id="simulation-score">Aguardando envio</strong>
+        <p id="simulation-score-detail">Use a base cadastrada para gerar um comparativo tributario completo.</p>
+        </div>
+
+      <div class="simulation-illustration" aria-hidden="true">
+        <svg viewBox="0 0 320 210" role="img">
+          <defs>
+            <linearGradient id="simGradientA" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#0f766e"></stop>
+              <stop offset="100%" stop-color="#0ea5e9"></stop>
+            </linearGradient>
+            <linearGradient id="simGradientB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#f59e0b"></stop>
+              <stop offset="100%" stop-color="#fb7185"></stop>
+            </linearGradient>
+          </defs>
+          <rect x="20" y="20" width="280" height="170" rx="24" fill="#ffffff" stroke="#dbe4ee"></rect>
+          <rect x="44" y="46" width="96" height="18" rx="9" fill="#ccfbf1"></rect>
+          <rect x="44" y="76" width="150" height="11" rx="5.5" fill="#e2e8f0"></rect>
+          <rect x="44" y="98" width="120" height="11" rx="5.5" fill="#e2e8f0"></rect>
+          <path d="M58 154 C110 120, 156 176, 220 120 S258 96, 280 68" fill="none" stroke="url(#simGradientB)" stroke-width="9" stroke-linecap="round"></path>
+          <circle cx="58" cy="154" r="8" fill="#f59e0b"></circle>
+          <circle cx="220" cy="120" r="8" fill="#fb7185"></circle>
+          <circle cx="280" cy="68" r="8" fill="#0ea5e9"></circle>
+          <circle cx="234" cy="92" r="38" fill="none" stroke="#e2e8f0" stroke-width="16"></circle>
+          <circle cx="234" cy="92" r="38" fill="none" stroke="url(#simGradientA)" stroke-width="16" stroke-linecap="round" stroke-dasharray="162 76" transform="rotate(-90 234 92)"></circle>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <div class="simulation-grid">
+    <section class="card card--padded">
+      <div class="section-heading">
+        <div>
+          <span class="section-heading__eyebrow">Entrada da consulta</span>
+          <h3>Preencha so o essencial</h3>
+        </div>
+      </div>
+
+      <form id="simulation-form" class="simulation-form">
+        <label class="full-width">
+          Descricao do item
+          <input id="description" type="text" placeholder="Cafe torrado e moido 500g" />
+        </label>
+
+        <label>
+          GTIN
+          <input id="gtin" type="text" placeholder="7890000000000" />
+        </label>
+
+        <label>
+          NCM
+          <input id="ncm-code" type="text" placeholder="09012100" />
+        </label>
+
+        <div class="full-width consultation-defaults" id="consultation-defaults">
+          <strong>Contexto automatico da consulta</strong>
+          <p id="consultation-defaults-text">
+            Se nada for preenchido, a consulta usa venda a consumidor final e a UF da organizacao ativa.
+          </p>
+        </div>
+
+        <details class="full-width consultation-advanced">
+          <summary>Ajustar contexto da consulta</summary>
+          <div class="consultation-advanced__grid">
+            <label>
+              Operacao fiscal
+              <select id="operation-code">
+                <option value="">Venda a consumidor final (padrao)</option>
+              </select>
+            </label>
+
+            <label>
+              Regime tributario
+              <select id="tax-regime">
+                <option value="">Usar regime da organizacao</option>
+                <option value="simples_nacional">Simples Nacional</option>
+                <option value="lucro_presumido">Lucro Presumido</option>
+                <option value="lucro_real">Lucro Real</option>
+              </select>
+            </label>
+
+            <label>
+              UF emitente
+              <input id="emitter-uf" type="text" maxlength="2" placeholder="UF da organizacao" />
+            </label>
+
+            <label>
+              UF destinatario
+              <input id="recipient-uf" type="text" maxlength="2" placeholder="UF da organizacao" />
+            </label>
+          </div>
+        </details>
+
+        <div class="form-actions full-width">
+          <button class="primary-button" type="submit">Consultar tributacao</button>
+          <p class="form-hint">A consulta usa o motor real da API e aproveita a memoria tributaria consolidada.</p>
+        </div>
+      </form>
+
+      <div id="simulation-message" class="dashboard-note">
+        Faca login, selecione uma organizacao e envie uma consulta para acionar o motor fiscal.
+      </div>
+    </section>
+
+    <section class="side-column">
+      <article class="card card--padded">
+        <div class="section-heading section-heading--tight">
+          <div>
+            <span class="section-heading__eyebrow">Rotas de consulta</span>
+            <h3>Como ler o retorno</h3>
+          </div>
+        </div>
+        <div class="comparison-guide">
+          <article class="comparison-guide__card">
+            <strong>Descricao ou GTIN</strong>
+            <p>Use quando o foco for descobrir a melhor tributacao para um item ja conhecido.</p>
+          </article>
+          <article class="comparison-guide__card">
+            <strong>NCM e operacao</strong>
+            <p>Use para validar classificacao, CFOP sugerido, CST e contribuicoes por contexto.</p>
+          </article>
+          <article class="comparison-guide__card">
+            <strong>Comparativo tecnico</strong>
+            <p>O radar abaixo mostra classificacao, ICMS, PIS, COFINS e dados da reforma em paralelo.</p>
+          </article>
+        </div>
+      </article>
+
+      <article class="card card--padded">
+        <div class="section-heading section-heading--tight">
+          <div>
+            <span class="section-heading__eyebrow">Comparativo</span>
+            <h3>Radar da sugestao</h3>
+          </div>
+        </div>
+        <div id="simulation-comparison" class="dashboard-note">
+          Aguardando uma consulta para montar os comparativos de classificacao e incidencia.
+        </div>
+      </article>
+
+      <article class="card card--padded">
+        <div class="section-heading section-heading--tight">
+          <div>
+            <span class="section-heading__eyebrow">Base legal</span>
+            <h3>Rastreabilidade</h3>
+          </div>
+        </div>
+        <div id="simulation-legal-basis" class="dashboard-note">
+          As referencias legais aplicadas aparecerao aqui apos a consulta.
+        </div>
+      </article>
+    </section>
   </div>
 
   <section class="card card--padded">
-    Em breve vamos ligar esta página ao motor tributário.
+    <div class="section-heading section-heading--tight">
+      <div>
+        <span class="section-heading__eyebrow">Resultado consolidado</span>
+        <h3>Painel da consulta tributaria</h3>
+      </div>
+    </div>
+    <div id="simulation-result" class="dashboard-note">
+      A consulta vai mostrar classificacao, CST, aliquotas, fluxo operacional e reforma em um unico painel.
+    </div>
   </section>
+
+  <script type="module">
+    import { listCatalogProducts } from "../../lib/catalog-products";
+    import { listFiscalOperations } from "../../lib/fiscaloperations";
+    import { listOrganizations } from "../../lib/organizations";
+    import { suggestTax } from "../../lib/tax";
+
+    const form = document.getElementById("simulation-form");
+    const operationSelect = document.getElementById("operation-code");
+    const defaultsText = document.getElementById("consultation-defaults-text");
+    const result = document.getElementById("simulation-result");
+    const message = document.getElementById("simulation-message");
+    const comparison = document.getElementById("simulation-comparison");
+    const legalBasisBox = document.getElementById("simulation-legal-basis");
+    const score = document.getElementById("simulation-score");
+    const scoreDetail = document.getElementById("simulation-score-detail");
+
+    function readStorage(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function hasValue(value) {
+      return String(value || "").trim() !== "";
+    }
+
+    function displayValue(value, fallback = "Nao informado") {
+      return hasValue(value) ? escapeHtml(value) : fallback;
+    }
+
+    function hasSuggestionPayload(payload) {
+      const suggestion = payload?.suggestion || {};
+      return [
+        suggestion.ncm,
+        suggestion.ncm_ex,
+        suggestion.cest,
+        suggestion.cclas_trib,
+        suggestion.cfop,
+        suggestion.csosn,
+        suggestion.icms_cst,
+        suggestion.pis_cst,
+        suggestion.cofins_cst,
+        suggestion.icms_rate,
+        suggestion.pis_rate,
+        suggestion.cofins_rate,
+        suggestion.ibs_rate,
+        suggestion.cbs_rate,
+        suggestion.selective_tax_code,
+      ].some(hasValue);
+    }
+
+    function renderNotFoundState(term) {
+      const safeTerm = displayValue(term, "consulta informada");
+
+      if (comparison) {
+        comparison.innerHTML = `
+          <div class="dashboard-empty">
+            <strong>Nenhum comparativo disponivel.</strong>
+            <p>Nao encontramos memoria fiscal suficiente para ${safeTerm}.</p>
+          </div>
+        `;
+      }
+
+      if (legalBasisBox) {
+        legalBasisBox.innerHTML = `
+          <div class="dashboard-empty">
+            <strong>Nenhuma regra localizada.</strong>
+            <p>Cadastre o produto, importe uma nota ou informe um NCM para fortalecer a consulta.</p>
+          </div>
+        `;
+      }
+
+      if (result) {
+        result.innerHTML = `
+          <div class="dashboard-empty dashboard-empty--error">
+            <strong>Nenhum perfil tributario encontrado.</strong>
+            <p>A busca por ${safeTerm} nao encontrou um produto no catalogo nem memoria suficiente para montar a sugestao.</p>
+          </div>
+        `;
+      }
+
+      if (score) {
+        score.textContent = "Sem correspondencia";
+      }
+      if (scoreDetail) {
+        scoreDetail.textContent = "Cadastre o produto ou importe uma nota para alimentar o motor tributario.";
+      }
+    }
+
+    async function resolveCatalogMatch(description) {
+      const normalized = String(description || "").trim();
+      if (!normalized) {
+        return null;
+      }
+
+      try {
+        const response = await listCatalogProducts(normalized);
+        const items = Array.isArray(response?.items) ? response.items : [];
+        return items[0] || null;
+      } catch {
+        return null;
+      }
+    }
+
+    function setMessage(text, tone = "muted") {
+      if (!message) return;
+      message.textContent = text;
+      message.className =
+        tone === "error"
+          ? "message-box message-box--error"
+          : tone === "success"
+            ? "message-box message-box--success"
+            : "dashboard-note";
+    }
+
+    function pill(label, value, tone = "teal") {
+      return `
+        <div class="tax-pill tax-pill--${tone}">
+          <span>${label}</span>
+          <strong>${displayValue(value)}</strong>
+        </div>
+      `;
+    }
+
+    function renderComparison(payload) {
+      if (!comparison) return;
+
+      const suggestion = payload?.suggestion || {};
+      comparison.innerHTML = `
+        <div class="comparison-grid">
+          <article class="comparison-card">
+            <h4>Classificacao</h4>
+            <p>NCM ${displayValue(suggestion.ncm)} | EX ${displayValue(suggestion.ncm_ex)} | CEST ${displayValue(suggestion.cest)}</p>
+          </article>
+          <article class="comparison-card">
+            <h4>Fluxo operacional</h4>
+            <p>CFOP ${displayValue(suggestion.cfop)} | CSOSN ${displayValue(suggestion.csosn)} | ICMS CST ${displayValue(suggestion.icms_cst)}</p>
+          </article>
+          <article class="comparison-card">
+            <h4>Partilha interestadual</h4>
+            <p>Modo ${displayValue(suggestion.difal_mode)} | interna ${displayValue(suggestion.difal_internal_rate)} | interestadual ${displayValue(suggestion.difal_interstate_rate)}</p>
+          </article>
+          <article class="comparison-card">
+            <h4>Contribuicoes</h4>
+            <p>PIS ${displayValue(suggestion.pis_cst)} | COFINS ${displayValue(suggestion.cofins_cst)} | cBenef ${displayValue(suggestion.cbenef)}</p>
+          </article>
+          <article class="comparison-card">
+            <h4>Reforma</h4>
+            <p>IBS ${displayValue(suggestion.ibs_rate)} | CBS ${displayValue(suggestion.cbs_rate)} | IS ${displayValue(suggestion.selective_tax_code)}</p>
+          </article>
+        </div>
+      `;
+    }
+
+    function renderLegalBasis(payload) {
+      if (!legalBasisBox) return;
+
+      const items = Array.isArray(payload?.legal_basis) ? payload.legal_basis : [];
+      const warnings = Array.isArray(payload?.warnings) ? payload.warnings : [];
+      if (!items.length) {
+        legalBasisBox.innerHTML = `
+          <div class="legal-basis-stack">
+            ${
+              warnings.length
+                ? `
+                  <div class="warning-list">
+                    ${warnings.map((warning) => `<p>${escapeHtml(warning)}</p>`).join("")}
+                  </div>
+                `
+                : ""
+            }
+            <div class="dashboard-empty">
+              <strong>Nenhuma regra legal especifica retornada.</strong>
+              <p>A sugestao foi montada principalmente com base no catalogo fiscal e no contexto operacional.</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      legalBasisBox.innerHTML = `
+        <div class="legal-basis-stack">
+          ${
+            warnings.length
+              ? `
+                <div class="warning-list">
+                  ${warnings.map((warning) => `<p>${escapeHtml(warning)}</p>`).join("")}
+                </div>
+              `
+              : ""
+          }
+          <div class="legal-basis-list">
+          ${items
+            .map(
+              (item) => `
+                <article class="legal-chip">
+                  <strong>${displayValue(item.tax_type, "-")}</strong>
+                  <span>${displayValue(item.title, "-")}</span>
+                  <small>${displayValue(item.reference_code, "-")} | ${displayValue(item.uf, "Brasil")}</small>
+                </article>
+              `,
+            )
+            .join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderScore(payload) {
+      if (!score || !scoreDetail) return;
+
+      const confidence = Number(payload?.confidence_score || 0);
+        score.textContent =
+        confidence >= 0.9 ? "Alta confianca" :
+        confidence >= 0.7 ? "Boa confianca" :
+        confidence >= 0.5 ? "Confianca moderada" :
+        "Confianca baixa";
+      scoreDetail.textContent = `Match ${displayValue(payload?.match_type, "-")} com score ${confidence.toFixed(2)}.`;
+    }
+
+    function renderResult(payload) {
+      if (!result) return;
+
+      const suggestion = payload?.suggestion || {};
+      const selectedOperation = payload?.selected_operation || {};
+
+      result.innerHTML = `
+        <div class="result-shell">
+          <div class="result-shell__header">
+            <article class="result-card">
+              <span>Operacao</span>
+              <strong>${displayValue(selectedOperation.name)}</strong>
+              <p>Codigo ${displayValue(selectedOperation.code)} | CFOP padrao ${displayValue(selectedOperation.cfop)}</p>
+            </article>
+            <article class="result-card result-card--soft">
+              <span>Confianca</span>
+              <strong>${Number(payload?.confidence_score || 0).toFixed(2)}</strong>
+              <p>Match ${displayValue(payload?.match_type, "-")}</p>
+            </article>
+          </div>
+
+          <div class="result-grid">
+            ${pill("NCM", suggestion.ncm, "teal")}
+            ${pill("NCM EX", suggestion.ncm_ex, "teal")}
+            ${pill("CEST", suggestion.cest, "amber")}
+            ${pill("cClasTrib", suggestion.cclas_trib, "sky")}
+            ${pill("CFOP", suggestion.cfop, "sky")}
+            ${pill("CSOSN", suggestion.csosn, "sky")}
+            ${pill("ICMS CST", suggestion.icms_cst, "sky")}
+            ${pill("PIS CST", suggestion.pis_cst, "rose")}
+            ${pill("COFINS CST", suggestion.cofins_cst, "rose")}
+            ${pill("Aliq. ICMS", suggestion.icms_rate, "sky")}
+            ${pill("Aliq. interna UF", suggestion.difal_internal_rate, "amber")}
+            ${pill("Aliq. interestadual", suggestion.difal_interstate_rate, "amber")}
+            ${pill("Dif. DIFAL", suggestion.difal_difference_rate, "amber")}
+            ${pill("Aliq. PIS", suggestion.pis_rate, "rose")}
+            ${pill("Aliq. COFINS", suggestion.cofins_rate, "rose")}
+            ${pill("FCP", suggestion.fcp_rate, "amber")}
+            ${pill("ICMS ST", suggestion.icms_st_rate, "amber")}
+            ${pill("IBS", suggestion.ibs_rate, "teal")}
+            ${pill("CBS", suggestion.cbs_rate, "teal")}
+            ${pill("Imp. seletivo", suggestion.selective_tax_code, "amber")}
+            ${pill("Aliq. seletivo", suggestion.selective_tax_rate, "amber")}
+            ${pill("Valor ICMS", suggestion.icms_value, "sky")}
+            ${pill("Valor IPI", suggestion.ipi_value, "amber")}
+            ${pill("Valor PIS", suggestion.pis_value, "rose")}
+            ${pill("Valor COFINS", suggestion.cofins_value, "rose")}
+          </div>
+        </div>
+      `;
+    }
+
+    function getDefaultOperationCode() {
+      return "sale_consumer_final";
+    }
+
+    async function applyOrganizationDefaults() {
+      const organizationId = readStorage("organization_id");
+      if (!organizationId) return;
+
+      try {
+        const response = await listOrganizations();
+        const organizations = Array.isArray(response?.organizations) ? response.organizations : [];
+        const active = organizations.find((item) => item.id === organizationId);
+        if (!active) return;
+
+        const homeUF = String(active.home_uf || "").trim().toUpperCase();
+        const taxRegime = String(active.tax_regime || "").trim();
+
+        const emitterInput = document.getElementById("emitter-uf");
+        const recipientInput = document.getElementById("recipient-uf");
+        const taxRegimeSelect = document.getElementById("tax-regime");
+
+        if (emitterInput && !emitterInput.value && homeUF) {
+          emitterInput.value = homeUF;
+        }
+        if (recipientInput && !recipientInput.value && homeUF) {
+          recipientInput.value = homeUF;
+        }
+        if (taxRegimeSelect && !taxRegimeSelect.value && taxRegime) {
+          taxRegimeSelect.value = taxRegime;
+        }
+        if (defaultsText) {
+          defaultsText.textContent = homeUF
+            ? `Padrao atual: venda a consumidor final em ${homeUF} para ${homeUF}. Voce pode ajustar isso abaixo se precisar.`
+            : "Padrao atual: venda a consumidor final usando a UF da organizacao ativa. Voce pode ajustar isso abaixo se precisar.";
+        }
+      } catch {
+        if (defaultsText) {
+          defaultsText.textContent = "Padrao atual: venda a consumidor final usando a UF da organizacao ativa.";
+        }
+      }
+    }
+
+    async function loadOperations() {
+      try {
+        const response = await listFiscalOperations();
+        const operations = response.operations || [];
+        if (!operationSelect) return;
+
+        const defaultCode = getDefaultOperationCode();
+
+        operationSelect.innerHTML = `
+          <option value="">Venda a consumidor final (padrao)</option>
+          ${operations
+            .map(
+              (item) => `
+                <option value="${item.code}">
+                  ${item.name} (${item.default_cfop || "-"})
+                </option>
+              `,
+            )
+            .join("")}
+        `;
+
+        const defaultOperation = operations.find((item) => item.code === defaultCode);
+        if (!operationSelect.value && defaultOperation) {
+          operationSelect.value = defaultCode;
+        }
+      } catch (error) {
+        if (operationSelect) {
+          operationSelect.innerHTML = `
+            <option value="">Venda a consumidor final (padrao)</option>
+            <option value="sale_consumer_final">Venda a consumidor final</option>
+          `;
+        }
+        setMessage(`Falha ao carregar operacoes fiscais. A consulta usara o padrao de venda a consumidor final. Detalhe: ${String(error)}`, "error");
+      }
+    }
+
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const token = readStorage("token");
+      const organizationId = readStorage("organization_id");
+
+      if (!token || !organizationId) {
+        setMessage("Faca login e selecione uma organizacao antes de consultar.", "error");
+        return;
+      }
+
+      try {
+        setMessage("Consultando motor tributario...", "success");
+
+        const descriptionValue = document.getElementById("description")?.value?.trim() || "";
+        const gtinValue = document.getElementById("gtin")?.value?.trim() || "";
+        const ncmValue = document.getElementById("ncm-code")?.value?.trim() || "";
+        const catalogMatch = !gtinValue && !ncmValue && descriptionValue
+          ? await resolveCatalogMatch(descriptionValue)
+          : null;
+
+        if (!gtinValue && !ncmValue && descriptionValue && !catalogMatch) {
+          renderNotFoundState(descriptionValue);
+          setMessage("Nenhum produto foi encontrado no catalogo para essa descricao.", "error");
+          return;
+        }
+
+        const payload = {
+          gtin: gtinValue || catalogMatch?.gtin || "",
+          description: descriptionValue || catalogMatch?.description || "",
+          ncm_code: ncmValue || catalogMatch?.profile?.ncm || "",
+          operation_code: document.getElementById("operation-code")?.value || getDefaultOperationCode(),
+          tax_regime: document.getElementById("tax-regime")?.value || "",
+          emitter_uf: (document.getElementById("emitter-uf")?.value || "").trim().toUpperCase(),
+          recipient_uf: (document.getElementById("recipient-uf")?.value || "").trim().toUpperCase(),
+        };
+
+        const response = await suggestTax(payload);
+        if (!hasSuggestionPayload(response)) {
+          renderNotFoundState(descriptionValue || gtinValue || ncmValue);
+          setMessage("A consulta nao encontrou memoria fiscal suficiente para montar a tributacao.", "error");
+          return;
+        }
+        renderScore(response);
+        renderComparison(response);
+        renderLegalBasis(response);
+        renderResult(response);
+        setMessage(
+          catalogMatch
+            ? "Consulta concluida com apoio do catalogo de produtos."
+            : "Consulta tributaria concluida com sucesso.",
+          "success",
+        );
+      } catch (error) {
+        setMessage(`Falha na consulta: ${String(error)}`, "error");
+      }
+    });
+
+    void loadOperations();
+    void applyOrganizationDefaults();
+  </script>
+
+  <style>
+    .simulation-hero,
+    .simulation-grid {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .simulation-hero {
+      grid-template-columns: 1.15fr 0.85fr;
+      padding: 24px;
+      border-radius: 24px;
+      border: 1px solid #dbe4ee;
+      background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.14), transparent 30%),
+        linear-gradient(135deg, #fffef8, #f8fbff);
+    }
+
+    .simulation-grid {
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      align-items: start;
+    }
+
+    .simulation-badge,
+    .section-heading__eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .simulation-hero h3 {
+      margin: 10px 0;
+      font-size: clamp(26px, 3vw, 38px);
+    }
+
+    .simulation-hero p,
+    .comparison-card p,
+    .result-card p {
+      margin: 0;
+      color: #475569;
+    }
+
+    .simulation-legend {
+      display: flex;
+      gap: 14px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .simulation-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .legend-dot--teal { background: #0f766e; }
+    .legend-dot--amber { background: #f59e0b; }
+    .legend-dot--sky { background: #0ea5e9; }
+
+    .simulation-hero__visual,
+    .side-column {
+      display: grid;
+      gap: 18px;
+    }
+
+    .simulation-score-card,
+    .simulation-illustration,
+    .comparison-card,
+    .result-card,
+    .tax-pill,
+    .legal-chip {
+      border: 1px solid #dbe4ee;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .simulation-score-card,
+    .simulation-illustration {
+      padding: 18px;
+    }
+
+    .simulation-score-card span,
+    .result-card span,
+    .tax-pill span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .simulation-score-card strong {
+      display: block;
+      margin: 8px 0 6px;
+      font-size: 28px;
+      color: #0f172a;
+    }
+
+    .simulation-illustration svg {
+      width: 100%;
+      display: block;
+      height: auto;
+    }
+
+    .section-heading {
+      margin-bottom: 16px;
+    }
+
+    .section-heading h3 {
+      margin: 6px 0 0;
+    }
+
+    .section-heading--tight {
+      margin-bottom: 14px;
+    }
+
+    .simulation-form {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .simulation-form label {
+      display: grid;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .simulation-form input,
+    .simulation-form select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font: inherit;
+      background: white;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .primary-button {
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      padding: 12px 18px;
+      cursor: pointer;
+      box-shadow: 0 16px 30px rgba(15, 118, 110, 0.18);
+    }
+
+    .form-hint {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .consultation-defaults {
+      display: grid;
+      gap: 6px;
+      padding: 14px 16px;
+      border: 1px solid #dbe4ee;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #f0fdfa, #f8fafc);
+    }
+
+    .consultation-defaults strong {
+      color: #0f172a;
+    }
+
+    .consultation-defaults p {
+      margin: 0;
+      color: #475569;
+    }
+
+    .consultation-advanced {
+      border: 1px solid #dbe4ee;
+      border-radius: 16px;
+      background: #ffffff;
+      padding: 14px 16px;
+    }
+
+    .consultation-advanced summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .consultation-advanced__grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .comparison-grid,
+    .comparison-guide,
+    .legal-basis-stack,
+    .legal-basis-list,
+    .result-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .comparison-guide__card,
+    .comparison-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .comparison-guide__card {
+      padding: 16px;
+      border: 1px solid #dbe4ee;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .comparison-guide__card strong {
+      color: #0f172a;
+    }
+
+    .comparison-guide__card p {
+      margin: 8px 0 0;
+      color: #64748b;
+    }
+
+    .comparison-card,
+    .legal-chip {
+      padding: 16px;
+    }
+
+    .comparison-card h4 {
+      margin: 0 0 8px;
+      color: #0f172a;
+    }
+
+    .legal-chip {
+      display: grid;
+      gap: 4px;
+    }
+
+    .warning-list {
+      display: grid;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid #fed7aa;
+      background: linear-gradient(180deg, #fff7ed, #fffaf5);
+      color: #9a3412;
+    }
+
+    .warning-list p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .legal-chip strong {
+      color: #0f172a;
+    }
+
+    .legal-chip span,
+    .legal-chip small {
+      color: #64748b;
+    }
+
+    .result-shell {
+      display: grid;
+      gap: 16px;
+    }
+
+    .result-shell__header {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .result-card {
+      padding: 16px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .result-card--soft {
+      background: #f0fdfa;
+    }
+
+    .result-card strong {
+      font-size: 24px;
+      color: #0f172a;
+      line-height: 1.1;
+    }
+
+    .result-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .tax-pill {
+      padding: 14px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .tax-pill strong {
+      color: #0f172a;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .tax-pill--teal { background: #f0fdfa; }
+    .tax-pill--amber { background: #fffbeb; }
+    .tax-pill--sky { background: #eff6ff; }
+    .tax-pill--rose { background: #fff1f2; }
+
+    .message-box {
+      margin-top: 14px;
+      border-radius: 14px;
+      padding: 12px 14px;
+    }
+
+    .message-box--error {
+      background: #fff1f2;
+      color: #b91c1c;
+    }
+
+    .message-box--success {
+      background: #ecfdf5;
+      color: #166534;
+    }
+
+    @media (max-width: 1080px) {
+      .simulation-hero,
+      .simulation-grid,
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .simulation-form,
+      .consultation-advanced__grid,
+      .comparison-guide,
+      .comparison-grid,
+      .result-shell__header {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </DashboardLayout>

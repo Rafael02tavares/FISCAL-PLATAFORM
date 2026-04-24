@@ -1,52 +1,477 @@
 ---
-import AppLayout from "../layouts/Layout.astro";
+import AppLayout from "../../layouts/DashboardLayout.astro";
 ---
 
-<AppLayout title="Dashboard">
-  <section class="page-header">
-    <h1>Dashboard</h1>
-    <p>Visão geral da operação fiscal.</p>
-  </section>
+<AppLayout
+  title="Dashboard"
+  subtitle="Portal de consulta tributaria com atalhos para consultar impostos, importar notas e navegar pela base fiscal"
+>
+  <section class="dashboard-hero card card--hero">
+    <div class="dashboard-hero__copy">
+      <span class="dashboard-kicker">Portal de consulta</span>
+      <h2>Consulte tributos por produto, nota fiscal, NCM ou operacao</h2>
+      <p>
+        Esta deve ser a entrada principal do usuario final. A partir daqui ele consegue consultar a
+        tributacao sugerida, importar XML para leitura fiscal e navegar pelo catalogo consultavel da plataforma.
+      </p>
 
-  <section class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">Notas importadas</div>
-      <div class="stat-value" id="stat-invoices">--</div>
+      <div class="dashboard-hero__actions">
+        <a class="button-link" href="/simulacao">Consultar tributos</a>
+        <a class="button-soft" href="/importacoes">Importar XML</a>
+        <a class="button-soft" href="/produtos">Consultar catalogo</a>
+        <a class="button-soft dashboard-admin-link" href="/admin">Administracao</a>
+      </div>
     </div>
 
-    <div class="stat-card">
-      <div class="stat-label">Empresa ativa</div>
-      <div class="stat-value" id="stat-organization">--</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-label">Status da API</div>
-      <div class="stat-value" id="stat-api">--</div>
+      <div class="dashboard-radar" aria-hidden="true">
+      <div class="dashboard-radar__badge">Rotas principais</div>
+      <svg viewBox="0 0 360 250" class="dashboard-radar__svg" role="img">
+        <defs>
+          <linearGradient id="dashGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0f766e"></stop>
+            <stop offset="100%" stop-color="#0ea5e9"></stop>
+          </linearGradient>
+          <linearGradient id="dashWarm" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f59e0b"></stop>
+            <stop offset="100%" stop-color="#fb7185"></stop>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="20" width="320" height="210" rx="30" fill="#ffffff" stroke="#d9e3df"></rect>
+        <rect x="44" y="48" width="120" height="22" rx="11" fill="#d9f4ee"></rect>
+        <rect x="44" y="84" width="170" height="12" rx="6" fill="#e2e8f0"></rect>
+        <rect x="44" y="106" width="138" height="12" rx="6" fill="#e2e8f0"></rect>
+        <circle cx="260" cy="96" r="46" fill="none" stroke="#e2e8f0" stroke-width="18"></circle>
+        <circle cx="260" cy="96" r="46" fill="none" stroke="url(#dashGlow)" stroke-width="18" stroke-linecap="round" stroke-dasharray="214 75" transform="rotate(-90 260 96)"></circle>
+        <path d="M56 178 C108 150, 146 194, 198 152 S270 132, 306 96" fill="none" stroke="url(#dashWarm)" stroke-width="8" stroke-linecap="round"></path>
+        <circle cx="56" cy="178" r="7" fill="#f59e0b"></circle>
+        <circle cx="198" cy="152" r="7" fill="#fb7185"></circle>
+        <circle cx="306" cy="96" r="7" fill="#0ea5e9"></circle>
+      </svg>
     </div>
   </section>
 
-  <section class="panel">
-    <h2>Ações rápidas</h2>
-    <div class="actions">
-      <a class="button-link" href="/upload">Importar XML</a>
-      <a class="button-link" href="/invoices">Ver notas</a>
-      <a class="button-link" href="/organizations">Trocar empresa</a>
-    </div>
+  <section class="grid grid--4 dashboard-metrics">
+    <article class="card card--padded metric-card metric-card--teal">
+      <span class="metric-card__label">Notas para consulta</span>
+      <strong class="metric-card__value" id="stat-invoices">--</strong>
+      <p class="metric-card__detail" id="stat-invoices-detail">Lendo historico recente...</p>
+    </article>
+
+    <article class="card card--padded metric-card metric-card--sky">
+      <span class="metric-card__label">Empresa ativa</span>
+      <strong class="metric-card__value metric-card__value--sm" id="stat-organization">--</strong>
+      <p class="metric-card__detail" id="stat-organization-detail">Buscando contexto da sessao...</p>
+    </article>
+
+    <article class="card card--padded metric-card metric-card--amber">
+      <span class="metric-card__label">Status da API</span>
+      <strong class="metric-card__value" id="stat-api">--</strong>
+      <p class="metric-card__detail" id="stat-api-detail">Verificando saude da plataforma...</p>
+    </article>
+
+    <article class="card card--padded metric-card metric-card--slate">
+      <span class="metric-card__label">Ultima nota lida</span>
+      <strong class="metric-card__value metric-card__value--sm" id="stat-last-issued">--</strong>
+      <p class="metric-card__detail" id="stat-last-issued-detail">Aguardando leitura da base...</p>
+    </article>
   </section>
 
-  <section class="panel" style="margin-top: 20px;">
-    <h2>Resumo</h2>
-    <div id="dashboard-result">Carregando dados...</div>
+  <section class="grid grid--2 dashboard-insights">
+    <article class="card card--padded">
+      <div class="panel-head">
+        <div>
+          <span class="panel-head__kicker">Leitura da base</span>
+          <h3 class="section-title">Prontidao para consulta</h3>
+        </div>
+      </div>
+      <div id="dashboard-pulse" class="dashboard-note">Carregando sinais da operacao...</div>
+    </article>
+
+    <article class="card card--padded">
+      <div class="panel-head">
+        <div>
+          <span class="panel-head__kicker">Portas de entrada</span>
+          <h3 class="section-title">Como o usuario consulta</h3>
+        </div>
+      </div>
+      <div class="quick-actions-grid">
+        <a class="quick-action-card" href="/simulacao" data-filter-item>
+          <span class="quick-action-card__tag">Descricao, GTIN ou NCM</span>
+          <strong>Consulta assistida</strong>
+          <p>Monte a sugestao tributaria completa com base no contexto operacional e no catalogo.</p>
+        </a>
+        <a class="quick-action-card" href="/invoices" data-filter-item>
+          <span class="quick-action-card__tag">A partir da nota</span>
+          <strong>Notas importadas</strong>
+          <p>Abra a NF-e, revise os itens capturados e aproveite a memoria fiscal observada na entrada.</p>
+        </a>
+        <a class="quick-action-card" href="/ncm" data-filter-item>
+          <span class="quick-action-card__tag">Tabela oficial</span>
+          <strong>Consulta por NCM</strong>
+          <p>Pesquise classificacao fiscal e use a base oficial para apoiar a decisao tributaria.</p>
+        </a>
+        <a class="quick-action-card" href="/produtos" data-filter-item>
+          <span class="quick-action-card__tag">Base consultavel</span>
+          <strong>Catalogo de produtos</strong>
+          <p>Consulte a memoria tributaria consolidada dos produtos cadastrados e sua cobertura fiscal.</p>
+        </a>
+      </div>
+    </article>
   </section>
+
+  <section class="grid grid--3 dashboard-entry-points">
+    <article class="card card--padded entry-card entry-card--teal" data-filter-item>
+      <span class="entry-card__eyebrow">Consulta imediata</span>
+      <h3>Quando ja sei o item</h3>
+      <p>Use descricao, GTIN ou NCM para encontrar rapidamente a tributacao sugerida.</p>
+      <a class="button-soft" href="/simulacao">Abrir consulta</a>
+    </article>
+
+    <article class="card card--padded entry-card entry-card--amber" data-filter-item>
+      <span class="entry-card__eyebrow">Leitura documental</span>
+      <h3>Quando recebi uma NF-e</h3>
+      <p>Importe o XML, abra os itens da nota e transforme a entrada em conhecimento tributario reutilizavel.</p>
+      <a class="button-soft" href="/importacoes">Importar XML</a>
+    </article>
+
+    <article class="card card--padded entry-card entry-card--sky" data-filter-item>
+      <span class="entry-card__eyebrow">Consulta de base</span>
+      <h3>Quando quero confirmar cadastro</h3>
+      <p>Navegue pelo catalogo para conferir NCM, CEST, CFOP, CST e tributos da reforma ja consolidados.</p>
+      <a class="button-soft" href="/produtos">Abrir catalogo</a>
+    </article>
+  </section>
+
+  <section class="card card--padded" style="margin-top: 18px;">
+    <div class="panel-head panel-head--spread">
+      <div>
+        <span class="panel-head__kicker">Base recente</span>
+        <h3 class="section-title">Ultimas notas disponiveis para consulta</h3>
+      </div>
+      <a class="button-soft" href="/invoices">Ver todas</a>
+    </div>
+    <div id="dashboard-result" class="dashboard-note">Carregando dados...</div>
+  </section>
+
+  <style>
+    .dashboard-hero {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 22px;
+      margin-bottom: 18px;
+    }
+
+    .dashboard-kicker,
+    .panel-head__kicker {
+      display: inline-flex;
+      width: fit-content;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e7f1f8;
+      color: #0a4664;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .dashboard-hero__copy h2 {
+      margin: 10px 0 12px;
+      font-size: clamp(32px, 3.7vw, 46px);
+      line-height: 1.02;
+    }
+
+    .dashboard-hero__copy p {
+      margin: 0;
+      max-width: 60ch;
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .dashboard-hero__actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .dashboard-radar {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(186, 200, 214, 0.85);
+      background: rgba(247, 250, 253, 0.96);
+    }
+
+    .dashboard-radar__badge {
+      display: inline-flex;
+      width: fit-content;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #143247;
+      color: white;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .dashboard-radar__svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .metric-card {
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 249, 252, 0.95));
+    }
+
+    .metric-card--teal {
+      background: linear-gradient(180deg, #ffffff, #eef6fb);
+    }
+
+    .metric-card--sky {
+      background: linear-gradient(180deg, #ffffff, #eef4f9);
+    }
+
+    .metric-card--amber {
+      background: linear-gradient(180deg, #ffffff, #fff5e8);
+    }
+
+    .metric-card--slate {
+      background: linear-gradient(180deg, #ffffff, #f4f7fb);
+    }
+
+    .metric-card__label {
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .metric-card__value {
+      font-size: clamp(30px, 5vw, 42px);
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .metric-card__value--sm {
+      font-size: clamp(22px, 3vw, 30px);
+      line-height: 1.15;
+    }
+
+    .metric-card__detail {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .panel-head--spread {
+      align-items: center;
+    }
+
+    .panel-head .section-title {
+      margin: 8px 0 0;
+    }
+
+    .pulse-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .pulse-strip {
+      display: grid;
+      gap: 8px;
+    }
+
+    .pulse-strip__head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .pulse-strip__track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #dbe4ec;
+    }
+
+    .pulse-strip__fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #0f5f86, #2b7ca3);
+    }
+
+    .pulse-summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .pulse-summary__card {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(248, 251, 254, 0.98);
+    }
+
+    .pulse-summary__card span {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .pulse-summary__card strong {
+      font-size: 20px;
+      color: var(--text);
+    }
+
+    .quick-actions-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .quick-action-card {
+      display: grid;
+      gap: 8px;
+      padding: 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(186, 200, 214, 0.82);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(245, 249, 252, 0.97));
+      transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+    }
+
+    .quick-action-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+      border-color: rgba(15, 95, 134, 0.3);
+    }
+
+    .quick-action-card__tag {
+      display: inline-flex;
+      width: fit-content;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #e3f0f7;
+      color: #0a4664;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .quick-action-card strong {
+      font-size: 19px;
+      color: var(--text);
+    }
+
+    .quick-action-card p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .dashboard-table-link {
+      color: var(--primary-strong);
+      font-weight: 700;
+    }
+
+    .dashboard-entry-points {
+      margin-top: 18px;
+    }
+
+    .entry-card {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+      min-height: 100%;
+    }
+
+    .entry-card__eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .entry-card h3 {
+      margin: 0;
+      color: var(--text);
+    }
+
+    .entry-card p {
+      margin: 0;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .entry-card--teal .entry-card__eyebrow {
+      background: #dff7f3;
+      color: #0f766e;
+    }
+
+    .entry-card--amber .entry-card__eyebrow {
+      background: #fff1cf;
+      color: #b45309;
+    }
+
+    .entry-card--sky .entry-card__eyebrow {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard-hero,
+      .quick-actions-grid,
+      .pulse-summary {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 
   <script>
-    import { listInvoices } from "../lib/invoices";
-    import { listOrganizations } from "../lib/organizations";
+    import { apiFetch } from "../../lib/api";
+    import { listInvoices } from "../../lib/invoices";
+    import { listOrganizations } from "../../lib/organizations";
 
-    const statInvoices = document.getElementById("stat-invoices") as HTMLDivElement | null;
-    const statOrganization = document.getElementById("stat-organization") as HTMLDivElement | null;
-    const statAPI = document.getElementById("stat-api") as HTMLDivElement | null;
-    const result = document.getElementById("dashboard-result") as HTMLDivElement | null;
+    const statInvoices = document.getElementById("stat-invoices");
+    const statInvoicesDetail = document.getElementById("stat-invoices-detail");
+    const statOrganization = document.getElementById("stat-organization");
+    const statOrganizationDetail = document.getElementById("stat-organization-detail");
+    const statAPI = document.getElementById("stat-api");
+    const statAPIDetail = document.getElementById("stat-api-detail");
+    const statLastIssued = document.getElementById("stat-last-issued");
+    const statLastIssuedDetail = document.getElementById("stat-last-issued-detail");
+    const pulse = document.getElementById("dashboard-pulse");
+    const result = document.getElementById("dashboard-result");
+    const adminLink = document.querySelector(".dashboard-admin-link");
 
     interface Invoice {
       id: string;
@@ -65,6 +490,95 @@ import AppLayout from "../layouts/Layout.astro";
       role?: string;
     }
 
+    function formatDate(value?: string) {
+      if (!value) return "-";
+
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        return value;
+      }
+
+      return new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short",
+      }).format(parsed);
+    }
+
+    function percentage(count: number, total: number) {
+      if (!total) return 0;
+      return Math.round((count / total) * 100);
+    }
+
+    function getStatusBadge(status?: string) {
+      const normalized = String(status || "").toLowerCase();
+      if (normalized.includes("process") || normalized.includes("success")) {
+        return '<span class="badge badge--success">Processada</span>';
+      }
+      if (normalized.includes("pending")) {
+        return '<span class="badge badge--warning">Pendente</span>';
+      }
+      if (normalized.includes("error") || normalized.includes("fail")) {
+        return '<span class="badge badge--danger">Com erro</span>';
+      }
+      return `<span class="badge badge--info">${status || "Sem status"}</span>`;
+    }
+
+    function hasAdminAreaAccess(role?: string) {
+      const normalized = String(role || "").toLowerCase();
+      return normalized === "owner" || normalized === "admin" || normalized === "analyst";
+    }
+
+    function renderPulse(invoices: Invoice[]) {
+      if (!pulse) return;
+
+      const total = invoices.length;
+      const processed = invoices.filter((invoice) =>
+        String(invoice.status || "").toLowerCase().includes("process")
+      ).length;
+      const withEmitter = invoices.filter((invoice) => String(invoice.emitter_name || "").trim() !== "").length;
+      const withDate = invoices.filter((invoice) => String(invoice.issued_at || "").trim() !== "").length;
+      const uniqueEmitters = new Set(
+        invoices.map((invoice) => String(invoice.emitter_name || "").trim()).filter(Boolean)
+      ).size;
+
+      const strips = [
+        { label: "Notas processadas", count: processed },
+        { label: "Emitente identificado", count: withEmitter },
+        { label: "Data identificada", count: withDate },
+      ];
+
+      pulse.innerHTML = `
+        <div class="pulse-grid">
+          ${strips
+            .map((strip) => {
+              const fill = percentage(strip.count, total);
+              return `
+                <div class="pulse-strip">
+                  <div class="pulse-strip__head">
+                    <span>${strip.label}</span>
+                    <span>${strip.count}/${total}</span>
+                  </div>
+                  <div class="pulse-strip__track">
+                    <div class="pulse-strip__fill" style="width:${fill}%"></div>
+                  </div>
+                </div>
+              `;
+            })
+            .join("")}
+          <div class="pulse-summary">
+            <div class="pulse-summary__card">
+              <span>Emissores distintos</span>
+              <strong>${uniqueEmitters || 0}</strong>
+            </div>
+            <div class="pulse-summary__card">
+              <span>Ritmo de carga</span>
+              <strong>${total >= 10 ? "Forte" : total >= 3 ? "Moderado" : "Inicial"}</strong>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     async function loadDashboard() {
       const token = localStorage.getItem("token");
       const organizationId = localStorage.getItem("organization_id");
@@ -80,76 +594,114 @@ import AppLayout from "../layouts/Layout.astro";
       }
 
       try {
+        await apiFetch("/health", { method: "GET" });
         if (statAPI) statAPI.textContent = "Online";
+        if (statAPIDetail) statAPIDetail.textContent = "API respondeu com sucesso ao healthcheck.";
 
-        const [invoiceData, organizationData] = await Promise.all([
-          listInvoices(),
-          listOrganizations(),
-        ]);
+        const [invoiceData, organizationData] = await Promise.all([listInvoices(), listOrganizations()]);
 
         const invoices: Invoice[] = invoiceData.invoices || [];
         const organizations: Organization[] = organizationData.organizations || [];
-
         const activeOrganization =
-          organizations.find((org) => org.id === organizationId) || null;
+          organizations.find((organization) => organization.id === organizationId) || null;
+        const adminArea = hasAdminAreaAccess(activeOrganization?.role);
+        const latestInvoice = [...invoices]
+          .filter((invoice) => invoice.issued_at)
+          .sort((left, right) => new Date(right.issued_at).getTime() - new Date(left.issued_at).getTime())[0];
 
-        if (statInvoices) {
-          statInvoices.textContent = String(invoices.length);
+        if (adminLink instanceof HTMLElement) {
+          adminLink.style.display = adminArea ? "inline-flex" : "none";
         }
 
-        if (statOrganization) {
-          statOrganization.textContent = activeOrganization?.name || "Não encontrada";
+        if (statInvoices) statInvoices.textContent = String(invoices.length);
+        if (statInvoicesDetail) {
+          statInvoicesDetail.textContent =
+            invoices.length > 0
+              ? `${Math.min(invoices.length, 5)} ultimas notas destacadas abaixo.`
+              : "Importe XMLs para ativar as consultas por documento.";
         }
+
+        if (statOrganization) statOrganization.textContent = activeOrganization?.name || "Nao encontrada";
+        if (statOrganizationDetail) {
+          statOrganizationDetail.textContent = activeOrganization?.cnpj
+            ? `CNPJ ${activeOrganization.cnpj}${activeOrganization.role ? ` - ${activeOrganization.role}` : ""}`
+            : "Sessao sem contexto de empresa completo.";
+        }
+
+        if (statLastIssued) statLastIssued.textContent = latestInvoice ? formatDate(latestInvoice.issued_at) : "--";
+        if (statLastIssuedDetail) {
+          statLastIssuedDetail.textContent = latestInvoice
+            ? `Ultima nota do emitente ${latestInvoice.emitter_name || "-"}`
+            : "Nenhuma emissao localizada na base atual.";
+        }
+
+        renderPulse(invoices);
 
         if (!result) return;
 
-        const latestInvoices = invoices.slice(0, 5);
-
-        if (latestInvoices.length === 0) {
+        if (!invoices.length) {
           result.innerHTML = `
-            <p>Nenhuma nota importada ainda.</p>
-            <p>Use o menu lateral para importar um XML.</p>
+            <div class="empty-state">
+              <strong>Nenhuma nota importada ainda.</strong>
+              <p>Use a tela de <a class="dashboard-table-link" href="/importacoes">importacoes</a> para carregar o primeiro XML e ativar as consultas por nota.</p>
+            </div>
           `;
           return;
         }
 
-        const rows = latestInvoices
+        const rows = invoices
+          .slice(0, 6)
           .map(
             (invoice: Invoice) => `
               <tr>
-                <td>${invoice.number}</td>
-                <td>${invoice.series}</td>
-                <td>${invoice.emitter_name}</td>
-                <td>${invoice.issued_at}</td>
-                <td>${invoice.total_amount}</td>
-                <td>${invoice.status}</td>
-                <td><a href="/invoices/${invoice.id}">Ver</a></td>
+                <td>${invoice.number || "-"}</td>
+                <td>${invoice.series || "-"}</td>
+                <td>${invoice.emitter_name || "-"}</td>
+                <td>${formatDate(invoice.issued_at)}</td>
+                <td>${getStatusBadge(invoice.status)}</td>
+                <td><a class="dashboard-table-link" href="/invoices/${invoice.id}">Abrir</a></td>
               </tr>
             `
           )
           .join("");
 
         result.innerHTML = `
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Número</th>
-                <th>Série</th>
-                <th>Emitente</th>
-                <th>Data</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Ação</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Numero</th>
+                  <th>Serie</th>
+                  <th>Emitente</th>
+                  <th>Emissao</th>
+                  <th>Status</th>
+                  <th>Acao</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
         `;
       } catch (error) {
         if (statAPI) statAPI.textContent = "Erro";
+        if (statAPIDetail) statAPIDetail.textContent = "Falha ao consultar o backend.";
+
+        if (pulse) {
+          pulse.innerHTML = `
+            <div class="empty-state">
+              <strong>Falha ao montar os sinais da operacao.</strong>
+              <p>${String(error)}</p>
+            </div>
+          `;
+        }
 
         if (result) {
-          result.textContent = `Erro ao carregar dashboard: ${String(error)}`;
+          result.innerHTML = `
+            <div class="empty-state">
+              <strong>Erro ao carregar a dashboard.</strong>
+              <p>${String(error)}</p>
+            </div>
+          `;
         }
       }
     }

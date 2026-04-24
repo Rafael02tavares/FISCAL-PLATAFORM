@@ -1,17 +1,72 @@
 ---
-import DashboardLayout from "../layouts/DashboardLayout.astro";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import importsScript from "../../scripts/importacoes.ts?url";
 ---
 
 <DashboardLayout
-  title="Simulação tributária"
-  subtitle="Simule a tributação por NCM, UF, regime e operação"
+  title="Importacoes"
+  subtitle="Envie um ou varios XMLs de NF-e e acompanhe as notas processadas pela API"
 >
   <div class="page-header">
-    <h2>Simulação tributária</h2>
-    <p>Esta tela será o coração comercial do produto.</p>
+    <h2>Importar XMLs de NF-e</h2>
+    <p>O upload usa o endpoint autenticado `/invoices/upload` e permite importar varios XMLs em lote.</p>
   </div>
 
+  <div class="grid grid--2">
+    <section class="card card--padded">
+      <form id="upload-form" class="upload-form">
+        <label>
+          Arquivos XML
+          <input id="xml-file" type="file" accept=".xml,text/xml,application/xml" multiple required />
+        </label>
+        <p class="upload-hint">Selecione um ou varios arquivos XML para processamento em lote.</p>
+        <div class="upload-actions">
+          <button class="primary-button" type="submit">Enviar lote</button>
+        </div>
+      </form>
+      <div id="upload-message" class="dashboard-note"></div>
+    </section>
+
+    <section class="card card--padded">
+      <h3 class="section-title">Resumo do ambiente</h3>
+      <div id="upload-session" class="dashboard-note">Verificando sessao e organizacao ativa...</div>
+    </section>
+  </div>
+
+  <div style="height: 18px;"></div>
+
   <section class="card card--padded">
-    Em breve vamos ligar esta página ao motor tributário.
+    <h3 class="section-title">Notas importadas</h3>
+    <div id="upload-invoices" class="dashboard-note">Carregando notas...</div>
   </section>
+
+  <script type="module" src={importsScript}></script>
+
+  <style>
+    .upload-form { display: grid; gap: 14px; }
+    .upload-form label { display: grid; gap: 8px; font-weight: 600; }
+    .upload-hint { margin: 0; color: var(--text-muted); font-size: 13px; }
+    .upload-actions { display: flex; gap: 10px; }
+    .primary-button {
+      border: none;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+    .message-box { margin-top: 14px; border-radius: 12px; padding: 12px 14px; }
+    .message-box--error { background: #fff1f2; color: #b91c1c; }
+    .message-box--success { background: #ecfdf5; color: #166534; }
+    .session-card { display: grid; gap: 8px; }
+    .dashboard-empty {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      background: var(--surface-soft);
+    }
+    .dashboard-empty--error { border-color: #fecaca; background: #fff7f7; }
+  </style>
 </DashboardLayout>

@@ -1,0 +1,328 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import adminUsersScript from "../../../scripts/admin-users.ts?url";
+---
+
+<DashboardLayout
+  title="Administracao de usuarios"
+  subtitle="Gerencie os usuarios vinculados a organizacao atual, seus papeis e acessos operacionais"
+>
+  <div class="page-header">
+    <h2>Usuarios da organizacao</h2>
+    <p>Cadastre novos acessos, vincule usuarios existentes e ajuste o papel de cada membro na organizacao ativa.</p>
+  </div>
+
+  <section class="users-hero">
+    <div>
+      <span class="users-hero__eyebrow">Gestao de acessos</span>
+      <h3>Um painel simples para manter o time certo na organizacao certa</h3>
+      <p>
+        A criacao aqui funciona em dois modos: se o email ainda nao existir, um novo usuario e criado; se
+        ele ja existir, o sistema apenas vincula esse usuario a organizacao atual com o papel informado.
+      </p>
+    </div>
+    <div id="admin-users-stats" class="users-stat-grid">
+      <div class="dashboard-note">Carregando indicadores...</div>
+    </div>
+  </section>
+
+  <div class="grid grid--2">
+    <section class="card card--padded">
+      <h3 class="section-title">Cadastrar ou vincular usuario</h3>
+      <form id="admin-user-form" class="form-grid">
+        <label>
+          Nome
+          <input name="name" type="text" placeholder="Ex.: Maria Silva" />
+        </label>
+
+        <label>
+          Email
+          <input name="email" type="email" placeholder="maria@empresa.com" />
+        </label>
+
+        <label>
+          Senha
+          <input name="password" type="password" placeholder="Obrigatoria so para novo usuario" />
+        </label>
+
+        <label>
+          Papel
+          <select name="role">
+            <option value="viewer">Leitor</option>
+            <option value="analyst">Analista</option>
+            <option value="admin">Admin</option>
+            <option value="owner">Owner</option>
+          </select>
+        </label>
+
+        <div class="full-width form-actions">
+          <button class="primary-button" type="submit">Salvar usuario</button>
+        </div>
+      </form>
+
+      <div id="admin-user-feedback" class="dashboard-note">
+        Informe o email e o papel. Se for um novo usuario, preencha tambem nome e senha.
+      </div>
+    </section>
+
+    <section class="card card--padded">
+      <div class="users-list-head">
+        <h3 class="section-title">Membros da organizacao</h3>
+        <a class="secondary-link" href="/organizations">Trocar organizacao</a>
+      </div>
+      <div id="admin-users-list" class="dashboard-note">Carregando usuarios...</div>
+    </section>
+  </div>
+
+  <script type="module" src={adminUsersScript}></script>
+
+  <style>
+    .users-hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 22px;
+      border-radius: 24px;
+      border: 1px solid #dbe4ee;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(34, 197, 94, 0.14), transparent 30%),
+        linear-gradient(135deg, #ffffff, #f8fbff);
+    }
+
+    .users-hero__eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .users-hero h3 {
+      margin: 8px 0 10px;
+      font-size: clamp(24px, 3vw, 34px);
+    }
+
+    .users-hero p {
+      margin: 0;
+      color: #475569;
+      max-width: 62ch;
+    }
+
+    .users-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-content: start;
+    }
+
+    .stat-card {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      background: white;
+    }
+
+    .stat-card span {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .stat-card strong {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .stat-card--gold {
+      background: #fffbeb;
+    }
+
+    .stat-card--blue {
+      background: #eff6ff;
+    }
+
+    .stat-card--teal {
+      background: #f0fdfa;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .form-grid label {
+      display: grid;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .form-grid input,
+    .form-grid select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+      background: white;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-actions,
+    .users-list-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .primary-button,
+    .secondary-button,
+    .secondary-link,
+    .danger-button {
+      border: none;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .primary-button {
+      background: linear-gradient(135deg, #0f766e, #2563eb);
+      color: white;
+    }
+
+    .secondary-button,
+    .secondary-link {
+      background: #f8fafc;
+      color: #0f172a;
+      border: 1px solid #dbe4ee;
+    }
+
+    .danger-button {
+      background: #fff1f2;
+      color: #be123c;
+      border: 1px solid #fecdd3;
+    }
+
+    .user-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .user-card {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid #dbe4ee;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .user-card__top,
+    .user-card__actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .user-card__top p {
+      margin: 6px 0 0;
+      color: #64748b;
+    }
+
+    .role-badge {
+      display: inline-flex;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .role-badge--owner {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .role-badge--admin {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .role-badge--analyst {
+      background: #ccfbf1;
+      color: #115e59;
+    }
+
+    .role-badge--viewer {
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .role-select {
+      min-width: 150px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font: inherit;
+      background: white;
+    }
+
+    .dashboard-empty {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      background: var(--surface-soft);
+    }
+
+    .dashboard-empty--error {
+      border-color: #fecaca;
+      background: #fff7f7;
+    }
+
+    .feedback {
+      margin-top: 16px;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .feedback--success {
+      background: #ecfdf5;
+      color: #166534;
+    }
+
+    .feedback--error {
+      background: #fff1f2;
+      color: #b91c1c;
+    }
+
+    @media (max-width: 900px) {
+      .users-hero,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .users-stat-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</DashboardLayout>

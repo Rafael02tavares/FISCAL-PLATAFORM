@@ -3,6 +3,7 @@ package legalbasis
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -228,17 +229,17 @@ func (r *Repository) CreateLegalRuleMapping(ctx context.Context, p CreateLegalRu
 		VALUES (
 			$1::uuid,
 			$2,
-			$3,
-			$4,
-			$5,
-			$6,
-			$7,
-			$8,
-			$9,
-			$10,
-			$11,
-			$12,
-			$13,
+			NULLIF($3, ''),
+			NULLIF($4, ''),
+			NULLIF($5, ''),
+			NULLIF($6, ''),
+			NULLIF($7, ''),
+			NULLIF($8, ''),
+			NULLIF($9, ''),
+			NULLIF($10, ''),
+			NULLIF($11, ''),
+			NULLIF($12, ''),
+			NULLIF($13, ''),
 			NULLIF($14, ''),
 			NULLIF($15, ''),
 			$16,
@@ -379,11 +380,23 @@ type FindApplicableRulesParams struct {
 	OperationCode string
 	TaxRegime     string
 	NCMCode       string
+	CEST          string
+	CClasTrib     string
+	CFOP          string
 	EmitterUF     string
 	RecipientUF   string
 }
 
 func (r *Repository) FindApplicableRules(ctx context.Context, p FindApplicableRulesParams) ([]ApplicableLegalRule, error) {
+	operationCode := strings.TrimSpace(p.OperationCode)
+	taxRegime := strings.TrimSpace(p.TaxRegime)
+	ncmCode := strings.TrimSpace(p.NCMCode)
+	cest := strings.TrimSpace(p.CEST)
+	cclasTrib := strings.TrimSpace(p.CClasTrib)
+	cfop := strings.TrimSpace(p.CFOP)
+	emitterUF := strings.TrimSpace(p.EmitterUF)
+	recipientUF := strings.TrimSpace(p.RecipientUF)
+
 	query := `
 		SELECT
 			ls.id::text,
@@ -403,21 +416,39 @@ func (r *Repository) FindApplicableRules(ctx context.Context, p FindApplicableRu
 		  AND (lrm.operation_code = $1 OR lrm.operation_code IS NULL OR lrm.operation_code = '')
 		  AND (lrm.tax_regime = $2 OR lrm.tax_regime IS NULL OR lrm.tax_regime = '')
 		  AND (lrm.ncm_code = $3 OR lrm.ncm_code IS NULL OR lrm.ncm_code = '')
-		  AND (lrm.emitter_uf = $4 OR lrm.emitter_uf IS NULL OR lrm.emitter_uf = '')
-		  AND (lrm.recipient_uf = $5 OR lrm.recipient_uf IS NULL OR lrm.recipient_uf = '')
+		  AND (lrm.cest = $4 OR lrm.cest IS NULL OR lrm.cest = '')
+		  AND (lrm.cclas_trib = $5 OR lrm.cclas_trib IS NULL OR lrm.cclas_trib = '')
+		  AND (lrm.cfop = $6 OR lrm.cfop IS NULL OR lrm.cfop = '')
+		  AND (lrm.emitter_uf = $7 OR lrm.emitter_uf IS NULL OR lrm.emitter_uf = '')
+		  AND (lrm.recipient_uf = $8 OR lrm.recipient_uf IS NULL OR lrm.recipient_uf = '')
 		  AND (lrm.effective_from IS NULL OR lrm.effective_from <= CURRENT_DATE)
 		  AND (lrm.effective_to IS NULL OR lrm.effective_to >= CURRENT_DATE)
-		ORDER BY lrm.priority ASC, lrm.created_at DESC
+		ORDER BY
+			lrm.priority ASC,
+			(
+				CASE WHEN COALESCE(NULLIF(lrm.operation_code, ''), '') <> '' AND LOWER(lrm.operation_code) = LOWER($1) THEN 16 ELSE 0 END +
+				CASE WHEN COALESCE(NULLIF(lrm.tax_regime, ''), '') <> '' AND LOWER(lrm.tax_regime) = LOWER($2) THEN 12 ELSE 0 END +
+				CASE WHEN COALESCE(NULLIF(lrm.ncm_code, ''), '') <> '' AND lrm.ncm_code = $3 THEN 20 ELSE 0 END +
+				CASE WHEN COALESCE(NULLIF(lrm.cest, ''), '') <> '' AND lrm.cest = $4 THEN 8 ELSE 0 END +
+				CASE WHEN COALESCE(NULLIF(lrm.cclas_trib, ''), '') <> '' AND lrm.cclas_trib = $5 THEN 8 ELSE 0 END +
+				CASE WHEN COALESCE(NULLIF(lrm.cfop, ''), '') <> '' AND lrm.cfop = $6 THEN 10 ELSE 0 END +
+				CASE WHEN COALESCE(NULLIF(lrm.emitter_uf, ''), '') <> '' AND UPPER(lrm.emitter_uf) = UPPER($7) THEN 6 ELSE 0 END +
+				CASE WHEN COALESCE(NULLIF(lrm.recipient_uf, ''), '') <> '' AND UPPER(lrm.recipient_uf) = UPPER($8) THEN 6 ELSE 0 END
+			) DESC,
+			lrm.created_at DESC
 	`
 
 	rows, err := r.db.Query(
 		ctx,
 		query,
-		p.OperationCode,
-		p.TaxRegime,
-		p.NCMCode,
-		p.EmitterUF,
-		p.RecipientUF,
+		operationCode,
+		taxRegime,
+		ncmCode,
+		cest,
+		cclasTrib,
+		cfop,
+		emitterUF,
+		recipientUF,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("find applicable legal rules: %w", err)
@@ -451,4 +482,3 @@ func (r *Repository) FindApplicableRules(ctx context.Context, p FindApplicableRu
 
 	return items, nil
 }
-

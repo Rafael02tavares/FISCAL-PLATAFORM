@@ -1,0 +1,34 @@
+---
+import Page from "../../components/pages/admin/icms-module.astro";
+
+const links = [
+  { href: "/admin/icms", label: "Visao geral" },
+  { href: "/admin/icms-incidencia", label: "Incidencia" },
+  { href: "/admin/icms-base-aliquota", label: "Base e aliquota" },
+  { href: "/admin/icms-credito", label: "Credito" },
+  { href: "/admin/icms-st-fcp", label: "ICMS ST e FCP" },
+  { href: "/admin/icms-beneficios", label: "Beneficios" },
+  { href: "/admin/icms-fundamento", label: "Fundamento legal" },
+];
+---
+
+<Page
+  title="ICMS • Incidencia"
+  subtitle="Modulo isolado para fato gerador, nao incidencia e momento da operacao"
+  eyebrow="Camada 1"
+  summary="Este bloco define quando o ICMS existe na operacao. Aqui a equipe fiscal organiza hipoteses de incidencia, nao incidencia, importacao, circulacao e o momento juridico da operacao."
+  legalBasis="LC 87/1996: arts. 1 a 3 e 11 a 12"
+  activeHref="/admin/icms-incidencia"
+  links={links}
+  checklist={[
+    { title: "Tipo de operacao", copy: "Diferencie venda, transferencia, devolucao, bonificacao, importacao e outras hipoteses materiais." },
+    { title: "Gatilho de incidencia", copy: "Defina qual evento aciona o ICMS e em quais contextos o motor deve suprimir a cobranca." },
+    { title: "Momento da ocorrencia", copy: "Registre quando a operacao deve ser considerada para a regra, inclusive saida, entrada e desembaraco." },
+    { title: "Excecoes", copy: "Mantenha nao incidencia, isencoes operacionais e situacoes especiais fora do cadastro basico de aliquota." },
+  ]}
+  references={[
+    { label: "Campos principais", value: "operation_code, cfop, tipo de operacao, regime, contexto territorial" },
+    { label: "Saida para o motor", value: "ha incidencia, nao ha incidencia, incidencia condicionada" },
+    { label: "Fonte de apoio", value: "regras normativas, nota importada e contexto da organizacao" },
+  ]}
+/>

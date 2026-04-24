@@ -1,0 +1,262 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+
+const modules = [
+  {
+    eyebrow: "Enquadramento contributivo",
+    title: "CST e regime",
+    description:
+      "Separe claramente CST de PIS/COFINS, regime normal ou presumido e reaproveitamento vindo da nota de entrada.",
+    links: [
+      { href: "/admin/cst", label: "CST de PIS/COFINS", copy: "Cadastre CST de entrada e saida com contexto operacional." },
+      { href: "/admin/legal-rules", label: "Regras tributarias", copy: "Refine a aplicacao por NCM, CFOP, UFs, regime e vigencia." },
+    ],
+  },
+  {
+    eyebrow: "Receitas e aliquotas",
+    title: "Aliquotas e codigos de receita",
+    description:
+      "Controle aliquotas de PIS e COFINS por regime, alem dos codigos de receita usados para leitura e sugestao.",
+    links: [
+      { href: "/admin/cst", label: "Aliquotas e receita", copy: "Use o cadastro guiado para manter CST, aliquotas e receitas." },
+      { href: "/produtos", label: "Produtos", copy: "Revise como o perfil do produto esta consolidado para contribuicoes." },
+    ],
+  },
+  {
+    eyebrow: "Consulta e validacao",
+    title: "Motor e simulacao",
+    description:
+      "Acompanhe como as contribuicoes aparecem na consulta e valide se o reaproveitamento da entrada pode ou nao seguir para a saida.",
+    links: [
+      { href: "/simulacao", label: "Consulta tributaria", copy: "Confira rapidamente PIS e COFINS sugeridos no painel final." },
+      { href: "/invoices", label: "Notas importadas", copy: "Use CST e aliquotas capturados na entrada como apoio a decisao." },
+    ],
+  },
+];
+
+const highlights = [
+  "CST PIS",
+  "CST COFINS",
+  "Aliquota regime normal",
+  "Aliquota lucro presumido",
+  "Receita de PIS",
+  "Receita de COFINS",
+  "Memoria de entrada x saida",
+];
+---
+
+<DashboardLayout
+  title="PIS e COFINS"
+  subtitle="Central de gestao de PIS e COFINS com CST, aliquotas por regime e receitas"
+>
+  <section class="tax-hub-hero">
+    <div class="tax-hub-hero__copy">
+      <span class="tax-hub-hero__eyebrow">Contribuicoes federais</span>
+      <h2>Organize PIS e COFINS com mais clareza operacional</h2>
+      <p>
+        Esta aba separa enquadramento, aliquotas e receitas de PIS/COFINS para facilitar a leitura
+        do time. O objetivo e tirar esse assunto do meio das demais regras e deixar a manutencao
+        mais objetiva.
+      </p>
+
+      <div class="tax-hub-tags">
+        {highlights.map((item) => <span>{item}</span>)}
+      </div>
+    </div>
+
+    <div class="tax-hub-hero__panel">
+      <article class="tax-hub-stat">
+        <span>Frentes de gestao</span>
+        <strong>3 blocos</strong>
+        <p>Enquadramento, aliquotas/receitas e validacao na consulta.</p>
+      </article>
+      <article class="tax-hub-stat tax-hub-stat--accent">
+        <span>Foco operacional</span>
+        <strong>Regime + saida</strong>
+        <p>Ajuda a separar o que pode ser reutilizado da entrada do que precisa regra especifica de saida.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="tax-hub-grid">
+    {modules.map((module) => (
+      <article class="tax-hub-card" data-filter-item>
+        <header class="tax-hub-card__header">
+          <span class="tax-hub-card__eyebrow">{module.eyebrow}</span>
+          <h3>{module.title}</h3>
+          <p>{module.description}</p>
+        </header>
+
+        <div class="tax-hub-card__links">
+          {module.links.map((link) => (
+            <a class="tax-hub-link" href={link.href}>
+              <strong>{link.label}</strong>
+              <p>{link.copy}</p>
+            </a>
+          ))}
+        </div>
+      </article>
+    ))}
+  </section>
+
+  <style>
+    .tax-hub-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+      gap: 22px;
+      margin-bottom: 24px;
+      padding: 26px;
+      border-radius: 28px;
+      border: 1px solid rgba(219, 228, 238, 0.92);
+      background:
+        radial-gradient(circle at top right, rgba(251, 113, 133, 0.12), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.12), transparent 26%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 252, 0.98));
+      box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+    }
+
+    .tax-hub-hero__copy {
+      display: grid;
+      gap: 12px;
+    }
+
+    .tax-hub-hero__eyebrow,
+    .tax-hub-card__eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(251, 113, 133, 0.12);
+      color: #9f1239;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .tax-hub-hero h2,
+    .tax-hub-card h3 {
+      margin: 0;
+      color: #0f172a;
+    }
+
+    .tax-hub-hero p,
+    .tax-hub-card p {
+      margin: 0;
+      color: #475569;
+      line-height: 1.7;
+    }
+
+    .tax-hub-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .tax-hub-tags span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(186, 200, 214, 0.82);
+      background: rgba(255, 255, 255, 0.86);
+      color: #334155;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .tax-hub-hero__panel {
+      display: grid;
+      gap: 14px;
+    }
+
+    .tax-hub-stat {
+      display: grid;
+      gap: 8px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .tax-hub-stat span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .tax-hub-stat strong {
+      color: #0f172a;
+      font-size: 30px;
+      font-family: var(--font-display);
+    }
+
+    .tax-hub-stat--accent {
+      background: linear-gradient(180deg, rgba(255, 241, 242, 0.98), rgba(255, 247, 250, 0.98));
+      border-color: rgba(251, 113, 133, 0.2);
+    }
+
+    .tax-hub-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .tax-hub-card {
+      display: grid;
+      gap: 18px;
+      padding: 24px;
+      border-radius: 26px;
+      border: 1px solid rgba(219, 228, 238, 0.92);
+      background:
+        radial-gradient(circle at top right, rgba(251, 113, 133, 0.08), transparent 30%),
+        linear-gradient(180deg, #ffffff, #fff9fc);
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+    }
+
+    .tax-hub-card__header {
+      display: grid;
+      gap: 10px;
+    }
+
+    .tax-hub-card__links {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .tax-hub-link {
+      display: grid;
+      gap: 8px;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(186, 200, 214, 0.82);
+      background: rgba(255, 255, 255, 0.88);
+      transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+    }
+
+    .tax-hub-link:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+      border-color: rgba(251, 113, 133, 0.24);
+    }
+
+    .tax-hub-link strong {
+      color: #0f172a;
+      font-size: 18px;
+    }
+
+    @media (max-width: 1080px) {
+      .tax-hub-hero,
+      .tax-hub-card__links {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</DashboardLayout>

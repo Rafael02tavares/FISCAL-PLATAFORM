@@ -1,0 +1,301 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+
+interface ModuleLink {
+  href: string;
+  label: string;
+}
+
+interface ChecklistItem {
+  title: string;
+  copy: string;
+}
+
+interface ReferenceItem {
+  label: string;
+  value: string;
+}
+
+interface Props {
+  title: string;
+  subtitle: string;
+  eyebrow: string;
+  summary: string;
+  legalBasis: string;
+  activeHref: string;
+  links: ModuleLink[];
+  checklist: ChecklistItem[];
+  references: ReferenceItem[];
+}
+
+const {
+  title,
+  subtitle,
+  eyebrow,
+  summary,
+  legalBasis,
+  activeHref,
+  links,
+  checklist,
+  references,
+} = Astro.props;
+---
+
+<DashboardLayout title={title} subtitle={subtitle}>
+  <section class="module-hero">
+    <div class="module-hero__copy">
+      <span class="module-hero__eyebrow">{eyebrow}</span>
+      <h2>{title}</h2>
+      <p>{summary}</p>
+
+      <div class="module-legal-note">
+        <strong>Base legal principal</strong>
+        <span>{legalBasis}</span>
+      </div>
+    </div>
+
+    <div class="module-hero__panel">
+      <article class="module-stat">
+        <span>Modo de cadastro</span>
+        <strong>Bloco isolado</strong>
+        <p>Este modulo deve evoluir sem depender da tela inteira do ICMS.</p>
+      </article>
+      <article class="module-stat module-stat--accent">
+        <span>Saida esperada</span>
+        <strong>Composicao reutilizavel</strong>
+        <p>O que for definido aqui deve alimentar produto, triagem, regras e consulta final.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="module-section">
+    <header class="module-section__header">
+      <span class="module-section__eyebrow">Navegacao do ICMS</span>
+      <h3>Submodulos da engenharia do ICMS</h3>
+    </header>
+
+    <nav class="module-nav">
+      {links.map((link) => (
+        <a
+          href={link.href}
+          class={`module-nav__link ${link.href === activeHref ? "module-nav__link--active" : ""}`}
+        >
+          {link.label}
+        </a>
+      ))}
+    </nav>
+  </section>
+
+  <section class="module-grid">
+    <article class="module-card" data-filter-item>
+      <header class="module-card__header">
+        <span class="module-section__eyebrow">Checklist tecnico</span>
+        <h3>O que este bloco precisa controlar</h3>
+      </header>
+
+      <div class="module-checklist">
+        {checklist.map((item) => (
+          <article class="module-checklist__item">
+            <strong>{item.title}</strong>
+            <p>{item.copy}</p>
+          </article>
+        ))}
+      </div>
+    </article>
+
+    <article class="module-card module-card--secondary" data-filter-item>
+      <header class="module-card__header">
+        <span class="module-section__eyebrow">Referencias</span>
+        <h3>Campos que devem existir no modelo</h3>
+      </header>
+
+      <div class="module-reference-list">
+        {references.map((item) => (
+          <div class="module-reference-list__item">
+            <strong>{item.label}</strong>
+            <span>{item.value}</span>
+          </div>
+        ))}
+      </div>
+    </article>
+  </section>
+
+  <style>
+    .module-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.85fr);
+      gap: 22px;
+      margin-bottom: 24px;
+      padding: 26px;
+      border-radius: 28px;
+      border: 1px solid rgba(219, 228, 238, 0.92);
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(250, 204, 21, 0.14), transparent 26%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.98));
+      box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+    }
+
+    .module-hero__copy,
+    .module-hero__panel,
+    .module-stat,
+    .module-section,
+    .module-card,
+    .module-card__header,
+    .module-checklist,
+    .module-checklist__item,
+    .module-reference-list,
+    .module-reference-list__item {
+      display: grid;
+      gap: 10px;
+    }
+
+    .module-hero__eyebrow,
+    .module-section__eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(14, 165, 233, 0.12);
+      color: #0c4a6e;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .module-hero h2,
+    .module-section h3,
+    .module-card h3 {
+      margin: 0;
+      color: #0f172a;
+    }
+
+    .module-hero p,
+    .module-checklist__item p,
+    .module-stat p {
+      margin: 0;
+      color: #475569;
+      line-height: 1.7;
+    }
+
+    .module-legal-note {
+      display: grid;
+      gap: 4px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(14, 165, 233, 0.08);
+      color: #0c4a6e;
+    }
+
+    .module-stat {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .module-stat span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .module-stat strong {
+      color: #0f172a;
+      font-size: 28px;
+      font-family: var(--font-display);
+    }
+
+    .module-stat--accent {
+      background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(255, 247, 237, 0.98));
+      border-color: rgba(245, 158, 11, 0.22);
+    }
+
+    .module-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .module-nav__link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(186, 200, 214, 0.82);
+      background: rgba(255, 255, 255, 0.92);
+      color: #334155;
+      text-decoration: none;
+      font-weight: 700;
+      transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+    }
+
+    .module-nav__link:hover,
+    .module-nav__link--active {
+      transform: translateY(-1px);
+      border-color: rgba(14, 165, 233, 0.24);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .module-nav__link--active {
+      background: linear-gradient(180deg, rgba(236, 254, 255, 1), rgba(240, 249, 255, 1));
+      color: #0c4a6e;
+    }
+
+    .module-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .module-card {
+      padding: 24px;
+      border-radius: 26px;
+      border: 1px solid rgba(219, 228, 238, 0.92);
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 30%),
+        linear-gradient(180deg, #ffffff, #f8fbff);
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+    }
+
+    .module-card--secondary {
+      background:
+        radial-gradient(circle at top right, rgba(250, 204, 21, 0.08), transparent 30%),
+        linear-gradient(180deg, #ffffff, #fffaf0);
+    }
+
+    .module-checklist__item,
+    .module-reference-list__item {
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(186, 200, 214, 0.82);
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .module-checklist__item strong,
+    .module-reference-list__item strong {
+      color: #0f172a;
+      font-size: 16px;
+    }
+
+    .module-reference-list__item span {
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1080px) {
+      .module-hero,
+      .module-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</DashboardLayout>

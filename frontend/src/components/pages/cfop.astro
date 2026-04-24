@@ -1,17 +1,340 @@
 ---
-import DashboardLayout from "../layouts/DashboardLayout.astro";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import cfopScript from "../../scripts/cfop.ts?url";
 ---
 
 <DashboardLayout
-  title="Simulação tributária"
-  subtitle="Simule a tributação por NCM, UF, regime e operação"
+  title="Catalogo CFOP"
+  subtitle="Consulte os codigos CFOP importados, filtre por operacao e analise os sinais fiscais da classificacao"
 >
   <div class="page-header">
-    <h2>Simulação tributária</h2>
-    <p>Esta tela será o coração comercial do produto.</p>
+    <h2>Consulta CFOP</h2>
+    <p>
+      Esta area agora usa o catalogo real de CFOP importado no banco. Voce pode pesquisar por codigo,
+      descricao e filtrar rapidamente entre entradas e saidas.
+    </p>
   </div>
 
-  <section class="card card--padded">
-    Em breve vamos ligar esta página ao motor tributário.
+  <section class="cfop-hero">
+    <div class="cfop-hero__copy">
+      <span class="eyebrow">Catalogo operacional</span>
+      <h3>Encontre o CFOP certo com mais contexto visual</h3>
+      <p>
+        Compare a natureza da operacao, veja sinais de devolucao, transporte e comunicacao, e use a
+        base importada como apoio para a classificacao fiscal.
+      </p>
+    </div>
+    <div id="cfop-stats" class="cfop-stat-grid">
+      <div class="dashboard-note">Carregando indicadores...</div>
+    </div>
   </section>
+
+  <div class="grid grid--2">
+    <section class="card card--padded">
+      <div class="toolbar">
+        <input id="cfop-filter" type="text" placeholder="Ex.: 5102, devolucao, transporte..." />
+        <select id="cfop-type">
+          <option value="">Todas as operacoes</option>
+          <option value="entrada">Somente entradas</option>
+          <option value="saida">Somente saidas</option>
+        </select>
+        <button class="primary-button" id="cfop-search" type="button">Buscar</button>
+      </div>
+      <div id="cfop-result" class="dashboard-note">Carregando catalogo de CFOP...</div>
+    </section>
+
+    <section class="card card--padded">
+      <h3 class="section-title">Detalhe do CFOP</h3>
+      <div id="cfop-detail" class="dashboard-note">Selecione um item da lista para ver os detalhes.</div>
+    </section>
+  </div>
+
+  <script type="module" src={cfopScript}></script>
+
+  <style>
+    .cfop-hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 22px;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.18), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(20, 184, 166, 0.16), transparent 32%),
+        linear-gradient(135deg, #fffef8, #f8fbff);
+      border: 1px solid #e7e5e4;
+    }
+
+    .cfop-hero__copy h3 {
+      margin: 8px 0 10px;
+      font-size: clamp(24px, 3vw, 34px);
+    }
+
+    .cfop-hero__copy p {
+      margin: 0;
+      color: #475569;
+      max-width: 62ch;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .cfop-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-content: start;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 220px auto;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .toolbar input,
+    .toolbar select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font: inherit;
+      background: white;
+    }
+
+    .primary-button {
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0f766e, #2563eb);
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      padding: 12px 18px;
+      cursor: pointer;
+    }
+
+    .cfop-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .cfop-row {
+      width: 100%;
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      text-align: left;
+      border: 1px solid #dbe4ee;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      cursor: pointer;
+    }
+
+    .cfop-row--selected {
+      border-color: #0f766e;
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+      background: linear-gradient(180deg, #f0fdfa, #f8fafc);
+    }
+
+    .cfop-row__top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .cfop-row__main p {
+      margin: 0;
+      color: #475569;
+    }
+
+    .cfop-row__flags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .cfop-type-pill,
+    .mini-flag,
+    .hint-chip,
+    .cfop-code-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .cfop-type-pill {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .cfop-type-pill--entrada {
+      background: #ccfbf1;
+      color: #115e59;
+    }
+
+    .cfop-type-pill--saida {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .cfop-type-pill--neutral {
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .mini-flag,
+    .hint-chip {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .mini-flag--rose,
+    .hint-chip {
+      background: #ffe4e6;
+      color: #be123c;
+    }
+
+    .mini-flag--slate {
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .mini-flag--amber {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .cfop-detail-card {
+      display: grid;
+      gap: 16px;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid #dbe4ee;
+      background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent 30%),
+        linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .cfop-detail-card__hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .cfop-code-badge {
+      padding: 8px 14px;
+      background: #0f172a;
+      color: white;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+    }
+
+    .cfop-detail-card h3 {
+      margin: 0 0 8px;
+    }
+
+    .cfop-detail-card__description {
+      margin: 0;
+      color: #475569;
+    }
+
+    .cfop-signal-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .cfop-signal-grid div,
+    .stat-card {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+    }
+
+    .cfop-signal-grid span,
+    .stat-card span {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .cfop-signal-grid strong,
+    .stat-card strong {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .stat-card--teal {
+      background: #f0fdfa;
+    }
+
+    .stat-card--amber {
+      background: #fffbeb;
+    }
+
+    .stat-card--rose {
+      background: #fff1f2;
+    }
+
+    .stat-card--slate {
+      background: #f8fafc;
+    }
+
+    .cfop-hint-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .dashboard-empty {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      background: var(--surface-soft);
+    }
+
+    .dashboard-empty--error {
+      border-color: #fecaca;
+      background: #fff7f7;
+    }
+
+    @media (max-width: 900px) {
+      .cfop-hero,
+      .toolbar,
+      .cfop-signal-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cfop-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .cfop-stat-grid,
+      .cfop-signal-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </DashboardLayout>

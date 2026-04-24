@@ -1,0 +1,34 @@
+---
+import Page from "../../components/pages/admin/icms-module.astro";
+
+const links = [
+  { href: "/admin/icms", label: "Visao geral" },
+  { href: "/admin/icms-incidencia", label: "Incidencia" },
+  { href: "/admin/icms-base-aliquota", label: "Base e aliquota" },
+  { href: "/admin/icms-credito", label: "Credito" },
+  { href: "/admin/icms-st-fcp", label: "ICMS ST e FCP" },
+  { href: "/admin/icms-beneficios", label: "Beneficios" },
+  { href: "/admin/icms-fundamento", label: "Fundamento legal" },
+];
+---
+
+<Page
+  title="ICMS • ST e FCP"
+  subtitle="Modulo isolado para substituicao tributaria, fundos e camada complementar"
+  eyebrow="Camada 4"
+  summary="Este bloco isola os componentes complementares do ICMS para evitar que ST, FCP e FCP ST contaminem o cadastro do imposto proprio. Aqui a equipe trabalha MVA, antecipacao e fundos adicionais."
+  legalBasis="LC 87/1996 combinada com regras estaduais e matriz de partilha"
+  activeHref="/admin/icms-st-fcp"
+  links={links}
+  checklist={[
+    { title: "ICMS ST", copy: "Modele quando ha substituicao tributaria e como a base deve ser projetada." },
+    { title: "FCP e FCP ST", copy: "Mantenha percentuais adicionais separados, por UF e destino aplicavel." },
+    { title: "MVA e ajustes", copy: "Cadastre margens e criterios complementares sem misturar com o ICMS proprio." },
+    { title: "Conexao interestadual", copy: "Integre esse bloco com partilha, DIFAL e matriz estadual sempre que houver destino diverso." },
+  ]}
+  references={[
+    { label: "Campos principais", value: "st_flag, st_rate, fcp_rate, fcp_st_rate, mva_rule" },
+    { label: "Saida para o motor", value: "ICMS ST devido, FCP devido, camada complementar aplicavel" },
+    { label: "Tela de apoio", value: "partilha de ICMS e beneficios fiscais" },
+  ]}
+/>

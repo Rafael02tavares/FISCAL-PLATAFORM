@@ -1,0 +1,125 @@
+---
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+---
+
+<DashboardLayout title="Configurações" subtitle="Diagnóstico da sessão local e ajustes operacionais">
+  <div class="page-header">
+    <h2>Configurações</h2>
+    <p>
+      Esta área ajuda a revisar o estado da sessão, testar a API e limpar o contexto salvo no
+      navegador.
+    </p>
+  </div>
+
+  <div class="grid grid--2">
+    <section class="card card--padded">
+      <h3 class="section-title">Sessão atual</h3>
+      <div id="session-state" class="dashboard-note">Lendo token e organização ativa...</div>
+      <div class="config-actions">
+        <button id="clear-session" class="secondary-button" type="button">Limpar sessão</button>
+        <a class="secondary-button" href="/login">Ir para login</a>
+        <a class="secondary-button" href="/organizations">Ir para organizações</a>
+      </div>
+    </section>
+
+    <section class="card card--padded">
+      <h3 class="section-title">Saúde da API</h3>
+      <div id="health-state" class="dashboard-note">Consultando /health...</div>
+      <div class="config-actions">
+        <button id="refresh-health" class="secondary-button" type="button">Atualizar status</button>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { clearSession, getOrganizationId, getToken } from "../lib/auth";
+
+    const sessionState = document.getElementById("session-state");
+    const healthState = document.getElementById("health-state");
+    const clearSessionButton = document.getElementById("clear-session");
+    const refreshHealthButton = document.getElementById("refresh-health");
+
+    const API_URL = (import.meta.env.PUBLIC_API_URL || "http://localhost:8081").replace(/\/+$/, "");
+
+    function renderSession() {
+      const token = getToken();
+      const organizationId = getOrganizationId();
+
+      if (!sessionState) return;
+
+      sessionState.innerHTML = `
+        <div class="session-card">
+          <span><strong>Token:</strong> ${token ? "ativo" : "ausente"}</span>
+          <span><strong>Organização ativa:</strong> ${organizationId || "nenhuma"}</span>
+        </div>
+      `;
+    }
+
+    async function renderHealth() {
+      if (!healthState) return;
+
+      try {
+        const response = await fetch(`${API_URL}/health`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const payload = await response.json();
+        healthState.innerHTML = `
+          <div class="session-card">
+            <span><strong>Status:</strong> ${payload.status || "ok"}</span>
+            <span><strong>Ambiente:</strong> ${payload.app_env || "-"}</span>
+            <span><strong>Timestamp:</strong> ${payload.timestamp || "-"}</span>
+          </div>
+        `;
+      } catch (error) {
+        healthState.innerHTML = `
+          <div class="dashboard-empty dashboard-empty--error">
+            <strong>Falha ao consultar /health.</strong>
+            <p>${String(error)}</p>
+          </div>
+        `;
+      }
+    }
+
+    clearSessionButton?.addEventListener("click", () => {
+      clearSession();
+      renderSession();
+    });
+
+    refreshHealthButton?.addEventListener("click", renderHealth);
+
+    renderSession();
+    renderHealth();
+  </script>
+
+  <style>
+    .config-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .secondary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 12px;
+      padding: 11px 16px;
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text);
+      font-weight: 700;
+      font: inherit;
+      cursor: pointer;
+    }
+    .session-card { display: grid; gap: 10px; }
+    .dashboard-empty {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      background: var(--surface-soft);
+    }
+    .dashboard-empty--error { border-color: #fecaca; background: #fff7f7; }
+  </style>
+</DashboardLayout>

@@ -1,0 +1,447 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+
+const legalLayers = [
+  {
+    eyebrow: "Camada 1",
+    title: "Incidencia e nao incidencia",
+    description:
+      "Primeiro definimos quando o ICMS existe na operacao. Essa camada organiza fato gerador, hipoteses de incidencia, nao incidencia e o momento da saida ou entrada.",
+    legal: "LC 87/1996: arts. 1 a 3 e 11 a 12",
+    links: [
+      { href: "/admin/legal-rules", label: "Regras de incidencia", copy: "Amarre NCM, CFOP, UFs e contexto para decidir se ha ICMS na operacao." },
+      { href: "/simulacao", label: "Validar na consulta", copy: "Veja como a leitura de incidencia aparece no parecer final." },
+    ],
+    chips: ["fato gerador", "nao incidencia", "saida", "entrada", "importacao"],
+  },
+  {
+    eyebrow: "Camada 2",
+    title: "Base de calculo e reducoes",
+    description:
+      "Depois tratamos a base de calculo: valor da operacao, inclusoes, exclusoes e reducoes aplicaveis antes do calculo da aliquota.",
+    legal: "LC 87/1996: arts. 13 a 15",
+    links: [
+      { href: "/admin/icms-partilha", label: "Aliquotas e partilha", copy: "Use a mesma base para compor interna, interestadual, DIFAL e FCP." },
+      { href: "/admin/legal-rules", label: "Fundamento da base", copy: "Cadastre reducoes e excecoes com vigencia e base normativa." },
+    ],
+    chips: ["base de calculo", "reducao", "valor da operacao", "MVA", "ajustes"],
+  },
+  {
+    eyebrow: "Camada 3",
+    title: "Credito, estorno e nao cumulatividade",
+    description:
+      "A terceira camada organiza o que pode virar credito, quando deve haver estorno e como a entrada conversa com a saida no motor tributario.",
+    legal: "LC 87/1996: arts. 19 a 21 e 23",
+    links: [
+      { href: "/invoices", label: "Notas de entrada", copy: "Capture CST, aliquota e contexto da entrada como memoria fiscal aproveitavel." },
+      { href: "/produtos", label: "Perfil do produto", copy: "Consolide o que veio da nota em um cadastro independente da origem." },
+    ],
+    chips: ["credito", "estorno", "nao cumulatividade", "entrada", "saida"],
+  },
+  {
+    eyebrow: "Camada 4",
+    title: "ICMS ST, FCP e FCP ST",
+    description:
+      "Aqui entram as pecas de substituicao tributaria e fundos adicionais, para o cadastro ficar isolado do ICMS proprio e mais simples de compor.",
+    legal: "LC 87/1996: estrutura operacional do ICMS e complemento estadual",
+    links: [
+      { href: "/admin/icms-partilha", label: "ST, FCP e DIFAL", copy: "Trabalhe a camada complementar do ICMS fora do cadastro basico." },
+      { href: "/admin/cbenef", label: "Beneficios e excecoes", copy: "Associe beneficios e tratamentos diferenciados sem contaminar a regra principal." },
+    ],
+    chips: ["ICMS ST", "FCP", "FCP ST", "MVA", "antecipacao"],
+  },
+  {
+    eyebrow: "Camada 5",
+    title: "DIFAL e partilha interestadual",
+    description:
+      "A operacao interestadual precisa de uma camada propria para aliquota interestadual, aliquota interna do destino, diferenca e destino do imposto.",
+    legal: "LC 87/1996 com alteracoes posteriores, incluindo art. 20-A",
+    links: [
+      { href: "/admin/icms-partilha", label: "Matriz de partilha", copy: "Gerencie referencia por UF, DIFAL, FCP e comportamento por destino." },
+      { href: "/organizations", label: "Contexto da empresa", copy: "Garanta que a UF base da organizacao esteja correta para o motor." },
+    ],
+    chips: ["interestadual", "DIFAL", "origem", "destino", "consumidor final"],
+  },
+  {
+    eyebrow: "Camada 6",
+    title: "Transicao para a reforma",
+    description:
+      "O bloco ICMS precisa nascer preparado para conviver com a reducao gradual do imposto e com a nova camada de IBS e CBS.",
+    legal: "LC 87/1996: art. 31-A e texto vigente com LC 214/2025",
+    links: [
+      { href: "/admin/reforma", label: "Bloco da reforma", copy: "Separe a nova camada tributaria para nao misturar regra atual e transitoria." },
+      { href: "/admin/legal-rules", label: "Governanca normativa", copy: "Use vigencia e prioridade para controlar a transicao entre regimes." },
+    ],
+    chips: ["transicao", "reducoes graduais", "IBS", "CBS", "vigencia"],
+  },
+];
+
+const buildingBlocks = [
+  {
+    title: "Bloco de incidencia",
+    copy: "Decide se a operacao gera ICMS, quando gera e em qual contexto ela deve ser tratada.",
+    href: "/admin/icms-incidencia",
+  },
+  {
+    title: "Bloco de base e aliquota",
+    copy: "Define base de calculo, reducoes, aliquota propria e criterios economicos da operacao.",
+    href: "/admin/icms-base-aliquota",
+  },
+  {
+    title: "Bloco de credito",
+    copy: "Traduz dados da entrada em memoria fiscal para reaproveitamento seguro na saida.",
+    href: "/admin/icms-credito",
+  },
+  {
+    title: "Bloco de ST e fundos",
+    copy: "Isola ICMS ST, FCP e FCP ST para que a manutencao nao se misture ao ICMS proprio.",
+    href: "/admin/icms-st-fcp",
+  },
+  {
+    title: "Bloco de beneficios",
+    copy: "Encaixa cBenef, tratamentos diferenciados e excecoes por estado, segmento e vigencia.",
+    href: "/admin/icms-beneficios",
+  },
+  {
+    title: "Bloco de fundamento legal",
+    copy: "Mostra ao usuario final nao so o resultado, mas tambem o artigo e a regra que sustentaram a decisao.",
+    href: "/admin/icms-fundamento",
+  },
+];
+
+const references = [
+  {
+    label: "Fonte primaria",
+    value: "Lei Complementar 87/1996",
+    note: "Lei Kandir no Portal do Planalto",
+    href: "https://www.planalto.gov.br/ccivil_03/Leis/lcp/Lcp87.htm",
+  },
+  {
+    label: "Foco principal",
+    value: "ICMS como sistema de camadas",
+    note: "Incidencia, base, credito, ST, DIFAL e transicao",
+  },
+  {
+    label: "Objetivo do produto",
+    value: "Consulta simples com engenharia robusta",
+    note: "Complexidade fica no cadastro modular, nao na experiencia do cliente final",
+  },
+];
+---
+
+<DashboardLayout
+  title="ICMS"
+  subtitle="Central de engenharia do ICMS baseada na LC 87, com blocos modulares para incidencia, base, credito, ST, partilha e transicao"
+>
+  <section class="icms-hero">
+    <div class="icms-hero__copy">
+      <span class="icms-hero__eyebrow">Lei Kandir como espinha dorsal</span>
+      <h2>Estruture o ICMS por camadas legais, nao por telas soltas</h2>
+      <p>
+        Esta central passa a seguir a logica da LC 87. Em vez de um cadastro confuso, o ICMS fica
+        quebrado em partes menores, cada uma com papel tecnico claro e fundamento normativo
+        identificavel.
+      </p>
+
+      <div class="icms-reference-strip">
+        {references.map((item) => (
+          item.href ? (
+            <a class="icms-reference-chip" href={item.href} target="_blank" rel="noreferrer">
+              <strong>{item.label}</strong>
+              <span>{item.value}</span>
+              <small>{item.note}</small>
+            </a>
+          ) : (
+            <div class="icms-reference-chip">
+              <strong>{item.label}</strong>
+              <span>{item.value}</span>
+              <small>{item.note}</small>
+            </div>
+          )
+        ))}
+      </div>
+    </div>
+
+    <div class="icms-hero__panel">
+      <article class="icms-stat">
+        <span>Modelo de cadastro</span>
+        <strong>6 camadas</strong>
+        <p>Separacao entre incidencia, base, credito, ST, partilha e transicao.</p>
+      </article>
+      <article class="icms-stat icms-stat--accent">
+        <span>Entrega para o SaaS</span>
+        <strong>Motor explicavel</strong>
+        <p>A consulta final pode exibir resultado tributario junto do fundamento que sustentou a decisao.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="icms-section">
+    <header class="icms-section__header">
+      <span class="icms-section__eyebrow">Arquitetura legal</span>
+      <h3>Camadas da engenharia do ICMS</h3>
+      <p>
+        Cada camada abaixo corresponde a uma responsabilidade tecnica do sistema. O objetivo e fazer
+        o cadastro parecer um lego fiscal, com pecas pequenas, reutilizaveis e mais faceis de revisar.
+      </p>
+    </header>
+
+    <div class="icms-layer-grid">
+      {legalLayers.map((layer) => (
+        <article class="icms-layer-card" data-filter-item>
+          <header class="icms-layer-card__header">
+            <span class="icms-layer-card__eyebrow">{layer.eyebrow}</span>
+            <h4>{layer.title}</h4>
+            <p>{layer.description}</p>
+          </header>
+
+          <div class="icms-legal-note">
+            <strong>Fundamento</strong>
+            <span>{layer.legal}</span>
+          </div>
+
+          <div class="icms-chip-list">
+            {layer.chips.map((chip) => <span>{chip}</span>)}
+          </div>
+
+          <div class="icms-layer-card__links">
+            {layer.links.map((link) => (
+              <a class="icms-link" href={link.href}>
+                <strong>{link.label}</strong>
+                <p>{link.copy}</p>
+              </a>
+            ))}
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="icms-section">
+    <header class="icms-section__header">
+      <span class="icms-section__eyebrow">Lego fiscal</span>
+      <h3>Pecas que devem virar cadastros isolados</h3>
+      <p>
+        Esta e a proxima camada natural de implementacao: transformar o desenho legal em modulos
+        reais de cadastro, sem concentrar tudo em uma unica tela.
+      </p>
+    </header>
+
+    <div class="icms-building-grid">
+      {buildingBlocks.map((block) => (
+        <a class="icms-building-card" href={block.href} data-filter-item>
+          <strong>{block.title}</strong>
+          <p>{block.copy}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <style>
+    .icms-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.85fr);
+      gap: 22px;
+      margin-bottom: 26px;
+      padding: 26px;
+      border-radius: 28px;
+      border: 1px solid rgba(219, 228, 238, 0.92);
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(250, 204, 21, 0.14), transparent 26%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.98));
+      box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+    }
+
+    .icms-hero__copy,
+    .icms-hero__panel,
+    .icms-stat,
+    .icms-section__header,
+    .icms-layer-card,
+    .icms-layer-card__header,
+    .icms-link {
+      display: grid;
+      gap: 10px;
+    }
+
+    .icms-hero__eyebrow,
+    .icms-section__eyebrow,
+    .icms-layer-card__eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(14, 165, 233, 0.12);
+      color: #0c4a6e;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .icms-hero h2,
+    .icms-section h3,
+    .icms-layer-card h4 {
+      margin: 0;
+      color: #0f172a;
+    }
+
+    .icms-hero p,
+    .icms-section p,
+    .icms-layer-card p,
+    .icms-link p,
+    .icms-building-card p {
+      margin: 0;
+      color: #475569;
+      line-height: 1.7;
+    }
+
+    .icms-reference-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .icms-reference-chip {
+      display: grid;
+      gap: 6px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(186, 200, 214, 0.82);
+      background: rgba(255, 255, 255, 0.9);
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .icms-reference-chip strong,
+    .icms-building-card strong,
+    .icms-link strong,
+    .icms-legal-note strong {
+      color: #0f172a;
+    }
+
+    .icms-reference-chip span {
+      color: #0f172a;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .icms-reference-chip small {
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    .icms-stat {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .icms-stat span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .icms-stat strong {
+      color: #0f172a;
+      font-size: 30px;
+      font-family: var(--font-display);
+    }
+
+    .icms-stat--accent {
+      background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(255, 247, 237, 0.98));
+      border-color: rgba(245, 158, 11, 0.22);
+    }
+
+    .icms-section {
+      display: grid;
+      gap: 18px;
+      margin-top: 28px;
+    }
+
+    .icms-layer-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .icms-layer-card {
+      padding: 24px;
+      border-radius: 26px;
+      border: 1px solid rgba(219, 228, 238, 0.92);
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 30%),
+        linear-gradient(180deg, #ffffff, #f8fbff);
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+    }
+
+    .icms-legal-note {
+      display: grid;
+      gap: 4px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(14, 165, 233, 0.08);
+      color: #0c4a6e;
+    }
+
+    .icms-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .icms-chip-list span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(186, 200, 214, 0.82);
+      background: rgba(255, 255, 255, 0.88);
+      color: #334155;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .icms-layer-card__links,
+    .icms-building-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .icms-link,
+    .icms-building-card {
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(186, 200, 214, 0.82);
+      background: rgba(255, 255, 255, 0.9);
+      color: inherit;
+      text-decoration: none;
+      transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+    }
+
+    .icms-link:hover,
+    .icms-building-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+      border-color: rgba(14, 165, 233, 0.24);
+    }
+
+    @media (max-width: 1080px) {
+      .icms-hero,
+      .icms-reference-strip,
+      .icms-layer-card__links,
+      .icms-building-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</DashboardLayout>

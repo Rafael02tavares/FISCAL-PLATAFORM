@@ -3,7 +3,6 @@ package organizations
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -45,16 +44,15 @@ func (r *Repository) CreateOrganization(
 	`
 
 	var organizationID string
-
 	err := r.db.QueryRow(
 		ctx,
 		query,
-		strings.TrimSpace(name),
-		strings.TrimSpace(cnpj),
-		strings.TrimSpace(taxRegime),
-		strings.TrimSpace(crt),
-		strings.TrimSpace(stateRegistration),
-		strings.ToUpper(strings.TrimSpace(homeUF)),
+		name,
+		cnpj,
+		taxRegime,
+		crt,
+		stateRegistration,
+		homeUF,
 	).Scan(&organizationID)
 	if err != nil {
 		return "", fmt.Errorf("create organization: %w", err)
@@ -69,13 +67,7 @@ func (r *Repository) AddUserToOrganization(ctx context.Context, userID, organiza
 		VALUES ($1, $2, $3)
 	`
 
-	_, err := r.db.Exec(
-		ctx,
-		query,
-		strings.TrimSpace(userID),
-		strings.TrimSpace(organizationID),
-		strings.TrimSpace(role),
-	)
+	_, err := r.db.Exec(ctx, query, userID, organizationID, role)
 	if err != nil {
 		return fmt.Errorf("add user to organization: %w", err)
 	}
@@ -97,20 +89,19 @@ func (r *Repository) ListOrganizationsByUser(ctx context.Context, userID string)
 		FROM organizations o
 		INNER JOIN organization_users ou ON ou.organization_id = o.id
 		WHERE ou.user_id = $1
-		ORDER BY o.created_at DESC, o.name ASC
+		ORDER BY o.created_at DESC
 	`
 
-	rows, err := r.db.Query(ctx, query, strings.TrimSpace(userID))
+	rows, err := r.db.Query(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list organizations by user: %w", err)
 	}
 	defer rows.Close()
 
-	organizations := make([]Organization, 0)
+	var organizations []Organization
 
 	for rows.Next() {
 		var org Organization
-
 		if err := rows.Scan(
 			&org.ID,
 			&org.Name,
@@ -123,7 +114,6 @@ func (r *Repository) ListOrganizationsByUser(ctx context.Context, userID string)
 		); err != nil {
 			return nil, fmt.Errorf("scan organization: %w", err)
 		}
-
 		organizations = append(organizations, org)
 	}
 
@@ -145,16 +135,41 @@ func (r *Repository) UserBelongsToOrganization(ctx context.Context, userID, orga
 	`
 
 	var exists bool
-
-	err := r.db.QueryRow(
-		ctx,
-		query,
-		strings.TrimSpace(userID),
-		strings.TrimSpace(organizationID),
-	).Scan(&exists)
+	err := r.db.QueryRow(ctx, query, userID, organizationID).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("check user organization membership: %w", err)
 	}
 
 	return exists, nil
+}
+
+func (r *Repository) GetOrganizationByID(ctx context.Context, organizationID string) (*Organization, error) {
+	query := `
+		SELECT
+			o.id,
+			COALESCE(o.name, ''),
+			COALESCE(o.cnpj, ''),
+			COALESCE(o.tax_regime, ''),
+			COALESCE(o.crt, ''),
+			COALESCE(o.state_registration, ''),
+			COALESCE(o.home_uf, '')
+		FROM organizations o
+		WHERE o.id = $1::uuid
+		LIMIT 1
+	`
+
+	var org Organization
+	if err := r.db.QueryRow(ctx, query, organizationID).Scan(
+		&org.ID,
+		&org.Name,
+		&org.CNPJ,
+		&org.TaxRegime,
+		&org.CRT,
+		&org.StateRegistration,
+		&org.HomeUF,
+	); err != nil {
+		return nil, fmt.Errorf("get organization by id: %w", err)
+	}
+
+	return &org, nil
 }

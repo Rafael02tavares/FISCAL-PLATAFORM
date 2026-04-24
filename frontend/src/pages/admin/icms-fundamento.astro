@@ -1,0 +1,34 @@
+---
+import Page from "../../components/pages/admin/icms-module.astro";
+
+const links = [
+  { href: "/admin/icms", label: "Visao geral" },
+  { href: "/admin/icms-incidencia", label: "Incidencia" },
+  { href: "/admin/icms-base-aliquota", label: "Base e aliquota" },
+  { href: "/admin/icms-credito", label: "Credito" },
+  { href: "/admin/icms-st-fcp", label: "ICMS ST e FCP" },
+  { href: "/admin/icms-beneficios", label: "Beneficios" },
+  { href: "/admin/icms-fundamento", label: "Fundamento legal" },
+];
+---
+
+<Page
+  title="ICMS • Fundamento legal"
+  subtitle="Modulo isolado para artigos, vigencia e explicacao normativa do motor"
+  eyebrow="Camada 6"
+  summary="Este bloco e responsavel por registrar a espinha normativa do ICMS dentro da plataforma. Ele permite que o motor nao apenas calcule, mas explique qual artigo, vigencia ou regra sustentou a decisao."
+  legalBasis="LC 87/1996, atos complementares e governanca normativa interna"
+  activeHref="/admin/icms-fundamento"
+  links={links}
+  checklist={[
+    { title: "Artigo e fonte", copy: "Grave a referencia legal primaria e os atos complementares que sustentam cada regra aplicada." },
+    { title: "Vigencia", copy: "Controle inicio, fim, transicao e prioridade para evitar conflito entre regras antigas e atuais." },
+    { title: "Rastreabilidade", copy: "Amarre fundamento a produto, bloco tributario, triagem e sugestao gravada pelo motor." },
+    { title: "Explicacao ao usuario", copy: "Prepare a base para exibir fundamento legal de forma simples no parecer tributario final." },
+  ]}
+  references={[
+    { label: "Campos principais", value: "legal_source, article_ref, vigencia_inicio, vigencia_fim, priority" },
+    { label: "Saida para o motor", value: "base legal principal, base complementar e trilha de auditoria" },
+    { label: "Telas de apoio", value: "regras tributarias, triagem de regras e consulta tributaria" },
+  ]}
+/>

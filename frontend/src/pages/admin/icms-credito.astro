@@ -1,0 +1,34 @@
+---
+import Page from "../../components/pages/admin/icms-module.astro";
+
+const links = [
+  { href: "/admin/icms", label: "Visao geral" },
+  { href: "/admin/icms-incidencia", label: "Incidencia" },
+  { href: "/admin/icms-base-aliquota", label: "Base e aliquota" },
+  { href: "/admin/icms-credito", label: "Credito" },
+  { href: "/admin/icms-st-fcp", label: "ICMS ST e FCP" },
+  { href: "/admin/icms-beneficios", label: "Beneficios" },
+  { href: "/admin/icms-fundamento", label: "Fundamento legal" },
+];
+---
+
+<Page
+  title="ICMS • Credito"
+  subtitle="Modulo isolado para credito, estorno e memoria de entrada"
+  eyebrow="Camada 3"
+  summary="Este bloco transforma a nao cumulatividade em regra operacional. Aqui entram credito potencial, estorno, aproveitamento da entrada e restricoes de reaproveitamento na saida."
+  legalBasis="LC 87/1996: arts. 19 a 21 e 23"
+  activeHref="/admin/icms-credito"
+  links={links}
+  checklist={[
+    { title: "Memoria da entrada", copy: "Capture CST, aliquota, CFOP e contexto da compra para a memoria fiscal do produto." },
+    { title: "Credito permitido", copy: "Defina quando a entrada gera credito pleno, parcial ou vedado." },
+    { title: "Estorno", copy: "Modele as situacoes em que o credito precisa ser revertido ou ajustado." },
+    { title: "Conexao com a saida", copy: "Deixe claro quando a entrada pode ou nao influenciar a sugestao tributaria da operacao de venda." },
+  ]}
+  references={[
+    { label: "Campos principais", value: "entry_cst_icms, entry_icms_rate, credit_policy, estorno_policy" },
+    { label: "Saida para o motor", value: "aproveita credito, nao aproveita, exige revisao" },
+    { label: "Fontes de dados", value: "notas importadas, catalogo do produto e triagem de regras" },
+  ]}
+/>

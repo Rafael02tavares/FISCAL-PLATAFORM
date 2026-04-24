@@ -1,0 +1,331 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+
+const taxBlocks = [
+  {
+    eyebrow: "Tributo estadual",
+    title: "Bloco ICMS",
+    description:
+      "Monte o tributo estadual em partes isoladas: CST, aliquota, ICMS ST, FCP, FCP ST, cBenef, reducoes e partilha.",
+    actions: [
+      { href: "/admin/icms", label: "Abrir central ICMS", copy: "Use a central para manter o lego do ICMS separado por assunto." },
+      { href: "/admin/icms-partilha", label: "Partilha, DIFAL e FCP", copy: "Ajuste a camada interestadual e a referencia por UF." },
+      { href: "/admin/cbenef", label: "Beneficios fiscais", copy: "Associe cBenef e excecoes sem poluir o restante do cadastro." },
+    ],
+  },
+  {
+    eyebrow: "Contribuicoes federais",
+    title: "Bloco PIS e COFINS",
+    description:
+      "Separe CST, aliquotas, receitas e diferencas entre regime normal e presumido para reduzir ambiguidade no motor.",
+    actions: [
+      { href: "/admin/pis-cofins", label: "Abrir central PIS e COFINS", copy: "Entre pelo bloco das contribuicoes e mantenha o cadastro isolado." },
+      { href: "/admin/cst", label: "CST e enquadramentos", copy: "Defina CST de entrada e saida com contexto operacional." },
+      { href: "/admin/legal-rules", label: "Regras normativas", copy: "Amarre aplicacao por NCM, CFOP, regime, UFs e vigencia." },
+    ],
+  },
+  {
+    eyebrow: "Nova camada",
+    title: "Bloco Reforma tributaria",
+    description:
+      "Mantenha IBS, CBS e cClasTrib em um bloco separado para nao misturar a reforma com tributos atuais.",
+    actions: [
+      { href: "/admin/reforma", label: "Abrir bloco da reforma", copy: "Cadastre a nova camada tributaria em frente propria." },
+      { href: "/admin/legal-rules", label: "Fundamento legal", copy: "Use a mesma malha normativa para sustentar a transicao." },
+      { href: "/simulacao", label: "Validar na consulta", copy: "Confira como a composicao aparece para o usuario final." },
+    ],
+  },
+];
+
+const compositionBlocks = [
+  {
+    title: "Triagem e memoria",
+    copy: "A regra observada entra primeiro na triagem, depois fortalece memoria fiscal, catalogo e motor.",
+    href: "/admin/capture-rules",
+  },
+  {
+    title: "Catalogo e produto",
+    copy: "Os blocos tributarios se encaixam no produto sem depender da nota de origem para existir.",
+    href: "/produtos",
+  },
+  {
+    title: "Motor e simulacao",
+    copy: "A consulta final so enxerga a composicao consolidada, nao a complexidade interna do cadastro.",
+    href: "/simulacao",
+  },
+];
+
+const controlBlocks = [
+  {
+    href: "/admin/users",
+    label: "Usuarios e acessos",
+    copy: "Controle quem so consulta e quem pode montar os blocos da engenharia fiscal.",
+  },
+  {
+    href: "/admin/imports",
+    label: "Importar catalogos",
+    copy: "Atualize tabelas oficiais como NCM e CFOP sem quebrar a separacao entre consulta e cadastro tecnico.",
+  },
+  {
+    href: "/configuracoes",
+    label: "Configuracoes",
+    copy: "Use a camada de suporte para sessao, API e contexto local da organizacao.",
+  },
+];
+---
+
+<DashboardLayout
+  title="Engenharia fiscal"
+  subtitle="Cadastre tributos em blocos isolados e depois componha o motor como um lego fiscal"
+>
+  <section class="engineering-hero">
+    <div class="engineering-hero__copy">
+      <span class="engineering-hero__eyebrow">Fluxo 2</span>
+      <h2>Uma area de engenharia separada do fluxo de consulta</h2>
+      <p>
+        A plataforma agora parte de dois fluxos. O usuario comum entra pela consulta operacional.
+        A sua equipe entra aqui para construir a base tributaria em partes isoladas, sem misturar
+        manutencao tecnica com a experiencia final de consulta.
+      </p>
+    </div>
+
+    <div class="engineering-hero__stats">
+      <article class="engineering-stat">
+        <span>Modelo de trabalho</span>
+        <strong>Lego fiscal</strong>
+        <p>Cada tributo vira um conjunto de blocos menores, reutilizaveis e mais claros de manter.</p>
+      </article>
+      <article class="engineering-stat engineering-stat--accent">
+        <span>Resultado esperado</span>
+        <strong>Menos confusao</strong>
+        <p>Consulta simples para o usuario final e cadastro tecnico controlado para a equipe fiscal.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="engineering-section">
+    <header class="engineering-section__header">
+      <span class="engineering-section__eyebrow">Cadastro por tributo</span>
+      <h3>Blocos modulares da engenharia fiscal</h3>
+      <p>
+        Em vez de uma tela gigante, cada familia tributaria passa a ter suas pecas isoladas e
+        depois se conecta ao produto, as regras e a consulta.
+      </p>
+    </header>
+
+    <div class="engineering-grid">
+      {taxBlocks.map((block) => (
+        <article class="engineering-card" data-filter-item>
+          <header class="engineering-card__header">
+            <span class="engineering-card__eyebrow">{block.eyebrow}</span>
+            <h4>{block.title}</h4>
+            <p>{block.description}</p>
+          </header>
+
+          <div class="engineering-card__actions">
+            {block.actions.map((action) => (
+              <a class="engineering-link" href={action.href}>
+                <strong>{action.label}</strong>
+                <p>{action.copy}</p>
+              </a>
+            ))}
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="engineering-section">
+    <header class="engineering-section__header">
+      <span class="engineering-section__eyebrow">Composicao do motor</span>
+      <h3>Como os blocos se encaixam</h3>
+      <p>
+        O cadastro isolado nao fica perdido. Ele alimenta memoria fiscal, produto, triagem e a
+        resposta final mostrada ao cliente da plataforma.
+      </p>
+    </header>
+
+    <div class="composition-grid">
+      {compositionBlocks.map((block) => (
+        <a class="composition-card" href={block.href} data-filter-item>
+          <strong>{block.title}</strong>
+          <p>{block.copy}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="engineering-section">
+    <header class="engineering-section__header">
+      <span class="engineering-section__eyebrow">Suporte da plataforma</span>
+      <h3>Controles de apoio</h3>
+      <p>
+        A administracao da plataforma continua existindo, mas agora fica claramente separada da
+        engenharia fiscal do produto.
+      </p>
+    </header>
+
+    <div class="composition-grid">
+      {controlBlocks.map((block) => (
+        <a class="composition-card composition-card--support" href={block.href} data-filter-item>
+          <strong>{block.label}</strong>
+          <p>{block.copy}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <style>
+    .engineering-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr);
+      gap: 22px;
+      margin-bottom: 26px;
+      padding: 26px;
+      border-radius: 28px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(20, 184, 166, 0.14), transparent 26%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.98));
+      box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+    }
+
+    .engineering-hero__copy,
+    .engineering-section__header,
+    .engineering-card,
+    .engineering-card__header,
+    .engineering-link,
+    .engineering-hero__stats,
+    .engineering-stat {
+      display: grid;
+      gap: 10px;
+    }
+
+    .engineering-hero__eyebrow,
+    .engineering-section__eyebrow,
+    .engineering-card__eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(14, 165, 233, 0.12);
+      color: #0c4a6e;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .engineering-hero h2,
+    .engineering-section h3,
+    .engineering-card h4 {
+      margin: 0;
+      color: #0f172a;
+    }
+
+    .engineering-hero p,
+    .engineering-section p,
+    .engineering-card p,
+    .engineering-link p,
+    .composition-card p {
+      margin: 0;
+      color: #475569;
+      line-height: 1.7;
+    }
+
+    .engineering-stat {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .engineering-stat span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .engineering-stat strong {
+      color: #0f172a;
+      font-size: 30px;
+      font-family: var(--font-display);
+    }
+
+    .engineering-stat--accent {
+      background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(255, 247, 237, 0.98));
+      border-color: rgba(245, 158, 11, 0.22);
+    }
+
+    .engineering-section {
+      display: grid;
+      gap: 18px;
+      margin-top: 28px;
+    }
+
+    .engineering-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .engineering-card {
+      padding: 24px;
+      border-radius: 26px;
+      border: 1px solid rgba(219, 228, 238, 0.92);
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 30%),
+        linear-gradient(180deg, #ffffff, #f8fbff);
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+    }
+
+    .engineering-card__actions,
+    .composition-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .engineering-link,
+    .composition-card {
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(186, 200, 214, 0.82);
+      background: rgba(255, 255, 255, 0.9);
+      color: inherit;
+      text-decoration: none;
+      transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+    }
+
+    .engineering-link:hover,
+    .composition-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+      border-color: rgba(14, 165, 233, 0.24);
+    }
+
+    .engineering-link strong,
+    .composition-card strong {
+      color: #0f172a;
+      font-size: 18px;
+    }
+
+    .composition-card--support {
+      background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(255, 247, 237, 0.98));
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    @media (max-width: 1080px) {
+      .engineering-hero,
+      .engineering-card__actions,
+      .composition-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</DashboardLayout>

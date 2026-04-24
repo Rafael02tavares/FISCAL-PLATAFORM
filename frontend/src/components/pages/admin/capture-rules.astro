@@ -1,0 +1,332 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import adminCaptureScript from "../../../scripts/admin-capture.ts?url";
+---
+
+<DashboardLayout
+  title="Triagem de regras capturadas"
+  subtitle="Aceite evidencias tributarias extraidas das notas e integre ao motor fiscal com governanca"
+>
+  <div class="page-header">
+    <h2>Captura assistida de regras fiscais</h2>
+    <p>Depois que a nota e importada e lida, as pistas tributarias observadas ficam aqui para validacao humana antes de entrar na memoria fiscal da plataforma.</p>
+  </div>
+
+  <section class="capture-hero">
+    <div>
+      <span class="capture-hero__eyebrow">Curadoria operacional</span>
+      <h3>Transforme comportamento observado nas notas em conhecimento tributario reaproveitavel</h3>
+      <p>
+        Esta tela organiza as evidencias extraidas de XML por item, com destaque para NCM, CFOP, CST, CSOSN,
+        PIS e COFINS. Ao aceitar, a regra observada segue para o catalogo fiscal e fortalece sugestao e simulacao.
+      </p>
+    </div>
+    <div id="capture-stats" class="capture-stat-grid">
+      <div class="dashboard-note">Carregando indicadores...</div>
+    </div>
+  </section>
+
+  <section class="card card--padded">
+    <div class="capture-head">
+      <div>
+        <h3 class="section-title">Fila de triagem</h3>
+        <p class="capture-head__text">Aceite somente regras coerentes com a operacao real. Isso evita contaminar o motor tributario com excecoes indevidas.</p>
+      </div>
+      <a class="secondary-link" href="/invoices">Revisar notas importadas</a>
+    </div>
+
+    <div id="capture-feedback" class="dashboard-note">
+      As regras observadas nas notas importadas serao exibidas aqui para analise.
+    </div>
+
+    <div id="capture-rules-list" class="capture-rules-list">
+      <div class="dashboard-note">Carregando regras capturadas...</div>
+    </div>
+  </section>
+
+  <script type="module" src={adminCaptureScript}></script>
+
+  <style>
+    .capture-hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 22px;
+      border-radius: 24px;
+      border: 1px solid #dbe4ee;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.18), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.15), transparent 30%),
+        linear-gradient(135deg, #ffffff, #f8fbff);
+    }
+
+    .capture-hero__eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #ccfbf1;
+      color: #115e59;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .capture-hero h3 {
+      margin: 8px 0 10px;
+      font-size: clamp(24px, 3vw, 34px);
+    }
+
+    .capture-hero p,
+    .capture-head__text {
+      margin: 0;
+      color: #475569;
+      max-width: 64ch;
+    }
+
+    .capture-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-content: start;
+    }
+
+    .stat-card {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      background: white;
+    }
+
+    .stat-card span {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .stat-card strong {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .stat-card--teal {
+      background: #f0fdfa;
+    }
+
+    .stat-card--amber {
+      background: #fffbeb;
+    }
+
+    .stat-card--sky {
+      background: #eff6ff;
+    }
+
+    .capture-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .capture-rules-list {
+      margin-top: 16px;
+    }
+
+    .capture-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .capture-card {
+      display: grid;
+      gap: 16px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid #dbe4ee;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 24%),
+        linear-gradient(180deg, #ffffff, #f8fafc);
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.05);
+    }
+
+    .capture-card__head,
+    .capture-card__meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .capture-card__head h3 {
+      margin: 6px 0 6px;
+      font-size: 24px;
+    }
+
+    .capture-card__head p {
+      margin: 0;
+      color: #64748b;
+    }
+
+    .capture-card__eyebrow {
+      display: inline-flex;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #ecfeff;
+      color: #155e75;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .capture-card__meta {
+      color: #475569;
+      font-size: 14px;
+    }
+
+    .capture-card__meta span {
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+
+    .capture-card__grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .capture-panel {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid #dbe4ee;
+    }
+
+    .capture-panel h4 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .capture-panel--teal {
+      background: linear-gradient(180deg, #f0fdfa, #ffffff);
+    }
+
+    .capture-panel--amber {
+      background: linear-gradient(180deg, #fffbeb, #ffffff);
+    }
+
+    .capture-panel--sky {
+      background: linear-gradient(180deg, #eff6ff, #ffffff);
+    }
+
+    .capture-kpis {
+      display: grid;
+      gap: 10px;
+    }
+
+    .capture-kpis p {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 0;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #cbd5e1;
+    }
+
+    .capture-kpis p:last-child {
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .capture-kpis strong {
+      color: #0f172a;
+    }
+
+    .capture-kpis span {
+      color: #334155;
+      text-align: right;
+    }
+
+    .primary-button,
+    .secondary-link {
+      border: none;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .primary-button {
+      background: linear-gradient(135deg, #0f766e, #0284c7);
+      color: white;
+      box-shadow: 0 12px 24px rgba(15, 118, 110, 0.18);
+    }
+
+    .primary-button:disabled {
+      cursor: progress;
+      opacity: 0.72;
+    }
+
+    .secondary-link {
+      background: #f8fafc;
+      color: #0f172a;
+      border: 1px solid #dbe4ee;
+    }
+
+    .dashboard-empty {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      background: var(--surface-soft);
+    }
+
+    .dashboard-empty--error {
+      border-color: #fecaca;
+      background: #fff7f7;
+    }
+
+    .feedback {
+      margin-top: 16px;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .feedback--success {
+      background: #ecfdf5;
+      color: #166534;
+    }
+
+    .feedback--error {
+      background: #fff1f2;
+      color: #b91c1c;
+    }
+
+    @media (max-width: 1100px) {
+      .capture-card__grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .capture-hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .capture-stat-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</DashboardLayout>

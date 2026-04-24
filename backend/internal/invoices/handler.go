@@ -4,16 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"path"
 	"strings"
 
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/auth"
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/organizations"
+	"github.com/rafa/fiscal-platform/backend/internal/auth"
+	"github.com/rafa/fiscal-platform/backend/internal/organizations"
 )
-
-const maxUploadSize = 20 << 20 // 20 MB
 
 type Handler struct {
 	service             *Service
@@ -33,52 +32,106 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MULTIPART_FORM", "formulário multipart inválido")
+	if err := r.ParseMultipartForm(20 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_MULTIPART_FORM", "formulario multipart invalido")
 		return
 	}
 
-	file, fileHeader, err := r.FormFile("file")
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "FILE_REQUIRED", "arquivo é obrigatório no campo 'file'")
-		return
+	files := r.MultipartForm.File["files"]
+	if len(files) == 0 {
+		files = r.MultipartForm.File["file"]
 	}
-	defer file.Close()
 
-	filename := strings.TrimSpace(fileHeader.Filename)
-	if filename == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_FILENAME", "nome do arquivo é obrigatório")
+	if len(files) == 0 {
+		writeError(w, http.StatusBadRequest, "FILE_REQUIRED", "arquivo e obrigatorio no campo 'files' ou 'file'")
 		return
 	}
 
-	if !strings.HasSuffix(strings.ToLower(filename), ".xml") {
-		writeError(w, http.StatusBadRequest, "INVALID_FILE_TYPE", "o arquivo enviado deve ser um XML")
-		return
+	results := make([]BatchUploadItemResult, 0, len(files))
+	successCount := 0
+	failedCount := 0
+
+	for _, fileHeader := range files {
+		filename := strings.TrimSpace(fileHeader.Filename)
+		if filename == "" {
+			results = append(results, BatchUploadItemResult{
+				FileName: "arquivo-sem-nome",
+				Success:  false,
+				Error:    "nome do arquivo e obrigatorio",
+			})
+			failedCount++
+			continue
+		}
+
+		file, err := fileHeader.Open()
+		if err != nil {
+			results = append(results, BatchUploadItemResult{
+				FileName: filename,
+				Success:  false,
+				Error:    "nao foi possivel abrir o arquivo enviado",
+			})
+			failedCount++
+			continue
+		}
+
+		xmlBytes, err := io.ReadAll(file)
+		_ = file.Close()
+		if err != nil {
+			results = append(results, BatchUploadItemResult{
+				FileName: filename,
+				Success:  false,
+				Error:    "nao foi possivel ler o arquivo enviado",
+			})
+			failedCount++
+			continue
+		}
+
+		if len(bytes.TrimSpace(xmlBytes)) == 0 {
+			results = append(results, BatchUploadItemResult{
+				FileName: filename,
+				Success:  false,
+				Error:    "o arquivo enviado esta vazio",
+			})
+			failedCount++
+			continue
+		}
+
+		result, err := h.service.ProcessXML(
+			r.Context(),
+			orgID,
+			string(xmlBytes),
+			bytes.NewReader(xmlBytes),
+		)
+		if err != nil {
+			results = append(results, BatchUploadItemResult{
+				FileName: filename,
+				Success:  false,
+				Error:    fmt.Sprintf("nao foi possivel processar o XML enviado: %v", err),
+			})
+			failedCount++
+			continue
+		}
+
+		results = append(results, BatchUploadItemResult{
+			FileName:   filename,
+			InvoiceID:  result.InvoiceID,
+			ItemsCount: result.ItemsCount,
+			Success:    true,
+		})
+		successCount++
 	}
 
-	xmlBytes, err := io.ReadAll(file)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "FILE_READ_FAILED", "não foi possível ler o arquivo enviado")
-		return
+	status := http.StatusCreated
+	if successCount == 0 {
+		status = http.StatusBadRequest
 	}
 
-	if len(bytes.TrimSpace(xmlBytes)) == 0 {
-		writeError(w, http.StatusBadRequest, "EMPTY_FILE", "o arquivo enviado está vazio")
-		return
-	}
-
-	result, err := h.service.ProcessXML(
-		r.Context(),
-		orgID,
-		string(xmlBytes),
-		bytes.NewReader(xmlBytes),
-	)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "PROCESS_XML_FAILED", "não foi possível processar o XML enviado")
-		return
-	}
-
-	writeJSON(w, http.StatusCreated, result)
+	writeJSON(w, status, BatchUploadResult{
+		TotalFiles:   len(files),
+		SuccessCount: successCount,
+		FailedCount:  failedCount,
+		Results:      results,
+	})
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +142,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	invoices, err := h.service.ListInvoices(r.Context(), orgID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "LIST_INVOICES_FAILED", "não foi possível listar as notas fiscais")
+		writeError(w, http.StatusInternalServerError, "LIST_INVOICES_FAILED", "nao foi possivel listar as notas fiscais")
 		return
 	}
 
@@ -112,12 +165,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	invoice, err := h.service.GetInvoiceByID(r.Context(), orgID, invoiceID)
 	if err != nil {
-		switch {
-		case errors.Is(err, ErrInvoiceNotFound):
-			writeError(w, http.StatusNotFound, "INVOICE_NOT_FOUND", "nota fiscal não encontrada")
-		default:
-			writeError(w, http.StatusInternalServerError, "GET_INVOICE_FAILED", "não foi possível buscar a nota fiscal")
-		}
+		writeError(w, http.StatusInternalServerError, "GET_INVOICE_FAILED", "nao foi possivel buscar a nota fiscal")
 		return
 	}
 
@@ -129,24 +177,24 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) authorizeOrganizationRequest(w http.ResponseWriter, r *http.Request) (string, bool) {
 	userID := auth.UserIDFromContext(r.Context())
 	if userID == "" {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "usuário não autenticado")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "usuario nao autenticado")
 		return "", false
 	}
 
 	orgID := strings.TrimSpace(r.Header.Get("X-Organization-ID"))
 	if orgID == "" {
-		writeError(w, http.StatusBadRequest, "MISSING_ORGANIZATION_ID", "X-Organization-ID é obrigatório")
+		writeError(w, http.StatusBadRequest, "MISSING_ORGANIZATION_ID", "X-Organization-ID e obrigatorio")
 		return "", false
 	}
 
 	allowed, err := h.organizationService.UserBelongsToOrganization(r.Context(), userID, orgID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "ORGANIZATION_VALIDATION_FAILED", "não foi possível validar acesso à organização")
+		writeError(w, http.StatusInternalServerError, "ORGANIZATION_VALIDATION_FAILED", "nao foi possivel validar acesso a organizacao")
 		return "", false
 	}
 
 	if !allowed {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "usuário sem acesso a esta organização")
+		writeError(w, http.StatusForbidden, "FORBIDDEN", "usuario sem acesso a esta organizacao")
 		return "", false
 	}
 
@@ -156,12 +204,12 @@ func (h *Handler) authorizeOrganizationRequest(w http.ResponseWriter, r *http.Re
 func extractInvoiceID(urlPath string) (string, error) {
 	cleanPath := strings.TrimSpace(urlPath)
 	if cleanPath == "" {
-		return "", errors.New("identificador da nota fiscal não informado")
+		return "", errors.New("identificador da nota fiscal nao informado")
 	}
 
 	last := strings.TrimSpace(path.Base(cleanPath))
 	if last == "" || last == "." || last == "invoices" || last == "upload" {
-		return "", errors.New("identificador da nota fiscal inválido")
+		return "", errors.New("identificador da nota fiscal invalido")
 	}
 
 	return last, nil
@@ -170,10 +218,7 @@ func extractInvoiceID(urlPath string) (string, error) {
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-	}
+	_ = json.NewEncoder(w).Encode(payload)
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {

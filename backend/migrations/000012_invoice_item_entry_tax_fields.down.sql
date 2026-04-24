@@ -1,0 +1,7 @@
+ALTER TABLE invoice_items
+DROP COLUMN IF EXISTS cofins_rate,
+DROP COLUMN IF EXISTS cofins_cst,
+DROP COLUMN IF EXISTS pis_rate,
+DROP COLUMN IF EXISTS pis_cst,
+DROP COLUMN IF EXISTS icms_rate,
+DROP COLUMN IF EXISTS icms_cst;

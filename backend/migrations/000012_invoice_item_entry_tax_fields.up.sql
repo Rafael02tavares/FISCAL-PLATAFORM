@@ -1,0 +1,11 @@
+ALTER TABLE invoice_items
+ADD COLUMN IF NOT EXISTS icms_cst TEXT,
+ADD COLUMN IF NOT EXISTS icms_rate NUMERIC(10,4),
+ADD COLUMN IF NOT EXISTS pis_cst TEXT,
+ADD COLUMN IF NOT EXISTS pis_rate NUMERIC(10,4),
+ADD COLUMN IF NOT EXISTS cofins_cst TEXT,
+ADD COLUMN IF NOT EXISTS cofins_rate NUMERIC(10,4);
+
+UPDATE invoice_items
+SET icms_cst = COALESCE(NULLIF(icms_cst, ''), NULLIF(cst, ''))
+WHERE COALESCE(NULLIF(icms_cst, ''), '') = '';

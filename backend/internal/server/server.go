@@ -7,16 +7,22 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/auth"
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/catalog"
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/companies"
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/config"
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/fiscaloperations"
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/invoices"
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/legalbasis"
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/ncm"
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/organizations"
-	"github.com/Rafael02tavares/FISCAL-PLATAFORM/backend/internal/tax"
+	"github.com/rafa/fiscal-platform/backend/internal/admincapture"
+	"github.com/rafa/fiscal-platform/backend/internal/adminimports"
+	"github.com/rafa/fiscal-platform/backend/internal/adminpartilha"
+	"github.com/rafa/fiscal-platform/backend/internal/adminusers"
+	"github.com/rafa/fiscal-platform/backend/internal/auth"
+	"github.com/rafa/fiscal-platform/backend/internal/catalog"
+	"github.com/rafa/fiscal-platform/backend/internal/cfop"
+	"github.com/rafa/fiscal-platform/backend/internal/companies"
+	"github.com/rafa/fiscal-platform/backend/internal/config"
+	"github.com/rafa/fiscal-platform/backend/internal/fiscaloperations"
+	"github.com/rafa/fiscal-platform/backend/internal/icmsrates"
+	"github.com/rafa/fiscal-platform/backend/internal/invoices"
+	"github.com/rafa/fiscal-platform/backend/internal/legalbasis"
+	"github.com/rafa/fiscal-platform/backend/internal/ncm"
+	"github.com/rafa/fiscal-platform/backend/internal/organizations"
+	"github.com/rafa/fiscal-platform/backend/internal/tax"
 )
 
 type Server struct {
@@ -28,12 +34,10 @@ type Server struct {
 
 func New(cfg config.Config, db *pgxpool.Pool) http.Handler {
 	s := &Server{
-		cfg: cfg,
-		db:  db,
-		mux: http.NewServeMux(),
-		cors: map[string]struct{}{
-			"http://localhost:4321": {},
-		},
+		cfg:  cfg,
+		db:   db,
+		mux:  http.NewServeMux(),
+		cors: buildAllowedOriginsMap(cfg.AllowedOrigins),
 	}
 
 	s.registerRoutes()
@@ -42,16 +46,8 @@ func New(cfg config.Config, db *pgxpool.Pool) http.Handler {
 }
 
 func (s *Server) registerRoutes() {
-	s.registerHealthRoutes()
-	s.registerPublicRoutes()
-	s.registerProtectedRoutes()
-}
-
-func (s *Server) registerHealthRoutes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
-}
 
-func (s *Server) registerPublicRoutes() {
 	// auth
 	authRepo := auth.NewRepository(s.db)
 	authService := auth.NewService(authRepo)
@@ -61,83 +57,126 @@ func (s *Server) registerPublicRoutes() {
 	s.mux.HandleFunc("POST /auth/register", authHandler.Register)
 	s.mux.HandleFunc("POST /auth/login", authHandler.Login)
 
-	// companies
+	// consulta pública CNPJ
 	companyClient := companies.NewClient()
 	companyService := companies.NewService(companyClient)
 	companyHandler := companies.NewHandler(companyService)
 	s.mux.HandleFunc("GET /companies/lookup", companyHandler.Lookup)
 
-	// fiscal operations
+	// operações fiscais
 	fiscalOpRepo := fiscaloperations.NewRepository(s.db)
 	fiscalOpService := fiscaloperations.NewService(fiscalOpRepo)
 	fiscalOpHandler := fiscaloperations.NewHandler(fiscalOpService)
 	s.mux.HandleFunc("GET /fiscal-operations", fiscalOpHandler.List)
 
-	// ncm
+	// catálogo NCM
 	ncmRepo := ncm.NewRepository(s.db)
 	ncmService := ncm.NewService(ncmRepo)
 	ncmHandler := ncm.NewHandler(ncmService)
-
 	s.mux.HandleFunc("GET /ncm", ncmHandler.List)
 	s.mux.HandleFunc("GET /ncm/find", ncmHandler.GetByCode)
 	s.mux.HandleFunc("GET /ncm/search", ncmHandler.Search)
 
-	// legal basis
+	// catálogo CFOP
+	cfopRepo := cfop.NewRepository(s.db)
+	cfopService := cfop.NewService(cfopRepo)
+	cfopHandler := cfop.NewHandler(cfopService)
+	s.mux.HandleFunc("GET /cfop", cfopHandler.List)
+	s.mux.HandleFunc("GET /cfop/find", cfopHandler.GetByCode)
+
+	// base legal
 	legalRepo := legalbasis.NewRepository(s.db)
 	legalService := legalbasis.NewService(legalRepo)
 	legalHandler := legalbasis.NewHandler(legalService)
-
 	s.mux.HandleFunc("GET /legal-sources", legalHandler.ListLegalSources)
 	s.mux.HandleFunc("POST /legal-sources", legalHandler.CreateLegalSource)
 	s.mux.HandleFunc("GET /legal-rules", legalHandler.ListLegalRuleMappings)
 	s.mux.HandleFunc("POST /legal-rules", legalHandler.CreateLegalRuleMapping)
-}
 
-func (s *Server) registerProtectedRoutes() {
+	// protected routes
 	protectedMux := http.NewServeMux()
 
-	// dependencies
-	authRepo := auth.NewRepository(s.db)
-	authService := auth.NewService(authRepo)
-	jwtService := auth.NewJWT(s.cfg.JWTSecret)
-	authHandler := auth.NewHandler(authService, jwtService)
+	protectedMux.HandleFunc("GET /auth/me", authHandler.Me)
 
+	adminImportsRepo := adminimports.NewRepository(s.db)
+	adminImportsService := adminimports.NewService(adminImportsRepo, s.db)
+	adminImportsHandler := adminimports.NewHandler(adminImportsService)
+	protectedMux.HandleFunc("GET /admin/imports/batches", adminImportsHandler.ListImportBatches)
+	protectedMux.HandleFunc("POST /admin/imports/ncm", adminImportsHandler.UploadNCM)
+	protectedMux.HandleFunc("POST /admin/imports/cfop", adminImportsHandler.UploadCFOP)
+
+	// organizations
 	orgRepo := organizations.NewRepository(s.db)
 	orgService := organizations.NewService(orgRepo)
 	orgHandler := organizations.NewHandler(orgService)
 
+	adminUsersRepo := adminusers.NewRepository(s.db)
+	adminUsersService := adminusers.NewService(adminUsersRepo)
+	adminUsersHandler := adminusers.NewHandler(adminUsersService, orgService)
+	icmsRatesRepo := icmsrates.NewRepository(s.db)
+	icmsRatesService := icmsrates.NewService(icmsRatesRepo)
+	icmsRatesHandler := icmsrates.NewHandler(icmsRatesService, orgService)
+	adminPartilhaRepo := adminpartilha.NewRepository(s.db)
+	adminPartilhaService := adminpartilha.NewService(adminPartilhaRepo)
+	adminPartilhaHandler := adminpartilha.NewHandler(adminPartilhaService, orgService)
+
+	protectedMux.HandleFunc("POST /organizations", orgHandler.Create)
+	protectedMux.HandleFunc("GET /organizations", orgHandler.List)
+	protectedMux.HandleFunc("GET /admin/users", adminUsersHandler.List)
+	protectedMux.HandleFunc("POST /admin/users", adminUsersHandler.Create)
+	protectedMux.HandleFunc("PATCH /admin/users/role", adminUsersHandler.UpdateRole)
+	protectedMux.HandleFunc("DELETE /admin/users", adminUsersHandler.Remove)
+	protectedMux.HandleFunc("GET /admin/icms-partilha", adminPartilhaHandler.List)
+	protectedMux.HandleFunc("POST /admin/icms-partilha", adminPartilhaHandler.Create)
+	protectedMux.HandleFunc("GET /admin/icms-rates", icmsRatesHandler.ListStateRates)
+	protectedMux.HandleFunc("PUT /admin/icms-rates", icmsRatesHandler.UpsertStateRate)
+	protectedMux.HandleFunc("GET /admin/icms-rates/reference", icmsRatesHandler.ResolveReference)
+
+	// catálogo / invoices
 	catalogRepo := catalog.NewRepository(s.db)
 	catalogService := catalog.NewService(catalogRepo)
+	catalogHandler := catalog.NewHandler(catalogService, orgService)
+	adminCaptureRepo := admincapture.NewRepository(s.db)
+	adminCaptureService := admincapture.NewService(adminCaptureRepo, catalogService, legalService)
+	adminCaptureHandler := admincapture.NewHandler(adminCaptureService, orgService)
 
 	invoiceRepo := invoices.NewRepository(s.db)
 	invoiceService := invoices.NewService(invoiceRepo, catalogService)
 	invoiceHandler := invoices.NewHandler(invoiceService, orgService)
 
-	fiscalOpRepo := fiscaloperations.NewRepository(s.db)
-	fiscalOpService := fiscaloperations.NewService(fiscalOpRepo)
-
-	legalRepo := legalbasis.NewRepository(s.db)
-	legalService := legalbasis.NewService(legalRepo)
-
-	taxRepo := tax.NewRepository(s.db)
-	taxService := tax.NewService(taxRepo, fiscalOpService, legalService)
-	taxHandler := tax.NewHandler(taxService, orgService)
-
-	// routes
-	protectedMux.HandleFunc("GET /auth/me", authHandler.Me)
-
-	protectedMux.HandleFunc("POST /organizations", orgHandler.Create)
-	protectedMux.HandleFunc("GET /organizations", orgHandler.List)
-
+	protectedMux.HandleFunc("GET /admin/capture-rules", adminCaptureHandler.List)
+	protectedMux.HandleFunc("POST /admin/capture-rules/accept", adminCaptureHandler.Accept)
+	protectedMux.HandleFunc("GET /catalog/products", catalogHandler.ListProducts)
+	protectedMux.HandleFunc("POST /catalog/products", catalogHandler.SaveProduct)
 	protectedMux.HandleFunc("POST /invoices/upload", invoiceHandler.Upload)
 	protectedMux.HandleFunc("GET /invoices", invoiceHandler.List)
 	protectedMux.HandleFunc("GET /invoices/", invoiceHandler.GetByID)
+
+	// tax engine
+	taxRepo := tax.NewRepository(s.db)
+	taxService := tax.NewService(taxRepo, fiscalOpService, legalService, icmsRatesService)
+	taxHandler := tax.NewHandler(taxService, orgService)
 
 	protectedMux.HandleFunc("POST /tax/suggest", taxHandler.Suggest)
 
 	protected := auth.AuthMiddleware(jwtService, protectedMux)
 
-	s.mux.Handle("/", protected)
+	s.mux.Handle("/auth/me", protected)
+	s.mux.Handle("/admin/imports/batches", protected)
+	s.mux.Handle("/admin/imports/ncm", protected)
+	s.mux.Handle("/admin/imports/cfop", protected)
+	s.mux.Handle("/admin/users", protected)
+	s.mux.Handle("/admin/users/role", protected)
+	s.mux.Handle("/admin/capture-rules", protected)
+	s.mux.Handle("/admin/capture-rules/accept", protected)
+	s.mux.Handle("/admin/icms-partilha", protected)
+	s.mux.Handle("/admin/icms-rates", protected)
+	s.mux.Handle("/admin/icms-rates/reference", protected)
+	s.mux.Handle("/organizations", protected)
+	s.mux.Handle("/catalog/products", protected)
+	s.mux.Handle("/invoices", protected)
+	s.mux.Handle("/invoices/", protected)
+	s.mux.Handle("/tax/suggest", protected)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -168,7 +207,6 @@ func (s *Server) withCORS(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Organization-ID")
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		}
 
 		if r.Method == http.MethodOptions {
@@ -190,11 +228,16 @@ func (s *Server) isAllowedOrigin(origin string) bool {
 	return ok
 }
 
+func buildAllowedOriginsMap(origins []string) map[string]struct{} {
+	allowed := make(map[string]struct{}, len(origins))
+	for _, origin := range origins {
+		allowed[origin] = struct{}{}
+	}
+	return allowed
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-	}
+	_ = json.NewEncoder(w).Encode(payload)
 }

@@ -1,17 +1,88 @@
 ---
-import DashboardLayout from "../layouts/DashboardLayout.astro";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import ncmScript from "../../scripts/ncm.ts?url";
 ---
 
 <DashboardLayout
-  title="Simulação tributária"
-  subtitle="Simule a tributação por NCM, UF, regime e operação"
+  title="Catalogo NCM"
+  subtitle="Pesquise codigos NCM reais da base carregada no PostgreSQL"
 >
   <div class="page-header">
-    <h2>Simulação tributária</h2>
-    <p>Esta tela será o coração comercial do produto.</p>
+    <h2>Consulta NCM</h2>
+    <p>Use a busca por descricao ou informe um codigo exato para detalhar um item do catalogo.</p>
   </div>
 
-  <section class="card card--padded">
-    Em breve vamos ligar esta página ao motor tributário.
-  </section>
+  <div class="grid grid--2">
+    <section class="card card--padded">
+      <div class="toolbar">
+        <input id="ncm-query" type="text" placeholder="Ex.: monitor, teclado, 84713012..." />
+        <button class="primary-button" id="ncm-search" type="button">Buscar</button>
+      </div>
+      <div id="ncm-list" class="dashboard-note">Carregando catalogo NCM...</div>
+    </section>
+
+    <section class="card card--padded">
+      <h3 class="section-title">Detalhe do NCM</h3>
+      <div id="ncm-detail" class="dashboard-note">Selecione um item da lista para ver os detalhes.</div>
+    </section>
+  </div>
+
+  <script type="module" src={ncmScript}></script>
+
+  <style>
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .toolbar input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+    }
+    .primary-button {
+      border: none;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+    .link-button {
+      border: none;
+      background: transparent;
+      color: var(--primary);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+      padding: 0;
+    }
+    .detail-card { display: grid; gap: 10px; }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .detail-notes { margin: 0; color: var(--text-muted); }
+    .dashboard-empty {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      background: var(--surface-soft);
+    }
+    .dashboard-empty--error {
+      border-color: #fecaca;
+      background: #fff7f7;
+    }
+    @media (max-width: 900px) {
+      .detail-grid { grid-template-columns: 1fr; }
+      .toolbar { flex-direction: column; }
+    }
+  </style>
 </DashboardLayout>

@@ -1,14 +1,15 @@
 ---
 export const prerender = false;
 
-import DashboardLayout from "../";
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import invoiceDetailScript from "../../../scripts/invoice-detail.ts?url";
 
 const { id } = Astro.params;
 ---
 
 <DashboardLayout
   title="Detalhe da nota"
-  subtitle={`Visualização detalhada da nota fiscal ${id}`}
+  subtitle={`Visualizacao detalhada da nota fiscal ${id}`}
 >
   <div class="page-header">
     <h2>Detalhe da nota</h2>
@@ -16,310 +17,88 @@ const { id } = Astro.params;
   </div>
 
   <section class="card card--padded">
-    <div id="invoice-detail">Carregando dados da nota...</div>
+    <div id="invoice-detail" data-invoice-id={id}>Carregando dados da nota...</div>
   </section>
 
-  <script type="module" define:vars={{ id }}>
-    const API_URL = "http://localhost:8081";
-    const wrapper = document.getElementById("invoice-detail");
-
-    async function apiFetch(path, options = {}) {
-      const token = localStorage.getItem("token");
-      const organizationId = localStorage.getItem("organization_id");
-
-      const response = await fetch(`${API_URL}${path}`, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "X-Organization-ID": organizationId || "",
-          ...(options.headers || {}),
-        },
-      });
-
-      const contentType = response.headers.get("content-type") || "";
-      const isJSON = contentType.includes("application/json");
-
-      if (!response.ok) {
-        const errorBody = isJSON ? await response.json() : await response.text();
-        throw new Error(typeof errorBody === "string" ? errorBody : JSON.stringify(errorBody));
-      }
-
-      return isJSON ? response.json() : response.text();
-    }
-
-    async function getInvoice(invoiceId) {
-      return apiFetch(`/invoices/${invoiceId}`, {
-        method: "GET",
-      });
-    }
-
-    async function suggestTax(payload) {
-      return apiFetch("/tax/suggest", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-    }
-
-    function confidenceLabel(score) {
-      const n = Number(score || 0);
-      if (n >= 0.9) return "Alta";
-      if (n >= 0.7) return "Média";
-      return "Baixa";
-    }
-
-    function confidenceClass(score) {
-      const n = Number(score || 0);
-      if (n >= 0.9) return "confidence-high";
-      if (n >= 0.7) return "confidence-medium";
-      return "confidence-low";
-    }
-
-    function renderLegalBasis(legalBasis) {
-      if (!legalBasis || !legalBasis.length) {
-        return `
-          <div class="compare-box">
-            <h4>Base legal</h4>
-            <p>Nenhuma base legal específica encontrada para este contexto.</p>
-          </div>
-        `;
-      }
-
-      const rows = legalBasis
-        .map(
-          (item) => `
-            <div class="legal-item">
-              <div><strong>${item.tax_type || "-"}</strong></div>
-              <div><strong>Fonte:</strong> ${item.title || "-"}</div>
-              <div><strong>Referência:</strong> ${item.reference_code || "-"}</div>
-              <div><strong>Jurisdição:</strong> ${item.jurisdiction || "-"}</div>
-              <div><strong>UF:</strong> ${item.uf || "-"}</div>
-              <div><strong>Motivo:</strong> ${item.applied_reason || "-"}</div>
-              <div><strong>Peso:</strong> ${item.weight || "-"}</div>
-            </div>
-          `
-        )
-        .join("");
-
-      return `
-        <div class="compare-box legal-basis-box">
-          <h4>Base legal aplicada</h4>
-          <div class="legal-list">${rows}</div>
-        </div>
-      `;
-    }
-
-    function renderSuggestion(result, item) {
-      const suggestion = result?.suggestion || {};
-
-      return `
-        <div class="suggestion-card">
-          <div class="suggestion-top">
-            <div>
-              <strong>Sugestão fiscal</strong>
-              <div class="muted-line">
-                Baseada no histórico aprendido pela plataforma e nas regras legais
-              </div>
-            </div>
-
-            <div class="confidence-badge ${confidenceClass(result.confidence_score)}">
-              Confiança ${confidenceLabel(result.confidence_score)} (${result.confidence_score ?? 0})
-            </div>
-          </div>
-
-          <div class="suggestion-grid">
-            <div class="compare-box">
-              <h4>Dados da nota</h4>
-              <p><strong>Descrição:</strong> ${item.description || "-"}</p>
-              <p><strong>GTIN:</strong> ${item.gtin || "-"}</p>
-              <p><strong>NCM:</strong> ${item.ncm || "-"}</p>
-              <p><strong>CFOP:</strong> ${item.cfop || "-"}</p>
-              <p><strong>Total:</strong> ${item.total_value || "-"}</p>
-            </div>
-
-            <div class="compare-box">
-              <h4>Sugestão da plataforma</h4>
-              <p><strong>Match:</strong> ${result.match_type || "-"}</p>
-              <p><strong>NCM sugerido:</strong> ${suggestion.ncm || "-"}</p>
-              <p><strong>CEST sugerido:</strong> ${suggestion.cest || "-"}</p>
-              <p><strong>cClasTrib:</strong> ${suggestion.cclas_trib || "-"}</p>
-              <p><strong>CFOP sugerido:</strong> ${suggestion.cfop || "-"}</p>
-              <p><strong>PIS CST:</strong> ${suggestion.pis_cst || "-"}</p>
-              <p><strong>COFINS CST:</strong> ${suggestion.cofins_cst || "-"}</p>
-              <p><strong>Cód. rec. PIS:</strong> ${suggestion.pis_revenue_code || "-"}</p>
-              <p><strong>Cód. rec. COFINS:</strong> ${suggestion.cofins_revenue_code || "-"}</p>
-              <p><strong>ICMS:</strong> ${suggestion.icms_value || "-"}</p>
-              <p><strong>IPI:</strong> ${suggestion.ipi_value || "-"}</p>
-              <p><strong>PIS:</strong> ${suggestion.pis_value || "-"}</p>
-              <p><strong>COFINS:</strong> ${suggestion.cofins_value || "-"}</p>
-              <p><strong>IBS:</strong> ${suggestion.ibs_rate || "-"}</p>
-              <p><strong>CBS:</strong> ${suggestion.cbs_rate || "-"}</p>
-            </div>
-          </div>
-
-          <div style="margin-top: 14px;">
-            ${renderLegalBasis(result.legal_basis || [])}
-          </div>
-        </div>
-      `;
-    }
-
-    async function loadInvoice() {
-      const token = localStorage.getItem("token");
-      const organizationId = localStorage.getItem("organization_id");
-
-      if (!token) {
-        window.location.href = "/login";
-        return;
-      }
-
-      if (!organizationId) {
-        window.location.href = "/organizations";
-        return;
-      }
-
-      if (!wrapper) return;
-
-      try {
-        const data = await getInvoice(id);
-        const invoice = data.invoice;
-
-        const rows = (invoice.items || [])
-          .map(
-            (item, index) => `
-              <tr>
-                <td>${item.item_number}</td>
-                <td>
-                  <div><strong>${item.description || "-"}</strong></div>
-                  <div class="small-muted">GTIN: ${item.gtin || "-"}</div>
-                </td>
-                <td>${item.ncm || "-"}</td>
-                <td>${item.cfop || "-"}</td>
-                <td>${item.total_value || "-"}</td>
-                <td>
-                  <button class="suggest-btn" data-index="${index}">
-                    Sugerir
-                  </button>
-                </td>
-              </tr>
-
-              <tr>
-                <td colspan="6">
-                  <div id="suggestion-${index}" class="suggestion-slot" style="display:none;"></div>
-                </td>
-              </tr>
-            `
-          )
-          .join("");
-
-        wrapper.innerHTML = `
-          <div class="invoice-meta-grid">
-            <div><strong>Número:</strong> ${invoice.number || "-"}</div>
-            <div><strong>Série:</strong> ${invoice.series || "-"}</div>
-            <div><strong>Data:</strong> ${invoice.issued_at || "-"}</div>
-            <div><strong>Status:</strong> ${invoice.status || "-"}</div>
-            <div><strong>Emitente:</strong> ${invoice.emitter_name || "-"}</div>
-            <div><strong>Destinatário:</strong> ${invoice.recipient_name || "-"}</div>
-            <div><strong>Natureza:</strong> ${invoice.operation_nature || "-"}</div>
-            <div><strong>Total:</strong> ${invoice.total_amount || "-"}</div>
-          </div>
-
-          <h3 style="margin-top: 20px;" class="section-title">Itens da nota</h3>
-
-          <div class="table-wrap">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Produto</th>
-                  <th>NCM</th>
-                  <th>CFOP</th>
-                  <th>Total</th>
-                  <th>Ação</th>
-                </tr>
-              </thead>
-              <tbody>${rows}</tbody>
-            </table>
-          </div>
-        `;
-
-        document.querySelectorAll(".suggest-btn").forEach((button) => {
-          button.addEventListener("click", async () => {
-            const idx = button.getAttribute("data-index");
-            if (idx === null) return;
-
-            const item = invoice.items[Number(idx)];
-            const target = document.getElementById(`suggestion-${idx}`);
-            if (!target) return;
-
-            target.style.display = "block";
-            target.innerHTML = `<div class="loading-box">Consultando sugestão fiscal...</div>`;
-
-            try {
-              const result = await suggestTax({
-                gtin: item.gtin || "",
-                description: item.description || "",
-                emitter_uf: "",
-                recipient_uf: "",
-              });
-
-              target.innerHTML = renderSuggestion(result, item);
-            } catch (error) {
-              target.innerHTML = `
-                <div class="error-box">
-                  Erro ao consultar sugestão: ${String(error)}
-                </div>
-              `;
-            }
-          });
-        });
-      } catch (error) {
-        wrapper.textContent = `Erro ao carregar nota: ${String(error)}`;
-      }
-    }
-
-    loadInvoice();
-  </script>
+  <script type="module" src={invoiceDetailScript}></script>
 
   <style>
+    #invoice-detail {
+      display: grid;
+      gap: 18px;
+    }
+
     .invoice-meta-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      background: white;
-      padding: 16px;
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      background:
+        radial-gradient(circle at top left, rgba(14, 165, 233, 0.12), transparent 30%),
+        linear-gradient(135deg, #ffffff, #f8fbff);
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid #d9e4f3;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+    }
+
+    .invoice-meta-grid > div {
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 14px;
     }
 
     .suggest-btn {
-      background: #2563eb;
+      background: linear-gradient(135deg, #0f766e, #2563eb);
       color: white;
       border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
+      padding: 9px 16px;
+      border-radius: 999px;
       cursor: pointer;
+      font-weight: 700;
+      transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
     }
 
     .suggest-btn:hover {
-      background: #1d4ed8;
+      transform: translateY(-1px);
+      box-shadow: 0 16px 28px rgba(37, 99, 235, 0.26);
+    }
+
+    .suggest-btn[disabled] {
+      opacity: 0.8;
+      cursor: wait;
+    }
+
+    .suggest-btn--secondary {
+      background: linear-gradient(135deg, #f59e0b, #fb7185);
+      box-shadow: 0 12px 24px rgba(245, 158, 11, 0.22);
+    }
+
+    .action-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .small-muted {
       font-size: 12px;
-      color: #6b7280;
+      color: #64748b;
       margin-top: 4px;
     }
 
     .suggestion-slot {
-      padding: 10px 0;
+      padding: 14px 0 6px;
     }
 
     .suggestion-card {
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      background: #ffffff;
-      padding: 14px;
+      border: 1px solid #d8e4f0;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 25%),
+        linear-gradient(180deg, #ffffff, #f8fbff);
+      padding: 20px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
     }
 
     .suggestion-top {
@@ -327,89 +106,256 @@ const { id } = Astro.params;
       justify-content: space-between;
       align-items: flex-start;
       gap: 12px;
-      margin-bottom: 14px;
+      margin-bottom: 18px;
+    }
+
+    .suggestion-heading strong {
+      font-size: 1.15rem;
+      color: #0f172a;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      margin-bottom: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #0f766e;
     }
 
     .muted-line {
-      color: #6b7280;
+      color: #475569;
       font-size: 13px;
       margin-top: 4px;
+    }
+
+    .suggestion-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .summary-chip {
+      display: grid;
+      gap: 6px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      background: #f8fafc;
+    }
+
+    .summary-chip strong {
+      font-size: 15px;
+      color: #0f172a;
+    }
+
+    .summary-chip__label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #475569;
+    }
+
+    .summary-chip--neutral {
+      border-color: #e2e8f0;
+      background: #f8fafc;
+    }
+
+    .summary-chip--blue {
+      border-color: #bfdbfe;
+      background: linear-gradient(180deg, #eff6ff, #dbeafe);
+    }
+
+    .summary-chip--green {
+      border-color: #bbf7d0;
+      background: linear-gradient(180deg, #f0fdf4, #dcfce7);
+    }
+
+    .summary-chip--amber {
+      border-color: #fde68a;
+      background: linear-gradient(180deg, #fffbeb, #fef3c7);
     }
 
     .suggestion-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 14px;
+      gap: 16px;
     }
 
     .compare-box {
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 12px;
-      background: #f9fafb;
+      border: 1px solid #dbe4ee;
+      border-radius: 20px;
+      padding: 18px;
+      background: #f8fafc;
     }
 
     .compare-box h4 {
       margin-top: 0;
-      margin-bottom: 10px;
+      margin-bottom: 14px;
+      color: #0f172a;
     }
 
-    .compare-box p {
-      margin: 6px 0;
+    .compare-box--source {
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .compare-box--result {
+      background: linear-gradient(180deg, #f0fdfb, #ecfeff);
+      border-color: #b6e4dd;
+    }
+
+    .compare-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .compare-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .compare-row span {
+      color: #475569;
+      font-size: 13px;
+    }
+
+    .compare-row strong {
+      color: #0f172a;
+      text-align: right;
+      word-break: break-word;
     }
 
     .confidence-badge {
-      padding: 8px 10px;
+      padding: 10px 14px;
       border-radius: 999px;
       font-size: 12px;
-      font-weight: bold;
+      font-weight: 800;
       white-space: nowrap;
+      border: 1px solid transparent;
     }
 
     .confidence-high {
       background: #dcfce7;
       color: #166534;
+      border-color: #86efac;
     }
 
     .confidence-medium {
       background: #fef3c7;
       color: #92400e;
+      border-color: #fcd34d;
     }
 
     .confidence-low {
       background: #fee2e2;
       color: #991b1b;
+      border-color: #fca5a5;
+    }
+
+    .tax-breakdown {
+      margin-top: 18px;
+      border-radius: 20px;
+      padding: 18px;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+    }
+
+    .tax-breakdown__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .tax-breakdown__header h4 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .tax-breakdown__header span {
+      color: rgba(226, 232, 240, 0.82);
+      font-size: 13px;
+    }
+
+    .tax-pill-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .tax-pill {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .tax-pill span {
+      color: rgba(226, 232, 240, 0.8);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .tax-pill strong {
+      font-size: 1rem;
+    }
+
+    .tax-pill--soft {
+      background: rgba(14, 165, 233, 0.12);
+      border-color: rgba(56, 189, 248, 0.28);
     }
 
     .loading-box {
-      background: #eff6ff;
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
       color: #1d4ed8;
-      padding: 12px;
-      border-radius: 8px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid #bfdbfe;
+      font-weight: 700;
     }
 
     .error-box {
-      background: #fee2e2;
+      background: linear-gradient(135deg, #fff1f2, #fee2e2);
       color: #991b1b;
-      padding: 12px;
-      border-radius: 8px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid #fecaca;
+    }
+
+    .legal-section {
+      margin-top: 18px;
     }
 
     .legal-basis-box {
-      background: #fcfcfd;
+      background: linear-gradient(180deg, #fffdf7, #fffaf0);
+      border-color: #f3e8c8;
     }
 
     .legal-list {
       display: grid;
-      gap: 10px;
+      gap: 12px;
     }
 
     .legal-item {
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 10px;
+      border: 1px solid #f1e3b6;
+      border-radius: 16px;
+      padding: 14px;
       background: white;
       font-size: 14px;
+      box-shadow: 0 10px 24px rgba(148, 163, 184, 0.08);
     }
 
     .legal-item div {
@@ -418,7 +364,30 @@ const { id } = Astro.params;
 
     @media (max-width: 900px) {
       .invoice-meta-grid,
-      .suggestion-grid {
+      .suggestion-grid,
+      .suggestion-summary,
+      .tax-pill-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .invoice-meta-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .tax-breakdown__header,
+      .suggestion-top,
+      .compare-row {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+
+      .compare-row strong {
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .invoice-meta-grid {
         grid-template-columns: 1fr;
       }
     }

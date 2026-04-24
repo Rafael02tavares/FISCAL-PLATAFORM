@@ -1,17 +1,135 @@
 ---
-import DashboardLayout from "../layouts/DashboardLayout.astro";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
 ---
 
 <DashboardLayout
-  title="Simulação tributária"
-  subtitle="Simule a tributação por NCM, UF, regime e operação"
+  title="Regras fiscais"
+  subtitle="Consulte fontes legais e mapeamentos tributários já persistidos na base"
 >
   <div class="page-header">
-    <h2>Simulação tributária</h2>
-    <p>Esta tela será o coração comercial do produto.</p>
+    <h2>Regras e fontes legais</h2>
+    <p>
+      Esta tela lista a base legal pública já disponível e leva para a área administrativa de
+      cadastro quando você quiser ampliar as regras.
+    </p>
   </div>
 
-  <section class="card card--padded">
-    Em breve vamos ligar esta página ao motor tributário.
-  </section>
+  <div class="page-actions">
+    <a class="primary-link" href="/admin/legal-rules">Abrir área administrativa de regras</a>
+  </div>
+
+  <div class="grid grid--2">
+    <section class="card card--padded">
+      <h3 class="section-title">Fontes legais</h3>
+      <div id="legal-sources" class="dashboard-note">Carregando fontes...</div>
+    </section>
+
+    <section class="card card--padded">
+      <h3 class="section-title">Mapeamentos fiscais</h3>
+      <div id="legal-rules" class="dashboard-note">Carregando regras...</div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { listLegalRules, listLegalSources } from "../../lib/legalbasis";
+
+    const sourcesBox = document.getElementById("legal-sources");
+    const rulesBox = document.getElementById("legal-rules");
+
+    function renderCards(target, items, mode) {
+      if (!target) return;
+
+      if (!items.length) {
+        target.innerHTML = `
+          <div class="dashboard-empty">
+            <strong>Nenhum registro encontrado.</strong>
+            <p>Cadastre novos itens na área administrativa para expandir esta base.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const html = items
+        .map((item) => {
+          if (mode === "sources") {
+            return `
+              <article class="rule-card">
+                <strong>${item.title || "-"}</strong>
+                <span>${item.tax_type || "-"} · ${item.source_type || "-"}</span>
+                <span>${item.jurisdiction || "-"} ${item.uf ? `· ${item.uf}` : ""}</span>
+                <small>${item.reference_code || "Sem referência"}</small>
+              </article>
+            `;
+          }
+
+          return `
+            <article class="rule-card">
+              <strong>${item.tax_type || "-"}</strong>
+              <span>Tipo: ${item.value_type || "-"}</span>
+              <span>Operação: ${item.operation_code || "-"}</span>
+              <span>NCM: ${item.ncm_code || "-"}</span>
+              <small>Prioridade ${item.priority || "-"} · confiança ${item.confidence_base || "-"}</small>
+            </article>
+          `;
+        })
+        .join("");
+
+      target.innerHTML = `<div class="rule-grid">${html}</div>`;
+    }
+
+    async function loadRules() {
+      try {
+        const [sources, rules] = await Promise.all([
+          listLegalSources(120),
+          listLegalRules(120),
+        ]);
+
+        renderCards(sourcesBox, sources.items || [], "sources");
+        renderCards(rulesBox, rules.items || [], "rules");
+      } catch (error) {
+        const content = `
+          <div class="dashboard-empty dashboard-empty--error">
+            <strong>Falha ao carregar base legal.</strong>
+            <p>${String(error)}</p>
+          </div>
+        `;
+        if (sourcesBox) sourcesBox.innerHTML = content;
+        if (rulesBox) rulesBox.innerHTML = content;
+      }
+    }
+
+    loadRules();
+  </script>
+
+  <style>
+    .page-actions { margin-bottom: 18px; }
+    .primary-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      font-weight: 700;
+    }
+    .rule-grid { display: grid; gap: 12px; }
+    .rule-card {
+      display: grid;
+      gap: 6px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      background: var(--surface-soft);
+      color: var(--text-muted);
+    }
+    .rule-card strong { color: var(--text); }
+    .dashboard-empty {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      background: var(--surface-soft);
+    }
+    .dashboard-empty--error { border-color: #fecaca; background: #fff7f7; }
+  </style>
 </DashboardLayout>

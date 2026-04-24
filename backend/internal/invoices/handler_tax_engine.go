@@ -76,7 +76,7 @@ type ProcessInvoiceTaxesItemResult struct {
 
 func (h *TaxEngineHandler) HandleProcessInvoiceTaxes(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{
+		writeTaxEngineJSON(w, http.StatusMethodNotAllowed, map[string]any{
 			"error": "method not allowed",
 		})
 		return
@@ -84,7 +84,7 @@ func (h *TaxEngineHandler) HandleProcessInvoiceTaxes(w http.ResponseWriter, r *h
 
 	var req ProcessInvoiceTaxesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{
+		writeTaxEngineJSON(w, http.StatusBadRequest, map[string]any{
 			"error": "invalid request body",
 		})
 		return
@@ -93,7 +93,7 @@ func (h *TaxEngineHandler) HandleProcessInvoiceTaxes(w http.ResponseWriter, r *h
 	req = sanitizeProcessInvoiceTaxesRequest(req)
 
 	if err := validateProcessInvoiceTaxesRequest(req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{
+		writeTaxEngineJSON(w, http.StatusBadRequest, map[string]any{
 			"error": err.Error(),
 		})
 		return
@@ -101,13 +101,13 @@ func (h *TaxEngineHandler) HandleProcessInvoiceTaxes(w http.ResponseWriter, r *h
 
 	invoice, err := h.invoiceQuery.GetInvoiceForTaxProcessing(r.Context(), req.InvoiceID, req.OrganizationID)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{
+		writeTaxEngineJSON(w, http.StatusInternalServerError, map[string]any{
 			"error": "failed to load invoice for tax processing",
 		})
 		return
 	}
 	if invoice == nil {
-		writeJSON(w, http.StatusNotFound, map[string]any{
+		writeTaxEngineJSON(w, http.StatusNotFound, map[string]any{
 			"error": "invoice not found",
 		})
 		return
@@ -130,7 +130,7 @@ func (h *TaxEngineHandler) HandleProcessInvoiceTaxes(w http.ResponseWriter, r *h
 		Metadata: buildTaxEngineMetadata(req),
 	})
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{
+		writeTaxEngineJSON(w, http.StatusInternalServerError, map[string]any{
 			"error": "failed to process invoice taxes",
 		})
 		return
@@ -155,7 +155,7 @@ func (h *TaxEngineHandler) HandleProcessInvoiceTaxes(w http.ResponseWriter, r *h
 		})
 	}
 
-	writeJSON(w, http.StatusOK, resp)
+	writeTaxEngineJSON(w, http.StatusOK, resp)
 }
 
 func buildTaxEngineMetadata(req ProcessInvoiceTaxesRequest) TaxEngineMetadataContext {
@@ -197,7 +197,7 @@ func validateProcessInvoiceTaxesRequest(req ProcessInvoiceTaxesRequest) error {
 	return nil
 }
 
-func writeJSON(w http.ResponseWriter, status int, payload any) {
+func writeTaxEngineJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)

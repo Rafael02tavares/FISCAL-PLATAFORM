@@ -8,26 +8,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const (
-	defaultMaxConns       = 10
-	defaultMinConns       = 2
-	defaultMaxConnLifetime = 30 * time.Minute
-	defaultMaxConnIdleTime = 5 * time.Minute
-	defaultConnectTimeout  = 10 * time.Second
-)
-
 func NewPostgres(databaseURL string) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse database url: %w", err)
 	}
 
-	cfg.MaxConns = defaultMaxConns
-	cfg.MinConns = defaultMinConns
-	cfg.MaxConnLifetime = defaultMaxConnLifetime
-	cfg.MaxConnIdleTime = defaultMaxConnIdleTime
+	cfg.MaxConns = 10
+	cfg.MinConns = 2
+	cfg.MaxConnLifetime = 30 * time.Minute
+	cfg.MaxConnIdleTime = 5 * time.Minute
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultConnectTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	db, err := pgxpool.NewWithConfig(ctx, cfg)

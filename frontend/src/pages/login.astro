@@ -1,0 +1,249 @@
+---
+const title = "Entrar";
+import loginScript from "../scripts/login.ts?url";
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <style>
+      :root {
+        --bg: #eef4ff;
+        --surface: #ffffff;
+        --surface-soft: #f8fafc;
+        --border: #dbe4f0;
+        --text: #0f172a;
+        --muted: #64748b;
+        --primary: #1d4ed8;
+        --primary-dark: #1e40af;
+        --danger: #dc2626;
+        --success: #15803d;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.16), transparent 24%),
+          linear-gradient(180deg, #f7fbff 0%, #edf3ff 100%);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      .auth-shell {
+        width: min(1040px, 100%);
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        border-radius: 28px;
+        overflow: hidden;
+        background: var(--surface);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+      }
+      .auth-aside {
+        padding: 40px;
+        background:
+          linear-gradient(160deg, rgba(29, 78, 216, 0.96), rgba(14, 116, 144, 0.88)),
+          #1d4ed8;
+        color: #eff6ff;
+      }
+      .auth-aside h1 { margin: 0 0 14px; font-size: 34px; line-height: 1.1; }
+      .auth-aside p { margin: 0; color: rgba(239, 246, 255, 0.9); max-width: 38ch; }
+      .auth-highlights { margin-top: 28px; display: grid; gap: 14px; }
+      .auth-highlight {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 18px;
+        padding: 16px 18px;
+      }
+      .auth-highlight strong { display: block; margin-bottom: 6px; }
+      .auth-panel { padding: 34px 32px; }
+      .auth-tabs {
+        display: inline-grid;
+        grid-template-columns: 1fr 1fr;
+        background: var(--surface-soft);
+        border-radius: 999px;
+        padding: 4px;
+        margin-bottom: 22px;
+      }
+      .auth-tab {
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        padding: 10px 18px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .auth-tab.is-active {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      }
+      .auth-form {
+        display: none;
+        gap: 14px;
+      }
+      .auth-form.is-active {
+        display: grid;
+      }
+      .auth-form h2 { margin: 0; font-size: 24px; }
+      .auth-form p { margin: 0 0 6px; color: var(--muted); }
+      label { display: grid; gap: 8px; font-weight: 600; font-size: 14px; }
+      input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 13px 14px;
+        font: inherit;
+      }
+      input:focus {
+        outline: 2px solid rgba(37, 99, 235, 0.22);
+        border-color: var(--primary);
+      }
+      .auth-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+      .auth-button {
+        border: none;
+        border-radius: 14px;
+        padding: 13px 18px;
+        background: var(--primary);
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .auth-button:hover { background: var(--primary-dark); }
+      .auth-button:disabled {
+        opacity: 0.7;
+        cursor: wait;
+      }
+      .auth-button--ghost {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid rgba(29, 78, 216, 0.2);
+      }
+      .auth-message {
+        min-height: 48px;
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-size: 14px;
+        display: none;
+      }
+      .auth-message.is-visible { display: block; }
+      .auth-message.is-error { background: #fff1f2; color: var(--danger); }
+      .auth-message.is-success { background: #ecfdf5; color: var(--success); }
+      .auth-footer { margin-top: 18px; color: var(--muted); font-size: 14px; }
+      .auth-footer a { color: var(--primary); font-weight: 600; }
+      @media (max-width: 900px) {
+        .auth-shell { grid-template-columns: 1fr; }
+        .auth-aside, .auth-panel { padding: 24px; }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="auth-shell">
+      <aside class="auth-aside">
+        <h1>Fiscal Platform</h1>
+        <p>
+          Entre com sua conta para acessar organizacoes, importar notas e alimentar a dashboard
+          com dados reais do ambiente.
+        </p>
+        <div class="auth-highlights">
+          <div class="auth-highlight">
+            <strong>1. Autentique</strong>
+            <span>O token da API e salvo no navegador para as rotas protegidas.</span>
+          </div>
+          <div class="auth-highlight">
+            <strong>2. Escolha a organizacao</strong>
+            <span>Depois do login, selecione a empresa ativa para consultar invoices.</span>
+          </div>
+          <div class="auth-highlight">
+            <strong>3. Volte para a dashboard</strong>
+            <span>Com sessao e organizacao definidas, os cards passam a ler dados reais.</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="auth-panel">
+        <div class="auth-tabs" role="tablist" aria-label="Autenticacao">
+          <a class="auth-tab is-active" href="#login-form" data-target="login-form" aria-selected="true">
+            Entrar
+          </a>
+          <a class="auth-tab" href="#register-form" data-target="register-form" aria-selected="false">
+            Cadastrar
+          </a>
+        </div>
+
+        <div id="auth-message" class="auth-message" aria-live="polite"></div>
+
+        <form id="login-form" class="auth-form is-active" novalidate>
+          <h2>Acessar conta</h2>
+          <p>Use o email e a senha cadastrados para gerar o token de acesso.</p>
+          <label>
+            Email
+            <input id="login-email" type="email" placeholder="voce@empresa.com" autocomplete="email" required />
+          </label>
+          <label>
+            Senha
+            <input id="login-password" type="password" placeholder="Sua senha" autocomplete="current-password" required />
+          </label>
+          <div class="auth-actions">
+            <button class="auth-button" type="submit" id="login-submit">Entrar</button>
+            <a class="auth-button auth-button--ghost" href="/">Voltar para a dashboard</a>
+          </div>
+        </form>
+
+        <form id="register-form" class="auth-form" novalidate>
+          <h2>Criar conta</h2>
+          <p>Cadastre um usuario novo para comecar a usar o ambiente local.</p>
+          <label>
+            Nome
+            <input id="register-name" type="text" placeholder="Nome do responsavel" autocomplete="name" required />
+          </label>
+          <label>
+            Email
+            <input id="register-email" type="email" placeholder="voce@empresa.com" autocomplete="email" required />
+          </label>
+          <label>
+            Senha
+            <input
+              id="register-password"
+              type="password"
+              placeholder="Minimo de 6 caracteres"
+              autocomplete="new-password"
+              minlength="6"
+              required
+            />
+          </label>
+          <label>
+            Confirmar senha
+            <input
+              id="register-password-confirm"
+              type="password"
+              placeholder="Repita a senha"
+              autocomplete="new-password"
+              minlength="6"
+              required
+            />
+          </label>
+          <div class="auth-actions">
+            <button class="auth-button" type="submit" id="register-submit">Criar conta</button>
+            <button class="auth-button auth-button--ghost" type="button" id="switch-to-login">
+              Ja tenho conta
+            </button>
+          </div>
+        </form>
+
+        <p class="auth-footer">
+          Depois do login, siga para <a href="/organizations">Organizacoes</a> para definir o
+          contexto ativo da dashboard.
+        </p>
+      </main>
+    </section>
+
+    <script type="module" src={loginScript}></script>
+  </body>
+</html>

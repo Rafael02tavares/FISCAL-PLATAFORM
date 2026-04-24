@@ -1,0 +1,772 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import adminICMSPartilhaScript from "../../../scripts/admin-icms-partilha.ts?url";
+---
+
+<DashboardLayout
+  title="Partilha de ICMS"
+  subtitle="Gerencie regras de DIFAL, FCP e combinacoes interestaduais usadas pelo motor tributario"
+>
+  <div class="page-header">
+    <h2>Partilha de ICMS</h2>
+    <p>
+      Cadastre regras para operacoes interestaduais de saida e mantenha organizada a diferenca entre
+      aliquota interna, aliquota interestadual e FCP por contexto fiscal.
+    </p>
+  </div>
+
+  <section class="difal-hero">
+    <div class="difal-hero__content">
+      <span class="difal-hero__eyebrow">Motor tributario</span>
+      <h3>Painel administrativo para DIFAL e partilha por UF</h3>
+      <p>
+        Use esta area para definir o comportamento da partilha em vendas interestaduais, filtrando por
+        origem, destino, consumidor final, contribuinte, CFOP, NCM e regime tributario.
+      </p>
+
+      <div class="difal-legend">
+        <article>
+          <strong>Aliquota interna</strong>
+          <span>Percentual praticado na UF de destino.</span>
+        </article>
+        <article>
+          <strong>Aliquota interestadual</strong>
+          <span>Base para calcular a diferenca do DIFAL.</span>
+        </article>
+        <article>
+          <strong>FCP</strong>
+          <span>Adicional destacado quando existir regra especifica.</span>
+        </article>
+      </div>
+    </div>
+
+    <div id="difal-stats" class="difal-stats">
+      <div class="dashboard-note">Carregando panorama da partilha...</div>
+    </div>
+  </section>
+
+  <div class="base-grid">
+    <section class="card card--padded">
+      <div class="difal-list-head">
+        <div>
+          <h3 class="section-title">Base por UF</h3>
+          <p>Cadastre a aliquota interna vigente de cada estado para servir de referencia ao motor e ao painel de partilha.</p>
+        </div>
+      </div>
+
+      <form id="icms-rate-form" class="difal-form difal-form--compact">
+        <label>
+          UF
+          <input name="uf" type="text" maxlength="2" placeholder="SP" required />
+        </label>
+
+        <label>
+          Aliquota interna
+          <input name="internal_rate" type="text" placeholder="18,00" required />
+        </label>
+
+        <label>
+          FCP padrao
+          <input name="fcp_rate" type="text" placeholder="0,00" />
+        </label>
+
+        <label>
+          Vigencia inicial
+          <input name="valid_from" type="date" required />
+        </label>
+
+        <label>
+          Vigencia final
+          <input name="valid_to" type="date" />
+        </label>
+
+        <label>
+          Fonte
+          <input
+            name="source_reference"
+            type="text"
+            placeholder="Conta Azul - Tabela ICMS 2026"
+            value="Conta Azul - Tabela ICMS 2026"
+          />
+        </label>
+
+        <label class="full-width">
+          Link da fonte
+          <input
+            name="source_url"
+            type="url"
+            placeholder="https://contaazul.com/blog/tabela-de-aliquota-interestadual/"
+            value="https://contaazul.com/blog/tabela-de-aliquota-interestadual/"
+          />
+        </label>
+
+        <label class="full-width">
+          Observacao
+          <textarea name="notes" rows="3" placeholder="Observacoes sobre vigencia ou fundamento."></textarea>
+        </label>
+
+        <div class="full-width form-actions">
+          <button class="primary-button" type="submit">Salvar base por UF</button>
+        </div>
+      </form>
+
+      <div id="icms-rate-feedback" class="dashboard-note">
+        A plataforma ja traz uma base inicial de 2026. Ajuste quando houver mudanca estadual.
+      </div>
+    </section>
+
+    <section class="card card--padded">
+      <div class="difal-list-head">
+        <div>
+          <h3 class="section-title">Referencia automatica</h3>
+          <p>Escolha origem e destino para ver a combinacao sugerida antes de registrar uma regra detalhada.</p>
+        </div>
+      </div>
+
+      <div id="icms-rate-reference" class="dashboard-note">
+        Informe UF de origem e destino na regra abaixo para visualizar a referencia automatica de partilha.
+      </div>
+
+      <div id="icms-state-rates-list" class="dashboard-note">
+        Carregando base estadual...
+      </div>
+    </section>
+  </div>
+
+  <div class="difal-grid">
+    <section class="card card--padded">
+      <h3 class="section-title">Nova regra de partilha</h3>
+
+      <form id="difal-rule-form" class="difal-form">
+        <label>
+          Nome da regra
+          <input name="name" type="text" placeholder="Ex.: DIFAL consumidor final SP" required />
+        </label>
+
+        <label>
+          Codigo interno
+          <input name="code" type="text" placeholder="Opcional, gerado automaticamente se vazio" />
+        </label>
+
+        <label>
+          Status
+          <select name="status">
+            <option value="ACTIVE">Ativa</option>
+            <option value="DRAFT">Rascunho</option>
+            <option value="INACTIVE">Inativa</option>
+          </select>
+        </label>
+
+        <label>
+          Prioridade
+          <input name="priority" type="number" min="1" value="100" />
+        </label>
+
+        <label>
+          Vigencia inicial
+          <input name="valid_from" type="date" required />
+        </label>
+
+        <label>
+          Vigencia final
+          <input name="valid_to" type="date" />
+        </label>
+
+        <label>
+          UF da regra
+          <input name="uf" type="text" maxlength="2" placeholder="UF de destino" />
+        </label>
+
+        <label>
+          CRT
+          <input name="crt" type="text" placeholder="Ex.: 1, 2 ou 3" />
+        </label>
+
+        <label>
+          UF origem
+          <input name="issuer_uf" type="text" maxlength="2" placeholder="Ex.: MG" />
+        </label>
+
+        <label>
+          UF destino
+          <input name="recipient_uf" type="text" maxlength="2" placeholder="Ex.: SP" />
+        </label>
+
+        <label>
+          Escopo da operacao
+          <select name="operation_scope">
+            <option value="INTERSTATE">Interestadual</option>
+          </select>
+        </label>
+
+        <label>
+          Tipo da operacao
+          <select name="operation_type">
+            <option value="EXIT">Saida</option>
+          </select>
+        </label>
+
+        <label>
+          Consumidor final
+          <select name="final_consumer_mode">
+            <option value="yes">Sim</option>
+            <option value="any">Qualquer</option>
+            <option value="no">Nao</option>
+          </select>
+        </label>
+
+        <label>
+          Destinatario contribuinte
+          <select name="recipient_contributor">
+            <option value="any">Qualquer</option>
+            <option value="yes">Sim</option>
+            <option value="no">Nao</option>
+          </select>
+        </label>
+
+        <label>
+          Prefixo CFOP
+          <input name="cfop_prefix" type="text" placeholder="Ex.: 610" />
+        </label>
+
+        <label>
+          Prefixo NCM
+          <input name="ncm_prefix" type="text" placeholder="Ex.: 2202" />
+        </label>
+
+        <label>
+          Aliquota interna
+          <input name="internal_rate" type="text" placeholder="Ex.: 18,00" required />
+        </label>
+
+        <label>
+          Aliquota interestadual
+          <input name="interstate_rate" type="text" placeholder="Ex.: 12,00" required />
+        </label>
+
+        <label>
+          FCP
+          <input name="fcp_rate" type="text" placeholder="Ex.: 2,00" />
+        </label>
+
+        <label class="difal-form__checkbox">
+          <input name="applies" type="checkbox" checked />
+          Aplicar esta regra no motor tributario
+        </label>
+
+        <label class="full-width">
+          Bases legais vinculadas
+          <input name="legal_basis_ids" type="text" placeholder="IDs separados por virgula" />
+        </label>
+
+        <label class="full-width">
+          Justificativa / observacao
+          <textarea
+            name="reason"
+            rows="4"
+            placeholder="Ex.: consumidor final nao contribuinte em operacao interestadual para SP."
+          ></textarea>
+        </label>
+
+        <div class="full-width form-actions">
+          <button class="primary-button" type="submit">Salvar regra</button>
+        </div>
+      </form>
+
+      <div id="difal-feedback" class="dashboard-note">
+        Preencha a combinacao fiscal e as aliquotas para registrar a regra de partilha.
+      </div>
+    </section>
+
+    <section class="card card--padded">
+      <div class="difal-list-head">
+        <div>
+          <h3 class="section-title">Regras cadastradas</h3>
+          <p>Panorama rapido das configuracoes que o motor usa nas sugestoes interestaduais.</p>
+        </div>
+        <a class="secondary-link" href="/simulacao">Abrir simulacao tributaria</a>
+      </div>
+
+      <div id="difal-rules-list" class="dashboard-note">Carregando regras...</div>
+    </section>
+  </div>
+
+  <script type="module" src={adminICMSPartilhaScript}></script>
+
+  <style>
+    .difal-hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 24px;
+      border-radius: 26px;
+      border: 1px solid #dbe4ee;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.18), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.18), transparent 30%),
+        linear-gradient(135deg, #ffffff, #f6fbff 55%, #fff9ef);
+    }
+
+    .difal-hero__eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #ccfbf1;
+      color: #115e59;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .difal-hero h3 {
+      margin: 8px 0 10px;
+      font-size: clamp(26px, 3vw, 36px);
+    }
+
+    .difal-hero p {
+      margin: 0;
+      color: #475569;
+      max-width: 64ch;
+    }
+
+    .difal-legend {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .difal-legend article {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #dbe4ee;
+      background: rgba(255, 255, 255, 0.88);
+    }
+
+    .difal-legend span {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .difal-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-content: start;
+    }
+
+    .difal-grid {
+      display: grid;
+      grid-template-columns: 0.95fr 1.05fr;
+      gap: 18px;
+    }
+
+    .base-grid {
+      display: grid;
+      grid-template-columns: 0.92fr 1.08fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .difal-form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .difal-form--compact {
+      margin-bottom: 16px;
+    }
+
+    .difal-form label {
+      display: grid;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .difal-form input,
+    .difal-form select,
+    .difal-form textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+      background: white;
+    }
+
+    .difal-form textarea {
+      resize: vertical;
+    }
+
+    .difal-form__checkbox {
+      display: flex !important;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid #dbe4ee;
+      background: #f8fafc;
+      font-weight: 700;
+    }
+
+    .difal-form__checkbox input {
+      width: auto;
+      margin: 0;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-actions,
+    .difal-list-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .difal-list-head p {
+      margin: 6px 0 0;
+      color: #64748b;
+    }
+
+    .primary-button,
+    .secondary-link {
+      border-radius: 12px;
+      padding: 11px 15px;
+      font: inherit;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .primary-button {
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, #0f766e, #0284c7);
+      color: white;
+    }
+
+    .secondary-link {
+      border: 1px solid #dbe4ee;
+      background: white;
+      color: #0f172a;
+    }
+
+    .stat-card {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #dbe4ee;
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .stat-card span {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .stat-card strong {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .stat-card--teal {
+      background: #f0fdfa;
+    }
+
+    .stat-card--gold {
+      background: #fffbeb;
+    }
+
+    .stat-card--blue {
+      background: #eff6ff;
+    }
+
+    .state-rate-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .state-rate-card {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #dbe4ee;
+      background: linear-gradient(180deg, #ffffff, #f8fbff);
+    }
+
+    .state-rate-card__top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .state-rate-card__top strong {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .state-rate-card__meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .state-rate-card__meta div {
+      padding: 12px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+
+    .state-rate-card__meta span {
+      display: block;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .state-rate-card__meta strong {
+      display: block;
+      margin-top: 6px;
+      color: #0f172a;
+      font-size: 18px;
+    }
+
+    .state-rate-card__footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .state-rate-card__apply {
+      border: 1px solid #dbe4ee;
+      background: white;
+      color: #0f172a;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .reference-card {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid #dbe4ee;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 24%),
+        linear-gradient(180deg, #ffffff, #f8fbff);
+    }
+
+    .reference-card__header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .reference-card__grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .reference-pill {
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid #dbe4ee;
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .reference-pill span {
+      display: block;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .reference-pill strong {
+      display: block;
+      margin-top: 6px;
+      color: #0f172a;
+      font-size: 18px;
+    }
+
+    .rule-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .rule-card {
+      display: grid;
+      gap: 16px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid #dbe4ee;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 22%),
+        linear-gradient(180deg, #ffffff, #f8fbff);
+    }
+
+    .rule-card__top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .rule-card__eyebrow {
+      color: #0f766e;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .rule-card h3 {
+      margin: 6px 0;
+    }
+
+    .rule-card p {
+      margin: 0;
+      color: #475569;
+    }
+
+    .rule-card__metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .rule-card__metrics div {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(248, 250, 252, 0.9);
+      border: 1px solid #e2e8f0;
+    }
+
+    .rule-card__metrics span,
+    .rule-card__grid strong {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .rule-card__metrics strong {
+      font-size: 22px;
+      line-height: 1;
+      color: #0f172a;
+    }
+
+    .rule-card__grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 14px;
+    }
+
+    .rule-card__reason,
+    .rule-card__footer {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    .rule-badge {
+      display: inline-flex;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .rule-badge--active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .rule-badge--draft {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .rule-badge--inactive {
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .dashboard-empty {
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      background: var(--surface-soft);
+    }
+
+    .dashboard-empty--error {
+      border-color: #fecaca;
+      background: #fff7f7;
+    }
+
+    .feedback {
+      margin-top: 16px;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .feedback--success {
+      background: #ecfdf5;
+      color: #166534;
+    }
+
+    .feedback--error {
+      background: #fff1f2;
+      color: #b91c1c;
+    }
+
+    @media (max-width: 1080px) {
+      .difal-grid,
+      .base-grid,
+      .difal-hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .difal-form,
+      .reference-card__grid,
+      .state-rate-card__meta,
+      .rule-card__grid,
+      .rule-card__metrics,
+      .difal-legend,
+      .difal-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</DashboardLayout>

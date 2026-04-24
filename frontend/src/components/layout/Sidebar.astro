@@ -1,32 +1,147 @@
 ---
 const currentPath = Astro.url.pathname;
 
-const items = [
-  { href: "/", label: "Dashboard" },
-  { href: "/simulacao", label: "Simulação tributária" },
-  { href: "/produtos", label: "Produtos" },
-  { href: "/regras-fiscais", label: "Regras fiscais" },
-  { href: "/ncm", label: "NCM" },
-  { href: "/cfop", label: "CFOP" },
-  { href: "/importacoes", label: "Importações" },
-  { href: "/configuracoes", label: "Configurações" },
+type NavItem = {
+  href: string;
+  label: string;
+  adminOnly?: boolean;
+};
+
+type NavSection = {
+  kicker: string;
+  title: string;
+  description: string;
+  adminOnly?: boolean;
+  tone?: "default" | "accent";
+  items: NavItem[];
+};
+
+const sections: NavSection[] = [
+  {
+    kicker: "Fluxo 1",
+    title: "Consulta operacional",
+    description: "Area do usuario final para consultar tributos, importar notas e revisar a memoria fiscal aplicada.",
+    items: [
+      { href: "/", label: "Painel de consulta" },
+      { href: "/simulacao", label: "Consultar tributos" },
+      { href: "/produtos", label: "Consulta de produtos" },
+      { href: "/importacoes", label: "Importacoes" },
+      { href: "/invoices", label: "Notas" },
+      { href: "/organizations", label: "Empresa ativa" },
+    ],
+  },
+  {
+    kicker: "Apoio de consulta",
+    title: "Tabelas consultaveis",
+    description: "Bases abertas para consulta tecnica rapida quando for preciso confirmar classificacoes e codigos.",
+    items: [
+      { href: "/ncm", label: "NCM" },
+      { href: "/cfop", label: "CFOP" },
+    ],
+  },
+  {
+    kicker: "Fluxo 2",
+    title: "Engenharia fiscal",
+    description: "Cadastre tributos por blocos isolados, componha regras e governe o motor sem misturar tudo na mesma tela.",
+    adminOnly: true,
+    tone: "accent",
+    items: [
+      { href: "/admin", label: "Matriz fiscal", adminOnly: true },
+      { href: "/admin/icms", label: "ICMS", adminOnly: true },
+      { href: "/admin/pis-cofins", label: "PIS e COFINS", adminOnly: true },
+      { href: "/admin/reforma", label: "IBS, CBS e cClasTrib", adminOnly: true },
+      { href: "/admin/capture-rules", label: "Triagem de regras", adminOnly: true },
+      { href: "/admin/cst", label: "CST e enquadramentos", adminOnly: true },
+      { href: "/admin/icms-partilha", label: "Partilha de ICMS", adminOnly: true },
+      { href: "/admin/cbenef", label: "cBenef", adminOnly: true },
+      { href: "/admin/legal-rules", label: "Regras tributarias", adminOnly: true },
+    ],
+  },
+  {
+    kicker: "Controle da plataforma",
+    title: "Administracao",
+    description: "Usuarios, importacoes oficiais e configuracoes de suporte da ferramenta.",
+    adminOnly: true,
+    tone: "accent",
+    items: [
+      { href: "/admin", label: "Central administrativa", adminOnly: true },
+      { href: "/admin/users", label: "Usuarios e acessos", adminOnly: true },
+      { href: "/admin/imports", label: "Importar catalogos", adminOnly: true },
+      { href: "/configuracoes", label: "Configuracoes", adminOnly: true },
+    ],
+  },
 ];
+
+function isActive(href: string) {
+  if (href === "/") {
+    return currentPath === "/";
+  }
+
+  return currentPath === href || currentPath.startsWith(`${href}/`);
+}
 ---
 
 <aside class="sidebar">
   <div class="sidebar__brand">
+    <span class="sidebar__brand-kicker">Plataforma fiscal SaaS</span>
     <span class="sidebar__brand-title">Fiscal Platform</span>
-    <span class="sidebar__brand-subtitle">SaaS de inteligência tributária</span>
+    <span class="sidebar__brand-subtitle">
+      Portal de consulta tributaria com base fiscal, notas importadas e motor de decisao.
+    </span>
   </div>
 
-  <nav class="sidebar__nav">
-    {items.map((item) => (
-      <a
-        href={item.href}
-        class={`sidebar__link ${currentPath === item.href ? "sidebar__link--active" : ""}`}
-      >
-        {item.label}
-      </a>
-    ))}
-  </nav>
+  {sections.map((section, sectionIndex) => (
+    <div
+      class={`sidebar__section ${section.adminOnly ? "sidebar__section--admin" : ""} ${section.tone === "accent" ? "sidebar__section--accent" : ""}`}
+      data-section-role={section.adminOnly ? "admin" : "all"}
+    >
+      <div class="sidebar__section-head">
+        <span class="sidebar__section-kicker">{section.kicker}</span>
+        <strong>{section.title}</strong>
+        <p>{section.description}</p>
+      </div>
+
+      <nav class="sidebar__nav" aria-label={section.title}>
+        {section.items.map((item) => (
+          <a
+            href={item.href}
+            class={`sidebar__link ${section.adminOnly ? "sidebar__link--admin" : ""} ${isActive(item.href) ? "sidebar__link--active" : ""}`}
+            data-link-role={item.adminOnly ? "admin" : "all"}
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
+
+      {sectionIndex < sections.length - 1 ? <div class="sidebar__divider" aria-hidden="true"></div> : null}
+    </div>
+  ))}
 </aside>
+
+<script>
+  function updateSidebarSections() {
+    let role = null;
+
+    try {
+      role = localStorage.getItem("organization_role");
+    } catch {
+      role = null;
+    }
+
+    const normalizedRole = String(role || "").toLowerCase();
+    const hasAdminArea =
+      normalizedRole === "owner" || normalizedRole === "admin" || normalizedRole === "analyst";
+
+    document.querySelectorAll("[data-section-role='admin']").forEach((element) => {
+      if (!(element instanceof HTMLElement)) return;
+      element.hidden = !hasAdminArea;
+    });
+
+    document.querySelectorAll("[data-link-role='admin']").forEach((element) => {
+      if (!(element instanceof HTMLElement)) return;
+      element.hidden = !hasAdminArea;
+    });
+  }
+
+  updateSidebarSections();
+</script>

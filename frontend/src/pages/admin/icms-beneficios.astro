@@ -1,0 +1,34 @@
+---
+import Page from "../../components/pages/admin/icms-module.astro";
+
+const links = [
+  { href: "/admin/icms", label: "Visao geral" },
+  { href: "/admin/icms-incidencia", label: "Incidencia" },
+  { href: "/admin/icms-base-aliquota", label: "Base e aliquota" },
+  { href: "/admin/icms-credito", label: "Credito" },
+  { href: "/admin/icms-st-fcp", label: "ICMS ST e FCP" },
+  { href: "/admin/icms-beneficios", label: "Beneficios" },
+  { href: "/admin/icms-fundamento", label: "Fundamento legal" },
+];
+---
+
+<Page
+  title="ICMS • Beneficios"
+  subtitle="Modulo isolado para cBenef, tratamentos diferenciados e excecoes"
+  eyebrow="Camada 5"
+  summary="Este bloco encaixa beneficios fiscais, cBenef, tratamentos diferenciados e excecoes por estado, setor ou operacao, sem poluir os cadastros centrais de incidencia e aliquota."
+  legalBasis="Base estadual e amarracao normativa interna da plataforma"
+  activeHref="/admin/icms-beneficios"
+  links={links}
+  checklist={[
+    { title: "cBenef", copy: "Associe codigos de beneficio ao contexto correto de produto, operacao, estado e vigencia." },
+    { title: "Tratamentos diferenciados", copy: "Isole reducoes, suspensoes e excecoes em um bloco proprio para facilitar auditoria." },
+    { title: "Prioridade normativa", copy: "Defina quando o beneficio supera a regra padrao e quando apenas complementa a decisao." },
+    { title: "Explicacao para a consulta", copy: "Permita que o parecer final mostre que a tributacao foi alterada por beneficio especifico." },
+  ]}
+  references={[
+    { label: "Campos principais", value: "cbenef_code, benefit_type, priority, vigencia, uf_scope" },
+    { label: "Saida para o motor", value: "aplica beneficio, reduz carga, altera CST ou apenas sinaliza excecao" },
+    { label: "Tela de apoio", value: "cBenef, regras tributarias e catalogo do produto" },
+  ]}
+/>

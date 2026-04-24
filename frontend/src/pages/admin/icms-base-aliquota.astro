@@ -1,0 +1,34 @@
+---
+import Page from "../../components/pages/admin/icms-module.astro";
+
+const links = [
+  { href: "/admin/icms", label: "Visao geral" },
+  { href: "/admin/icms-incidencia", label: "Incidencia" },
+  { href: "/admin/icms-base-aliquota", label: "Base e aliquota" },
+  { href: "/admin/icms-credito", label: "Credito" },
+  { href: "/admin/icms-st-fcp", label: "ICMS ST e FCP" },
+  { href: "/admin/icms-beneficios", label: "Beneficios" },
+  { href: "/admin/icms-fundamento", label: "Fundamento legal" },
+];
+---
+
+<Page
+  title="ICMS • Base e aliquota"
+  subtitle="Modulo isolado para base de calculo, reducoes e aliquota propria"
+  eyebrow="Camada 2"
+  summary="Este bloco controla como o valor tributavel e formado antes do calculo do imposto. Ele concentra base de calculo, reducoes, inclusoes, exclusoes e a aliquota propria da operacao."
+  legalBasis="LC 87/1996: arts. 13 a 15"
+  activeHref="/admin/icms-base-aliquota"
+  links={links}
+  checklist={[
+    { title: "Base de calculo", copy: "Defina o valor tributavel por operacao, considerando composicao comercial e fiscal." },
+    { title: "Reducao da base", copy: "Mantenha percentuais de reducao isolados, com vigencia e criterio por produto ou segmento." },
+    { title: "Aliquota propria", copy: "Cadastre a aliquota interna aplicavel por UF, produto, regime e contexto de venda." },
+    { title: "Regras complementares", copy: "Separe o que e base do ICMS proprio do que pertence a ST, DIFAL ou fundos." },
+  ]}
+  references={[
+    { label: "Campos principais", value: "base_rule, reduction_rate, internal_rate, uf_origem, uf_destino" },
+    { label: "Saida para o motor", value: "base final, percentual efetivo, aliquota aplicada" },
+    { label: "Dependencias", value: "partilha, beneficios, fundamento legal e memoria do produto" },
+  ]}
+/>

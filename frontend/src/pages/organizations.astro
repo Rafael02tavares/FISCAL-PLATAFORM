@@ -1,0 +1,204 @@
+---
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import organizationsScript from "../scripts/organizations.ts?url";
+---
+
+<DashboardLayout
+  title="Organizacoes"
+  subtitle="Crie uma empresa e defina qual ficara ativa na sessao"
+>
+  <div class="page-header">
+    <h2>Organizacoes</h2>
+    <p>
+      Essa tela usa a API real para listar empresas do usuario, criar novas organizacoes e salvar a
+      organizacao ativa no navegador.
+    </p>
+  </div>
+
+  <div class="grid grid--2">
+    <section class="card card--padded">
+      <h3 class="section-title">Organizacao ativa</h3>
+      <div id="organization-session" class="dashboard-note">Carregando contexto da sessao...</div>
+    </section>
+
+    <section class="card card--padded">
+      <h3 class="section-title">Acoes rapidas</h3>
+      <div class="list" id="organization-actions">
+        <div class="list-item">
+          <div class="list-item__meta">
+            <span class="list-item__title">Preparando acoes</span>
+            <span class="list-item__subtitle">A tela vai mostrar o proximo passo conforme a sessao</span>
+          </div>
+          <span class="badge badge--warning">Analisando</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div style="height: 18px;"></div>
+
+  <div class="grid grid--2">
+    <section class="card card--padded">
+      <h3 class="section-title">Minhas organizacoes</h3>
+      <div id="organizations-list">
+        <p class="dashboard-note">Carregando organizacoes...</p>
+      </div>
+    </section>
+
+    <section class="card card--padded">
+      <h3 class="section-title">Cadastrar organizacao</h3>
+      <form id="organization-form" class="organization-form">
+        <label>
+          Nome
+          <input id="org-name" type="text" placeholder="Empresa Exemplo LTDA" required />
+        </label>
+
+        <label>
+          CNPJ
+          <input id="org-cnpj" type="text" placeholder="00.000.000/0001-00" />
+        </label>
+
+        <div class="organization-grid">
+          <label>
+            Regime tributario
+            <select id="org-tax-regime">
+              <option value="simples_nacional">Simples Nacional</option>
+              <option value="lucro_presumido">Lucro Presumido</option>
+              <option value="lucro_real">Lucro Real</option>
+            </select>
+          </label>
+
+          <label>
+            CRT
+            <select id="org-crt">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="organization-grid">
+          <label>
+            Inscricao estadual
+            <input id="org-state-registration" type="text" placeholder="Opcional" />
+          </label>
+
+          <label>
+            UF base
+            <input id="org-home-uf" type="text" maxlength="2" placeholder="SP" />
+          </label>
+        </div>
+
+        <div class="organization-form__actions">
+          <button class="primary-button" type="submit">Salvar organizacao</button>
+          <a class="secondary-button" href="/">Ir para dashboard</a>
+        </div>
+      </form>
+
+      <div id="organization-message" class="organization-message"></div>
+    </section>
+  </div>
+
+  <script type="module" src={organizationsScript}></script>
+
+  <style>
+    .dashboard-note { margin: 0; color: var(--text-muted); }
+    .session-summary { display: grid; gap: 10px; }
+    .organization-form { display: grid; gap: 14px; }
+    .organization-form label { display: grid; gap: 8px; font-size: 14px; font-weight: 600; }
+    .organization-form input,
+    .organization-form select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+      background: white;
+    }
+    .organization-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .organization-form__actions,
+    .organization-card__actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .primary-button,
+    .secondary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 12px;
+      padding: 11px 16px;
+      font-weight: 700;
+      font: inherit;
+      cursor: pointer;
+    }
+    .primary-button {
+      border: none;
+      background: var(--primary);
+      color: white;
+    }
+    .secondary-button {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text);
+    }
+    .organization-message {
+      margin-top: 14px;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: none;
+    }
+    .organization-message.is-visible { display: block; }
+    .organization-message.is-success { background: #ecfdf5; color: #166534; }
+    .organization-message.is-error { background: #fff1f2; color: #b91c1c; }
+    .organization-cards { display: grid; gap: 12px; }
+    .organization-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      background: white;
+    }
+    .organization-card--active {
+      border-color: rgba(29, 78, 216, 0.28);
+      box-shadow: 0 10px 24px rgba(29, 78, 216, 0.08);
+    }
+    .organization-card__header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .organization-card__meta {
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-size: 14px;
+    }
+    .organization-card__details {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: var(--text-muted);
+      font-size: 14px;
+      margin: 12px 0 14px;
+    }
+    .dashboard-empty {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      background: var(--surface-soft);
+    }
+    .dashboard-empty strong { display: block; margin-bottom: 6px; }
+    .dashboard-empty p { margin: 6px 0 0; color: var(--text-muted); }
+    .dashboard-empty--error { border-color: #fecaca; background: #fff7f7; }
+    @media (max-width: 900px) {
+      .organization-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</DashboardLayout>
