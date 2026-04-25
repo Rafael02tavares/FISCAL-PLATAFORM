@@ -9,7 +9,7 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
 >
   <div class="page-header">
     <h2>Importacoes administrativas</h2>
-    <p>Use esta area para enviar os catalogos oficiais de NCM e CFOP em CSV ou XLSX e manter a plataforma atualizada.</p>
+    <p>Use esta area para enviar catalogos oficiais em CSV, XLSX ou conteudo copiado da fonte legal.</p>
   </div>
 
   <div class="admin-import-grid">
@@ -86,6 +86,101 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
             Envie um CSV ou XLSX de CFOP para popular a tabela cfop_catalog.
           </div>
         </article>
+
+        <article class="catalog-panel catalog-panel--cest">
+          <div class="catalog-panel__header">
+            <div>
+              <h3 class="section-title">Importar catalogo CEST</h3>
+              <p>Use a tabela CEST para conectar NCM, segmento e regras de ICMS ST.</p>
+            </div>
+            <span class="catalog-tag catalog-tag--blue">cest_catalog</span>
+          </div>
+
+          <form id="cest-import-form" class="form-grid">
+            <label>
+              Nome da fonte
+              <input id="cest-source-name" type="text" value="CEST XLSX" />
+            </label>
+
+            <label>
+              Versao
+              <input id="cest-version-label" type="text" placeholder="Ex.: CONFAZ 2026" />
+            </label>
+
+            <label class="full-width">
+              Arquivo de importacao
+              <input id="cest-file" type="file" accept=".csv,.xlsx,.txt,.html,text/csv,text/plain,text/html,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+            </label>
+
+            <label class="full-width">
+              Ou cole aqui a tabela oficial do CONFAZ
+              <textarea
+                id="cest-raw-content"
+                rows="8"
+                placeholder="Cole linhas com ITEM | CEST | NCM/SH | DESCRICAO copiadas do Convênio ICMS 142/18"
+              ></textarea>
+            </label>
+
+            <div class="full-width import-actions">
+              <button id="submit-cest-import" class="primary-button primary-button--blue" type="submit">Importar CEST</button>
+              <a class="secondary-link" href="/cest">Abrir consulta de CEST</a>
+            </div>
+          </form>
+
+          <div id="cest-import-feedback" class="dashboard-note">
+            Envie CSV/XLSX ou cole a tabela oficial do CONFAZ para popular a tabela cest_catalog.
+          </div>
+        </article>
+
+        <article class="catalog-panel catalog-panel--cbenef">
+          <div class="catalog-panel__header">
+            <div>
+              <h3 class="section-title">Importar catalogo cBenef</h3>
+              <p>Carregue tabelas estaduais de beneficios fiscais por CST, como SP e GO.</p>
+            </div>
+            <span class="catalog-tag catalog-tag--teal">cbenef_catalog</span>
+          </div>
+
+          <form id="cbenef-import-form" class="form-grid">
+            <label>
+              Nome da fonte
+              <input id="cbenef-source-name" type="text" value="cBenef GO" />
+            </label>
+
+            <label>
+              Versao
+              <input id="cbenef-version-label" type="text" placeholder="Ex.: IN 1518/22 atualizada" />
+            </label>
+
+            <label>
+              UF padrao
+              <input id="cbenef-uf" type="text" value="GO" maxlength="2" placeholder="GO" />
+            </label>
+
+            <label>
+              Arquivo de importacao
+              <input id="cbenef-file" type="file" accept=".csv,.xlsx,.txt,.html,text/csv,text/plain,text/html,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+            </label>
+
+            <label class="full-width">
+              Ou cole aqui a tabela estadual de cBenef
+              <textarea
+                id="cbenef-raw-content"
+                rows="8"
+                placeholder="Cole linhas como CODIGO | CST 00 | CST 10 | ... | DISPOSITIVO LEGAL | DESCRICAO | OBSERVACAO"
+              ></textarea>
+            </label>
+
+            <div class="full-width import-actions">
+              <button id="submit-cbenef-import" class="primary-button primary-button--teal" type="submit">Importar cBenef</button>
+              <a class="secondary-link" href="/admin/cbenef">Abrir regras de cBenef</a>
+            </div>
+          </form>
+
+          <div id="cbenef-import-feedback" class="dashboard-note">
+            Use XLSX/CSV ou cole a tabela de beneficios fiscais da UF para popular a tabela cbenef_catalog.
+          </div>
+        </article>
       </div>
     </section>
 
@@ -129,6 +224,16 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
       background: linear-gradient(180deg, #fffdf7, #fff7e8);
     }
 
+    .catalog-panel--cest {
+      border-color: #bfdbfe;
+      background: linear-gradient(180deg, #ffffff, #eff6ff);
+    }
+
+    .catalog-panel--cbenef {
+      border-color: #99f6e4;
+      background: linear-gradient(180deg, #ffffff, #ecfeff);
+    }
+
     .catalog-panel__header {
       display: flex;
       justify-content: space-between;
@@ -158,6 +263,16 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
       color: #92400e;
     }
 
+    .catalog-tag--blue {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .catalog-tag--teal {
+      background: #ccfbf1;
+      color: #0f766e;
+    }
+
     .form-grid label {
       display: grid;
       gap: 8px;
@@ -165,13 +280,20 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
       font-size: 14px;
     }
 
-    .form-grid input {
+    .form-grid input,
+    .form-grid textarea {
       width: 100%;
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 12px 14px;
       font: inherit;
       background: white;
+    }
+
+    .form-grid textarea {
+      min-height: 160px;
+      resize: vertical;
+      line-height: 1.5;
     }
 
     .full-width {
@@ -198,6 +320,14 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
 
     .primary-button--gold {
       background: linear-gradient(135deg, #b45309, #f59e0b);
+    }
+
+    .primary-button--blue {
+      background: linear-gradient(135deg, #1d4ed8, #0f766e);
+    }
+
+    .primary-button--teal {
+      background: linear-gradient(135deg, #0f766e, #0891b2);
     }
 
     .secondary-link {

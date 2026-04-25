@@ -82,6 +82,10 @@ func (s *Service) ProcessXML(ctx context.Context, organizationID string, xmlRaw 
 		pisData := extractPISData(item.Imposto.PIS)
 		cofinsData := extractCOFINSData(item.Imposto.COFINS)
 		sourceType := inferObservedSourceType(item.Prod.CFOP)
+		catalogGTIN := item.Prod.CEAN
+		if catalog.NormalizeGTIN(catalogGTIN) == "" {
+			catalogGTIN = item.Prod.CEANTrib
+		}
 
 		err := s.repo.CreateInvoiceItem(ctx, CreateInvoiceItemParams{
 			InvoiceID:      invoiceID,
@@ -114,12 +118,12 @@ func (s *Service) ProcessXML(ctx context.Context, organizationID string, xmlRaw 
 		}
 
 		if s.catalogService != nil {
-			_ = s.catalogService.RegisterObservedItem(ctx, catalog.RegisterObservedItemParams{
+			if err := s.catalogService.RegisterObservedItem(ctx, catalog.RegisterObservedItemParams{
 				OrganizationID:  organizationID,
 				SourceInvoiceID: invoiceID,
 
 				ProductCode: item.Prod.CProd,
-				GTIN:        item.Prod.CEAN,
+				GTIN:        catalogGTIN,
 				Description: item.Prod.XProd,
 
 				NCM:         item.Prod.NCM,
@@ -141,7 +145,9 @@ func (s *Service) ProcessXML(ctx context.Context, organizationID string, xmlRaw 
 				RecipientUF:     doc.NFe.InfNFe.Dest.Ender.UF,
 				OperationNature: doc.NFe.InfNFe.Ide.NatOp,
 				SourceType:      sourceType,
-			})
+			}); err != nil {
+				return nil, fmt.Errorf("register invoice item in product catalog: %w", err)
+			}
 		}
 	}
 

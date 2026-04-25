@@ -99,7 +99,7 @@ func (h *Handler) SaveProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.SaveManualProduct(r.Context(), SaveManualProductParams{
+	productID, err := h.service.SaveManualProduct(r.Context(), SaveManualProductParams{
 		OrganizationID: organizationID,
 		ProductID:      strings.TrimSpace(req.ProductID),
 		ProductCode:    strings.TrimSpace(req.ProductCode),
@@ -142,15 +142,17 @@ func (h *Handler) SaveProduct(w http.ResponseWriter, r *http.Request) {
 		ObservedTaxRegime: strings.TrimSpace(req.ObservedTaxRegime),
 		TargetCRT:         strings.TrimSpace(req.TargetCRT),
 		ObservedCRT:       strings.TrimSpace(req.ObservedCRT),
-	}); err != nil {
+	})
+	if err != nil {
 		writeCatalogError(w, http.StatusBadRequest, "SAVE_PRODUCT_FAILED", err.Error())
 		return
 	}
 
 	items, _ := h.service.ListCatalogProducts(r.Context(), organizationID, "")
 	writeCatalogJSON(w, http.StatusCreated, map[string]any{
-		"message": "produto fiscal salvo com sucesso",
-		"items":   items,
+		"message":    "produto fiscal salvo com sucesso",
+		"product_id": productID,
+		"items":      items,
 	})
 }
 

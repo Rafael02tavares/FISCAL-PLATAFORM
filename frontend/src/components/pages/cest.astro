@@ -1,0 +1,114 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import cestScript from "../../scripts/cest.ts?url";
+---
+
+<DashboardLayout
+  title="Catalogo CEST"
+  subtitle="Consulte a camada CEST usada para identificar produtos sujeitos a ICMS ST"
+>
+  <div class="page-header">
+    <h2>Consulta CEST</h2>
+    <p>Use CEST junto de NCM para enriquecer a identidade fiscal do produto e melhorar a decisao de ICMS ST.</p>
+  </div>
+
+  <section class="cest-toolbar">
+    <input id="cest-filter" type="text" placeholder="Buscar por CEST, segmento ou descricao" />
+    <input id="cest-ncm" type="text" placeholder="Filtrar por NCM" />
+    <button id="cest-search" type="button">Buscar</button>
+  </section>
+
+  <section class="cest-layout">
+    <aside id="cest-stats" class="cest-stats dashboard-note">Carregando indicadores...</aside>
+    <div id="cest-result" class="dashboard-note">Carregando catalogo CEST...</div>
+  </section>
+
+  <script type="module" src={cestScript}></script>
+
+  <style>
+    .cest-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 220px auto;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .cest-toolbar input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font: inherit;
+      background: #ffffff;
+    }
+
+    .cest-toolbar button {
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0f766e, #2563eb);
+      color: #ffffff;
+      font: inherit;
+      font-weight: 700;
+      padding: 12px 18px;
+      cursor: pointer;
+    }
+
+    .cest-layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .cest-stats {
+      display: grid;
+      gap: 12px;
+    }
+
+    .cest-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .cest-row {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border: 1px solid #dbe4ee;
+      border-radius: 8px;
+      background: #ffffff;
+    }
+
+    .cest-row__top,
+    .cest-row__meta {
+      display: flex;
+      gap: 8px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .cest-row__top strong {
+      color: #0f172a;
+      letter-spacing: 0.04em;
+    }
+
+    .cest-row__top span,
+    .cest-row__meta span {
+      color: #475569;
+      font-size: 13px;
+    }
+
+    .cest-row p {
+      margin: 0;
+      color: #334155;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 900px) {
+      .cest-toolbar,
+      .cest-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</DashboardLayout>

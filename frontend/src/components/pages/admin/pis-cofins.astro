@@ -1,5 +1,10 @@
 ---
 import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import {
+  pisCofinsCST04RevenueNatureReferences,
+  pisCofinsCST05RevenueNatureReferences,
+  pisCofinsCST06RevenueNatureReferences,
+} from "../../../lib/pis-cofins-revenue-natures";
 
 const modules = [
   {
@@ -75,6 +80,99 @@ const highlights = [
         <strong>Regime + saida</strong>
         <p>Ajuda a separar o que pode ser reutilizado da entrada do que precisa regra especifica de saida.</p>
       </article>
+    </div>
+  </section>
+
+  <section class="tax-hub-reference">
+    <div class="tax-hub-reference__header">
+      <div>
+        <span class="tax-hub-card__eyebrow">Natureza da receita</span>
+        <h3>CST 06 - Aliquota zero</h3>
+      </div>
+      <a
+        class="tax-hub-reference__link"
+        href="https://ajuda.alterdata.com.br/wfiscal/layout-importacao-sped/3-anexos/3-13-anexo-xiii-natureza-da-receita-pis-cofins-cst-06"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Ver referencia
+      </a>
+    </div>
+    <p>
+      Quando PIS/COFINS estiverem com CST 06, a natureza da receita deixa de ser opcional para
+      decisao fiscal segura. Cadastre o codigo correto junto da regra legal, em vez de reaproveitar
+      aliquotas de CST 01/02.
+    </p>
+    <div class="revenue-reference-grid">
+      {pisCofinsCST06RevenueNatureReferences.map((item) => (
+        <article>
+          <span>{item.category}</span>
+          <strong>{item.code} - {item.title}</strong>
+          <p>{item.description}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="tax-hub-reference tax-hub-reference--mono">
+    <div class="tax-hub-reference__header">
+      <div>
+        <span class="tax-hub-card__eyebrow">Natureza da receita</span>
+        <h3>CST 04 - Revenda monofasica</h3>
+      </div>
+      <a
+        class="tax-hub-reference__link"
+        href="https://ajuda.alterdata.com.br/wfiscal/layout-importacao-sped/3-anexos/3-11-anexo-xi-natureza-da-receita-pis-cofins-cst-04"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Ver referencia
+      </a>
+    </div>
+    <p>
+      Use CST 04 para revenda de produto monofasico com aliquota zero. Para bebidas frias, a tabela
+      separa codigos especificos, como `406` para cervejas e cervejas sem alcool, e `499` para
+      revenda residual de bebidas frias.
+    </p>
+    <div class="revenue-reference-grid">
+      {pisCofinsCST04RevenueNatureReferences.map((item) => (
+        <article>
+          <span>{item.category}</span>
+          <strong>{item.code} - {item.title}</strong>
+          <p>{item.description}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="tax-hub-reference tax-hub-reference--st">
+    <div class="tax-hub-reference__header">
+      <div>
+        <span class="tax-hub-card__eyebrow">Natureza da receita</span>
+        <h3>CST 05 - Substituicao tributaria</h3>
+      </div>
+      <a
+        class="tax-hub-reference__link"
+        href="https://ajuda.alterdata.com.br/wfiscal/layout-importacao-sped/3-anexos/3-12-anexo-xii-natureza-da-receita-pis-cofins-cst-05"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Ver referencia
+      </a>
+    </div>
+    <p>
+      Use CST 05 quando a contribuicao estiver enquadrada como substituicao tributaria de
+      PIS/COFINS. O codigo `999` cobre revenda de produtos sujeitos a ST, enquanto `407` e `408`
+      aparecem para bebidas frias e embalagens em operacoes monofasicas destinadas a ZFM.
+    </p>
+    <div class="revenue-reference-grid">
+      {pisCofinsCST05RevenueNatureReferences.map((item) => (
+        <article>
+          <span>{item.category}</span>
+          <strong>{item.code} - {item.title}</strong>
+          <p>{item.description}</p>
+        </article>
+      ))}
     </div>
   </section>
 
@@ -205,6 +303,100 @@ const highlights = [
       gap: 18px;
     }
 
+    .tax-hub-reference {
+      display: grid;
+      gap: 16px;
+      margin-top: 24px;
+      padding: 24px;
+      border-radius: 26px;
+      border: 1px solid rgba(251, 113, 133, 0.18);
+      background:
+        radial-gradient(circle at top right, rgba(251, 191, 36, 0.16), transparent 28%),
+        linear-gradient(180deg, #ffffff, #fff7ed);
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+    }
+
+    .tax-hub-reference--mono {
+      border-color: rgba(14, 165, 233, 0.2);
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 28%),
+        linear-gradient(180deg, #ffffff, #eff6ff);
+    }
+
+    .tax-hub-reference--st {
+      border-color: rgba(20, 184, 166, 0.22);
+      background:
+        radial-gradient(circle at top right, rgba(20, 184, 166, 0.16), transparent 28%),
+        linear-gradient(180deg, #ffffff, #ecfeff);
+    }
+
+    .tax-hub-reference__header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tax-hub-reference__header h3 {
+      margin: 8px 0 0;
+      color: #0f172a;
+    }
+
+    .tax-hub-reference > p {
+      margin: 0;
+      max-width: 980px;
+      color: #475569;
+      line-height: 1.7;
+    }
+
+    .tax-hub-reference__link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(251, 113, 133, 0.28);
+      background: #ffffff;
+      color: #9f1239;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .revenue-reference-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .revenue-reference-grid article {
+      display: grid;
+      gap: 8px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(251, 113, 133, 0.14);
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .revenue-reference-grid span {
+      color: #9f1239;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .revenue-reference-grid strong {
+      color: #0f172a;
+    }
+
+    .revenue-reference-grid p {
+      margin: 0;
+      color: #64748b;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
     .tax-hub-card {
       display: grid;
       gap: 18px;
@@ -254,7 +446,8 @@ const highlights = [
 
     @media (max-width: 1080px) {
       .tax-hub-hero,
-      .tax-hub-card__links {
+      .tax-hub-card__links,
+      .revenue-reference-grid {
         grid-template-columns: 1fr;
       }
     }

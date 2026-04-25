@@ -179,6 +179,7 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
     const listWrapper = document.getElementById("legal-rule-list");
     const sourceSelect = document.getElementById("legal-source-id");
     const operationSelect = document.getElementById("operation-code");
+    const LEGAL_RULE_DRAFT_KEY = "legal_rule_prefill";
 
     function setResult(message) {
       if (result) result.textContent = message;
@@ -323,6 +324,52 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
       }
     }
 
+    function applyDraftPrefill() {
+      let draft = null;
+      try {
+        const raw = localStorage.getItem(LEGAL_RULE_DRAFT_KEY);
+        draft = raw ? JSON.parse(raw) : null;
+        localStorage.removeItem(LEGAL_RULE_DRAFT_KEY);
+      } catch {
+        draft = null;
+      }
+
+      if (!draft || typeof draft !== "object") {
+        return;
+      }
+
+      const map = {
+        "tax-type": draft.tax_type,
+        "value-type": draft.value_type,
+        "operation-code": draft.operation_code,
+        "tax-regime": draft.tax_regime,
+        "ncm-code": draft.ncm_code,
+        cest: draft.cest,
+        "cclas-trib": draft.cclas_trib,
+        cfop: draft.cfop,
+        "pis-cst": draft.pis_cst,
+        "cofins-cst": draft.cofins_cst,
+        "icms-cst": draft.icms_cst,
+        csosn: draft.csosn,
+        cbenef: draft.cbenef,
+        "emitter-uf": draft.emitter_uf,
+        "recipient-uf": draft.recipient_uf,
+        "value-content": draft.value_content,
+        priority: draft.priority,
+        "confidence-base": draft.confidence_base,
+      };
+
+      Object.entries(map).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.value = value || "";
+        }
+      });
+
+      setResult("Rascunho carregado a partir da ultima consulta tributaria. Revise a fonte legal antes de salvar.");
+      form?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
 
@@ -375,9 +422,7 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
       }
     });
 
-    loadSources();
-    loadOperations();
-    loadRules();
+    Promise.all([loadSources(), loadOperations(), loadRules()]).then(applyDraftPrefill);
   </script>
 
   <style>

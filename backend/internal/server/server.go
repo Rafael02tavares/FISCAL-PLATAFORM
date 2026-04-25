@@ -13,10 +13,12 @@ import (
 	"github.com/rafa/fiscal-platform/backend/internal/adminusers"
 	"github.com/rafa/fiscal-platform/backend/internal/auth"
 	"github.com/rafa/fiscal-platform/backend/internal/catalog"
+	"github.com/rafa/fiscal-platform/backend/internal/cest"
 	"github.com/rafa/fiscal-platform/backend/internal/cfop"
 	"github.com/rafa/fiscal-platform/backend/internal/companies"
 	"github.com/rafa/fiscal-platform/backend/internal/config"
 	"github.com/rafa/fiscal-platform/backend/internal/fiscaloperations"
+	"github.com/rafa/fiscal-platform/backend/internal/fiscalwatcher"
 	"github.com/rafa/fiscal-platform/backend/internal/icmsrates"
 	"github.com/rafa/fiscal-platform/backend/internal/invoices"
 	"github.com/rafa/fiscal-platform/backend/internal/legalbasis"
@@ -84,6 +86,13 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /cfop", cfopHandler.List)
 	s.mux.HandleFunc("GET /cfop/find", cfopHandler.GetByCode)
 
+	// catalogo CEST
+	cestRepo := cest.NewRepository(s.db)
+	cestService := cest.NewService(cestRepo)
+	cestHandler := cest.NewHandler(cestService)
+	s.mux.HandleFunc("GET /cest", cestHandler.List)
+	s.mux.HandleFunc("GET /cest/find", cestHandler.GetByCode)
+
 	// base legal
 	legalRepo := legalbasis.NewRepository(s.db)
 	legalService := legalbasis.NewService(legalRepo)
@@ -104,6 +113,8 @@ func (s *Server) registerRoutes() {
 	protectedMux.HandleFunc("GET /admin/imports/batches", adminImportsHandler.ListImportBatches)
 	protectedMux.HandleFunc("POST /admin/imports/ncm", adminImportsHandler.UploadNCM)
 	protectedMux.HandleFunc("POST /admin/imports/cfop", adminImportsHandler.UploadCFOP)
+	protectedMux.HandleFunc("POST /admin/imports/cest", adminImportsHandler.UploadCEST)
+	protectedMux.HandleFunc("POST /admin/imports/cbenef", adminImportsHandler.UploadCBenef)
 
 	// organizations
 	orgRepo := organizations.NewRepository(s.db)
@@ -113,6 +124,9 @@ func (s *Server) registerRoutes() {
 	adminUsersRepo := adminusers.NewRepository(s.db)
 	adminUsersService := adminusers.NewService(adminUsersRepo)
 	adminUsersHandler := adminusers.NewHandler(adminUsersService, orgService)
+	fiscalWatcherRepo := fiscalwatcher.NewRepository(s.db)
+	fiscalWatcherService := fiscalwatcher.NewService(fiscalWatcherRepo)
+	fiscalWatcherHandler := fiscalwatcher.NewHandler(fiscalWatcherService)
 	icmsRatesRepo := icmsrates.NewRepository(s.db)
 	icmsRatesService := icmsrates.NewService(icmsRatesRepo)
 	icmsRatesHandler := icmsrates.NewHandler(icmsRatesService, orgService)
@@ -126,6 +140,9 @@ func (s *Server) registerRoutes() {
 	protectedMux.HandleFunc("POST /admin/users", adminUsersHandler.Create)
 	protectedMux.HandleFunc("PATCH /admin/users/role", adminUsersHandler.UpdateRole)
 	protectedMux.HandleFunc("DELETE /admin/users", adminUsersHandler.Remove)
+	protectedMux.HandleFunc("GET /admin/fiscal-watcher/sources", fiscalWatcherHandler.ListSources)
+	protectedMux.HandleFunc("GET /admin/fiscal-watcher/events", fiscalWatcherHandler.ListEvents)
+	protectedMux.HandleFunc("POST /admin/fiscal-watcher/check", fiscalWatcherHandler.RunCheck)
 	protectedMux.HandleFunc("GET /admin/icms-partilha", adminPartilhaHandler.List)
 	protectedMux.HandleFunc("POST /admin/icms-partilha", adminPartilhaHandler.Create)
 	protectedMux.HandleFunc("GET /admin/icms-rates", icmsRatesHandler.ListStateRates)
@@ -165,8 +182,13 @@ func (s *Server) registerRoutes() {
 	s.mux.Handle("/admin/imports/batches", protected)
 	s.mux.Handle("/admin/imports/ncm", protected)
 	s.mux.Handle("/admin/imports/cfop", protected)
+	s.mux.Handle("/admin/imports/cest", protected)
+	s.mux.Handle("/admin/imports/cbenef", protected)
 	s.mux.Handle("/admin/users", protected)
 	s.mux.Handle("/admin/users/role", protected)
+	s.mux.Handle("/admin/fiscal-watcher/sources", protected)
+	s.mux.Handle("/admin/fiscal-watcher/events", protected)
+	s.mux.Handle("/admin/fiscal-watcher/check", protected)
 	s.mux.Handle("/admin/capture-rules", protected)
 	s.mux.Handle("/admin/capture-rules/accept", protected)
 	s.mux.Handle("/admin/icms-partilha", protected)

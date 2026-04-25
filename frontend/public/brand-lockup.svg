@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 152" role="img" aria-label="Fiscal Platform">
+  <defs>
+    <linearGradient id="lockup-bg" x1="22" x2="130" y1="18" y2="134" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f5f86"/>
+      <stop offset="0.58" stop-color="#1692c4"/>
+      <stop offset="1" stop-color="#f2b84b"/>
+    </linearGradient>
+    <linearGradient id="lockup-f" x1="42" x2="98" y1="38" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dff6ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="128" height="128" rx="30" fill="#08141d"/>
+  <path d="M30 34c0-9.94 8.06-18 18-18h56c9.94 0 18 8.06 18 18v84c0 9.94-8.06 18-18 18H48c-9.94 0-18-8.06-18-18V34Z" fill="url(#lockup-bg)"/>
+  <path d="M53 40h48v16H72v15h25v15H72v30H53V40Z" fill="url(#lockup-f)"/>
+  <path d="M87 103h31" stroke="#f8d891" stroke-width="8" stroke-linecap="round"/>
+  <path d="M89 90h22" stroke="#dff6ff" stroke-opacity="0.78" stroke-width="5" stroke-linecap="round"/>
+  <text x="166" y="70" fill="#163042" font-family="Aptos Display, Segoe UI, sans-serif" font-size="38" font-weight="800" letter-spacing="-1">Fiscal Platform</text>
+  <text x="168" y="105" fill="#617589" font-family="Aptos, Segoe UI, sans-serif" font-size="18" font-weight="700">Inteligencia tributaria para decisao fiscal</text>
+  <path d="M169 122h142" stroke="#1692c4" stroke-width="5" stroke-linecap="round"/>
+  <path d="M323 122h54" stroke="#f2b84b" stroke-width="5" stroke-linecap="round"/>
+</svg>

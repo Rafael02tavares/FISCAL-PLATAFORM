@@ -4,29 +4,33 @@ interface Props {
   subtitle?: string;
 }
 
-const { title, subtitle = "Portal de consulta tributaria com memoria fiscal, importacao de notas e apoio a decisao" } = Astro.props;
+const { title, subtitle = "Plataforma de inteligencia tributaria" } = Astro.props;
 ---
 
 <header class="topbar">
-  <div class="topbar__title">
-    <span class="topbar__eyebrow">Portal tributario</span>
-    <h1>{title}</h1>
-    <p>{subtitle}</p>
+  <div class="topbar__identity">
+    <img class="topbar__mark" src="/brand-mark.svg" alt="" width="42" height="42" loading="eager" />
+    <div class="topbar__title">
+      <span class="topbar__eyebrow" id="topbar-eyebrow">Workspace</span>
+      <h1>{title}</h1>
+      <p>{subtitle}</p>
+    </div>
   </div>
 
   <div class="topbar__actions">
-    <span class="topbar-mode-chip" id="topbar-mode-chip">Fluxo operacional</span>
-    <a class="search-box topbar-link" id="topbar-primary-link" href="/simulacao">Nova consulta</a>
-    <a class="user-chip topbar-link" id="session-chip" href="/login">Sessao nao autenticada</a>
+    <a class="topbar-action topbar-action--primary" id="topbar-primary-link" href="/simulacao">Nova consulta</a>
+    <a class="topbar-action" id="topbar-secondary-link" href="/admin">Matriz fiscal</a>
+    <a class="topbar-user" id="session-chip" href="/login">Entrar</a>
   </div>
 </header>
 
 <script>
   function updateTopbarContext() {
     const chip = document.getElementById("session-chip");
-    const modeChip = document.getElementById("topbar-mode-chip");
+    const eyebrow = document.getElementById("topbar-eyebrow");
     const primaryLink = document.getElementById("topbar-primary-link");
-    if (!chip || !modeChip || !primaryLink) return;
+    const secondaryLink = document.getElementById("topbar-secondary-link");
+    if (!chip || !eyebrow || !primaryLink || !secondaryLink) return;
 
     let token = null;
     let organizationId = null;
@@ -42,17 +46,20 @@ const { title, subtitle = "Portal de consulta tributaria com memoria fiscal, imp
       role = null;
     }
 
-    const normalizedRole = String(role || "").toLowerCase();
-    const hasAdminArea = normalizedRole === "owner" || normalizedRole === "admin" || normalizedRole === "analyst";
     const currentPath = window.location.pathname;
-    const inEngineeringFlow = currentPath.startsWith("/admin");
+    const normalizedRole = String(role || "").toLowerCase();
+    const hasAdminArea =
+      normalizedRole === "owner" || normalizedRole === "admin" || normalizedRole === "analyst";
+    const inAdmin = currentPath.startsWith("/admin");
 
-    document.body.dataset.userScope = inEngineeringFlow && hasAdminArea ? "admin" : "operational";
+    eyebrow.textContent = inAdmin ? "Fiscal Lab" : "Cliente";
 
-    modeChip.textContent = inEngineeringFlow && hasAdminArea ? "Engenharia fiscal" : "Consulta operacional";
-    modeChip.className = `topbar-mode-chip ${inEngineeringFlow && hasAdminArea ? "topbar-mode-chip--admin" : "topbar-mode-chip--operational"}`;
-    primaryLink.textContent = inEngineeringFlow && hasAdminArea ? "Abrir consulta" : "Nova consulta";
-    primaryLink.setAttribute("href", inEngineeringFlow && hasAdminArea ? "/simulacao" : "/simulacao");
+    primaryLink.textContent = inAdmin ? "Abrir consulta" : "Nova consulta";
+    primaryLink.setAttribute("href", "/simulacao");
+
+    secondaryLink.textContent = inAdmin ? "Dashboard" : "Matriz fiscal";
+    secondaryLink.setAttribute("href", inAdmin ? "/" : "/admin");
+    secondaryLink.hidden = !hasAdminArea;
 
     if (!token) {
       chip.textContent = "Entrar";
@@ -60,7 +67,7 @@ const { title, subtitle = "Portal de consulta tributaria com memoria fiscal, imp
       return;
     }
 
-    chip.textContent = organizationId ? `Empresa ativa: ${organizationId}` : "Selecionar empresa";
+    chip.textContent = organizationId ? "Empresa ativa" : "Selecionar empresa";
     chip.setAttribute("href", "/organizations");
   }
 

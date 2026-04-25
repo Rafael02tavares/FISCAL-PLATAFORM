@@ -35,6 +35,10 @@ export type CatalogProductProfile = {
   emitter_uf?: string;
   recipient_uf?: string;
   operation_nature?: string;
+  target_tax_regime?: string;
+  observed_tax_regime?: string;
+  target_crt?: string;
+  observed_crt?: string;
   confidence_score?: number;
   source_type?: string;
 };
@@ -82,6 +86,10 @@ export type SaveCatalogProductPayload = {
   emitter_uf?: string;
   recipient_uf?: string;
   operation_nature?: string;
+  target_tax_regime?: string;
+  observed_tax_regime?: string;
+  target_crt?: string;
+  observed_crt?: string;
 };
 
 export async function listCatalogProducts(query = ""): Promise<{ items: CatalogProductItem[] }> {
@@ -89,7 +97,7 @@ export async function listCatalogProducts(query = ""): Promise<{ items: CatalogP
   return apiFetch(`/catalog/products${params}`);
 }
 
-export async function saveCatalogProduct(payload: SaveCatalogProductPayload): Promise<{ items: CatalogProductItem[]; message?: string }> {
+export async function saveCatalogProduct(payload: SaveCatalogProductPayload): Promise<{ items: CatalogProductItem[]; message?: string; product_id?: string }> {
   return apiFetch("/catalog/products", {
     method: "POST",
     body: JSON.stringify(payload),

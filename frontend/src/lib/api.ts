@@ -115,10 +115,21 @@ function extractErrorMessage(payload: unknown, fallback: string): { message: str
 }
 
 export async function apiFetch<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: buildHeaders(options),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: buildHeaders(options),
+    });
+  } catch (error) {
+    throw new APIRequestError(
+      "API indisponivel. Verifique se o backend esta em execucao e tente novamente.",
+      0,
+      "NETWORK_ERROR",
+      error
+    );
+  }
 
   const payload = await parseResponseBody(response);
 

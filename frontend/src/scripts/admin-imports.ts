@@ -1,21 +1,23 @@
 import { getToken } from "../lib/auth";
-import { listImportBatches, uploadCFOPCatalog, uploadNCMCatalog } from "../lib/admin-imports";
+import { listImportBatches, uploadCBenefCatalog, uploadCESTCatalog, uploadCFOPCatalog, uploadNCMCatalog } from "../lib/admin-imports";
 import * as XLSX from "xlsx";
 
-type CatalogType = "ncm" | "cfop";
+type CatalogType = "ncm" | "cfop" | "cest" | "cbenef";
 
 type ImportConfig = {
   type: CatalogType;
   formId: string;
   sourceInputId: string;
   versionInputId: string;
+  ufInputId?: string;
   fileInputId: string;
+  contentInputId?: string;
   feedbackId: string;
   submitButtonId: string;
   defaultSourceName: string;
   importingLabel: string;
   successFallback: string;
-  upload: (file: File, sourceName: string, versionLabel: string) => Promise<any>;
+  upload: (file: File | null, sourceName: string, versionLabel: string, content?: string, uf?: string) => Promise<any>;
 };
 
 const batchesBox = document.getElementById("import-batches");
@@ -32,7 +34,7 @@ const configs: ImportConfig[] = [
     defaultSourceName: "NCM CSV",
     importingLabel: "Importando NCM...",
     successFallback: "Importacao de NCM concluida com sucesso.",
-    upload: uploadNCMCatalog,
+    upload: (file, sourceName, versionLabel) => uploadNCMCatalog(file as File, sourceName, versionLabel),
   },
   {
     type: "cfop",
@@ -45,7 +47,36 @@ const configs: ImportConfig[] = [
     defaultSourceName: "CFOP XLSX",
     importingLabel: "Importando CFOP...",
     successFallback: "Importacao de CFOP concluida com sucesso.",
-    upload: uploadCFOPCatalog,
+    upload: (file, sourceName, versionLabel) => uploadCFOPCatalog(file as File, sourceName, versionLabel),
+  },
+  {
+    type: "cest",
+    formId: "cest-import-form",
+    sourceInputId: "cest-source-name",
+    versionInputId: "cest-version-label",
+    fileInputId: "cest-file",
+    contentInputId: "cest-raw-content",
+    feedbackId: "cest-import-feedback",
+    submitButtonId: "submit-cest-import",
+    defaultSourceName: "CEST XLSX",
+    importingLabel: "Importando CEST...",
+    successFallback: "Importacao de CEST concluida com sucesso.",
+    upload: uploadCESTCatalog,
+  },
+  {
+    type: "cbenef",
+    formId: "cbenef-import-form",
+    sourceInputId: "cbenef-source-name",
+    versionInputId: "cbenef-version-label",
+    ufInputId: "cbenef-uf",
+    fileInputId: "cbenef-file",
+    contentInputId: "cbenef-raw-content",
+    feedbackId: "cbenef-import-feedback",
+    submitButtonId: "submit-cbenef-import",
+    defaultSourceName: "cBenef UF",
+    importingLabel: "Importando cBenef...",
+    successFallback: "Importacao de cBenef concluida com sucesso.",
+    upload: uploadCBenefCatalog,
   },
 ];
 
@@ -162,7 +193,11 @@ function wireImportForm(config: ImportConfig) {
   const form = document.getElementById(config.formId) as HTMLFormElement | null;
   const sourceInput = document.getElementById(config.sourceInputId) as HTMLInputElement | null;
   const versionInput = document.getElementById(config.versionInputId) as HTMLInputElement | null;
+  const ufInput = config.ufInputId ? (document.getElementById(config.ufInputId) as HTMLInputElement | null) : null;
   const fileInput = document.getElementById(config.fileInputId) as HTMLInputElement | null;
+  const contentInput = config.contentInputId
+    ? (document.getElementById(config.contentInputId) as HTMLTextAreaElement | null)
+    : null;
   const feedback = document.getElementById(config.feedbackId) as HTMLElement | null;
   const submitButton = document.getElementById(config.submitButtonId) as HTMLButtonElement | null;
 
@@ -170,13 +205,15 @@ function wireImportForm(config: ImportConfig) {
     event.preventDefault();
 
     const file = fileInput?.files?.[0];
-    if (!file) {
-      setFeedback(feedback, "Selecione um arquivo CSV ou XLSX antes de importar.", "error");
+    const rawContent = contentInput?.value?.trim() || "";
+    if (!file && !rawContent) {
+      setFeedback(feedback, "Selecione um arquivo CSV/XLSX ou cole o conteudo oficial antes de importar.", "error");
       return;
     }
 
     const sourceName = sourceInput?.value?.trim() || config.defaultSourceName;
     const versionLabel = versionInput?.value?.trim() || "";
+    const uf = ufInput?.value?.trim().toUpperCase() || "";
     const originalLabel = submitButton?.textContent || config.importingLabel;
 
     if (submitButton) {
@@ -187,8 +224,8 @@ function wireImportForm(config: ImportConfig) {
     setFeedback(feedback, `Processando arquivo de ${config.type.toUpperCase()}. Isso pode levar alguns instantes.`, "muted");
 
     try {
-      const normalizedFile = await normalizeImportFile(file);
-      const response = await config.upload(normalizedFile, sourceName, versionLabel);
+      const normalizedFile = file ? await normalizeImportFile(file) : null;
+      const response = await config.upload(normalizedFile, sourceName, versionLabel, rawContent, uf);
       setFeedback(
         feedback,
         typeof response?.message === "string" ? response.message : config.successFallback,
@@ -199,6 +236,9 @@ function wireImportForm(config: ImportConfig) {
       form.reset();
       if (sourceInput) {
         sourceInput.value = config.defaultSourceName;
+      }
+      if (ufInput && config.type === "cbenef") {
+        ufInput.value = uf || "GO";
       }
     } catch (error) {
       setFeedback(feedback, `Falha na importacao: ${String(error)}`, "error");

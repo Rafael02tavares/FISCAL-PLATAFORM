@@ -1,6 +1,8 @@
 import { getOrganizationCRT, getOrganizationId, getOrganizationTaxRegime, getToken } from "../lib/auth";
+import { getCBenefAdvice } from "../lib/cbenef-rules";
 import { listFiscalOperations } from "../lib/fiscaloperations";
 import { getInvoice } from "../lib/invoices";
+import { getCSOSNInfo, getICMSCSTInfo, getICMSOriginInfo, getICMSRegimeAdvice, getPISCOFINSCSTInfo, getPISCOFINSRegimeAdvice } from "../lib/fiscal-codes";
 import { suggestTax } from "../lib/tax";
 
 const wrapper = document.getElementById("invoice-detail");
@@ -98,6 +100,15 @@ async function resolveOperationCode(item: any) {
     : [];
 
   const itemCFOP = normalizeValue(item?.cfop);
+  const inferredCode = inferOperationCodeFromCFOP(itemCFOP);
+  const inferredOperation = operations.find(
+    (operation) => normalizeValue(operation.code) === inferredCode
+  );
+
+  if (inferredOperation?.code) {
+    return inferredOperation.code;
+  }
+
   const matchedByCFOP = operations.find(
     (operation) => normalizeValue(operation.default_cfop) === itemCFOP
   );
@@ -114,6 +125,25 @@ async function resolveOperationCode(item: any) {
   return "";
 }
 
+function inferOperationCodeFromCFOP(cfop: unknown) {
+  switch (String(cfop || "").replace(/\D/g, "")) {
+    case "5403":
+    case "5405":
+      return "sale_st_internal";
+    case "6403":
+    case "6404":
+      return "sale_st_interstate";
+    case "6101":
+    case "6102":
+      return "sale_interstate";
+    case "5101":
+    case "5102":
+      return "sale_consumer_final";
+    default:
+      return "";
+  }
+}
+
 function renderLegalBasis(legalBasis: any[]) {
   if (!legalBasis || !legalBasis.length) {
     return `
@@ -124,10 +154,13 @@ function renderLegalBasis(legalBasis: any[]) {
     `;
   }
 
+  const retailDefaults = legalBasis.filter((item) => item?.tax_type === "RETAIL_DEFAULT");
+  const legalItems = legalBasis.filter((item) => item?.tax_type !== "RETAIL_DEFAULT");
+
   const rows = legalBasis
     .map(
       (item) => `
-        <div class="legal-item">
+        <div class="legal-item ${item.tax_type === "RETAIL_DEFAULT" ? "legal-item--retail-default" : ""}">
           <div><strong>${item.tax_type || "-"}</strong></div>
           <div><strong>Fonte:</strong> ${item.title || "-"}</div>
           <div><strong>Referencia:</strong> ${item.reference_code || "-"}</div>
@@ -143,7 +176,171 @@ function renderLegalBasis(legalBasis: any[]) {
   return `
     <div class="compare-box legal-basis-box">
       <h4>Base legal aplicada</h4>
+      ${
+        retailDefaults.length
+          ? `
+            <div class="retail-default-note">
+              <strong>Perfil padrao varejista aplicado</strong>
+              <p>A plataforma usou um default operacional para responder a consulta. Cadastre uma regra legal especifica para publicar essa decisao fiscal com seguranca.</p>
+            </div>
+          `
+          : ""
+      }
+      ${
+        retailDefaults.length && !legalItems.length
+          ? `<p class="legal-basis-muted">Ainda nao ha regra legal especifica vinculada a este item.</p>`
+          : ""
+      }
       <div class="legal-list">${rows}</div>
+    </div>
+  `;
+}
+
+function onlyDigits(value: unknown) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function isGenericSaleCFOP(value: unknown) {
+  return ["5101", "5102", "6101", "6102"].includes(onlyDigits(value));
+}
+
+function isSubstitutionTaxCFOP(value: unknown) {
+  return ["5403", "5405", "6403", "6404"].includes(onlyDigits(value));
+}
+
+function renderFiscalAnalysis(result: any, item: any) {
+  const suggestion = result?.suggestion || {};
+  const sourceCFOP = onlyDigits(item?.cfop);
+  const suggestedCFOP = onlyDigits(suggestion?.cfop || item?.cfop);
+  const sourceICMSCST = onlyDigits(item?.icms_cst || item?.cst);
+  const suggestedICMSCST = onlyDigits(suggestion?.icms_cst);
+  const sourcePISCST = onlyDigits(item?.pis_cst);
+  const sourceCOFINSCST = onlyDigits(item?.cofins_cst);
+  const suggestedPISCST = onlyDigits(suggestion?.pis_cst);
+  const suggestedCOFINSCST = onlyDigits(suggestion?.cofins_cst);
+  const suggestedCEST = onlyDigits(suggestion?.cest || item?.cest);
+  const sourceICMSInfo = getICMSCSTInfo(sourceICMSCST);
+  const suggestedICMSInfo = getICMSCSTInfo(suggestedICMSCST);
+  const sourceICMSOrigin = getICMSOriginInfo(item?.icms_cst || item?.cst);
+  const suggestedICMSOrigin = getICMSOriginInfo(suggestion?.icms_cst);
+  const sourceCSOSNInfo = getCSOSNInfo(item?.csosn);
+  const suggestedCSOSNInfo = getCSOSNInfo(suggestion?.csosn);
+  const sourcePISInfo = getPISCOFINSCSTInfo(sourcePISCST);
+  const suggestedPISInfo = getPISCOFINSCSTInfo(suggestedPISCST);
+  const sourceCOFINSInfo = getPISCOFINSCSTInfo(sourceCOFINSCST);
+  const suggestedCOFINSInfo = getPISCOFINSCSTInfo(suggestedCOFINSCST);
+  const regimeAdvice = getPISCOFINSRegimeAdvice(
+    getOrganizationTaxRegime(),
+    suggestedPISCST || sourcePISCST,
+    suggestedCOFINSCST || sourceCOFINSCST
+  );
+  const icmsRegimeAdvice = getICMSRegimeAdvice(
+    getOrganizationTaxRegime(),
+    getOrganizationCRT(),
+    suggestedICMSCST || sourceICMSCST,
+    suggestion?.csosn || item?.csosn
+  );
+  const cbenefAdvice = getCBenefAdvice(
+    item?.emitter_uf || item?.recipient_uf,
+    suggestedICMSCST || sourceICMSCST,
+    suggestion?.csosn || item?.csosn,
+    suggestion?.cbenef || item?.cbenef
+  );
+  const hasSTEvidence =
+    sourceICMSCST === "60" ||
+    isSubstitutionTaxCFOP(sourceCFOP) ||
+    suggestedCEST !== "";
+  const cfopPreserved = sourceCFOP !== "" && suggestedCFOP === sourceCFOP;
+  const wrongGenericCFOP = hasSTEvidence && isGenericSaleCFOP(suggestedCFOP);
+  const icmsPreserved = sourceICMSCST !== "" && suggestedICMSCST === sourceICMSCST;
+  const pisCofinsPreserved =
+    sourcePISCST !== "" &&
+    sourceCOFINSCST !== "" &&
+    suggestedPISCST === sourcePISCST &&
+    suggestedCOFINSCST === sourceCOFINSCST;
+
+  const status = wrongGenericCFOP
+    ? "danger"
+    : hasSTEvidence && cfopPreserved && (icmsPreserved || sourceICMSCST === "60")
+      ? "success"
+      : "warning";
+
+  const title = wrongGenericCFOP
+    ? "Divergencia critica na substituicao tributaria"
+    : status === "success"
+      ? "Leitura fiscal coerente com mercadoria ST"
+      : "Analise fiscal exige revisao";
+
+  const summary = wrongGenericCFOP
+    ? "A nota indica substituicao tributaria, mas a sugestao retornou CFOP de venda comum. Para esse cenario, preserve o CFOP ST da nota ou aplique regra estadual especifica."
+    : status === "success"
+      ? "A nota e a recomendacao apontam para mercadoria sujeita a substituicao tributaria, preservando a operacao fiscal observada."
+      : "Existem sinais fiscais importantes, mas ainda faltam campos para publicar a regra com seguranca.";
+
+  const findings = [
+    hasSTEvidence
+      ? `ST identificada por ${[
+          sourceICMSCST === "60" ? "CST ICMS 60" : "",
+          isSubstitutionTaxCFOP(sourceCFOP) ? `CFOP ${sourceCFOP}` : "",
+          suggestedCEST ? `CEST ${suggestedCEST}` : "",
+        ].filter(Boolean).join(", ")}.`
+      : "Nao ha evidencia suficiente de substituicao tributaria neste item.",
+    cfopPreserved
+      ? `CFOP recomendado preserva a operacao observada: ${suggestedCFOP}.`
+      : `CFOP observado ${displayValue(sourceCFOP)} e sugestao ${displayValue(suggestedCFOP)} precisam ser revisados.`,
+    icmsPreserved
+      ? `CST ICMS recomendado preserva a leitura da nota: ${suggestedICMSCST} - ${suggestedICMSInfo?.label || "classificacao identificada"}${suggestedICMSOrigin ? `; origem ${suggestedICMSOrigin}` : ""}.`
+      : sourceICMSCST === "60"
+        ? `${sourceICMSInfo?.label || "CST ICMS 60"}${sourceICMSOrigin ? `; origem ${sourceICMSOrigin}` : ""}: ${sourceICMSInfo?.note || "indica ICMS cobrado anteriormente por substituicao tributaria."}`
+        : "CST ICMS ainda nao esta fechado para a recomendacao.",
+    `${icmsRegimeAdvice.title}: ${icmsRegimeAdvice.detail}`,
+    `${cbenefAdvice.title}: ${cbenefAdvice.detail}`,
+    sourceCSOSNInfo || suggestedCSOSNInfo
+      ? `CSOSN ${displayValue(suggestedCSOSNInfo?.code || sourceCSOSNInfo?.code)} - ${suggestedCSOSNInfo?.label || sourceCSOSNInfo?.label}.`
+      : "CSOSN nao aplicavel ou nao informado para este item.",
+    pisCofinsPreserved
+      ? `PIS/COFINS preservados como CST ${suggestedPISCST}/${suggestedCOFINSCST} - ${suggestedPISInfo?.label || suggestedCOFINSInfo?.label || "classificacao identificada"}.`
+      : `PIS/COFINS devem ser revisados conforme regime tributario da empresa. Nota: PIS ${displayValue(sourcePISInfo?.label || sourcePISCST)}, COFINS ${displayValue(sourceCOFINSInfo?.label || sourceCOFINSCST)}.`,
+    `${regimeAdvice.title}: ${regimeAdvice.detail}`,
+  ];
+
+  const nextActions = wrongGenericCFOP
+    ? [
+        "Corrigir regra do motor para CFOP 5405 em venda interna de mercadoria ST.",
+        "Manter ICMS CST 60 quando a nota e o CEST indicarem substituicao tributaria.",
+        "Cadastrar regra por NCM/CEST/UF para evitar retorno ao CFOP 5102.",
+      ]
+    : [
+        "Validar se o CEST e aplicavel ao produto no estado de destino.",
+        "Completar base de ICMS ST com MVA, FCP ST e fundamento estadual quando existir.",
+        "Publicar a regra apos conferir regime tributario e operacao real.",
+      ];
+
+  return `
+    <div class="fiscal-analysis fiscal-analysis--${status}">
+      <div class="fiscal-analysis__head">
+        <div>
+          <span class="eyebrow">Analise fiscal</span>
+          <h4>${title}</h4>
+          <p>${summary}</p>
+        </div>
+        <strong>${status === "success" ? "Coerente" : status === "danger" ? "Corrigir" : "Revisar"}</strong>
+      </div>
+
+      <div class="fiscal-analysis__grid">
+        <div>
+          <h5>Leitura tecnica</h5>
+          <ul>
+            ${findings.map((finding) => `<li>${finding}</li>`).join("")}
+          </ul>
+        </div>
+        <div>
+          <h5>Proximas acoes</h5>
+          <ul>
+            ${nextActions.map((action) => `<li>${action}</li>`).join("")}
+          </ul>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -205,6 +402,8 @@ function renderSuggestion(result: any, item: any) {
           : ""
       }
 
+      ${renderFiscalAnalysis(result, item)}
+
       <div class="suggestion-grid">
         <div class="compare-box compare-box--source">
           <h4>O que veio na nota</h4>
@@ -220,6 +419,14 @@ function renderSuggestion(result: any, item: any) {
             <div class="compare-row">
               <span>NCM</span>
               <strong>${displayValue(item.ncm)}</strong>
+            </div>
+            <div class="compare-row">
+              <span>CEST</span>
+              <strong>${displayValue(item.cest)}</strong>
+            </div>
+            <div class="compare-row">
+              <span>cClasTrib</span>
+              <strong>${displayValue(item.cclas_trib)}</strong>
             </div>
             <div class="compare-row">
               <span>CFOP</span>
@@ -240,6 +447,10 @@ function renderSuggestion(result: any, item: any) {
             <div class="compare-row">
               <span>COFINS CST</span>
               <strong>${displayValue(item.cofins_cst)}</strong>
+            </div>
+            <div class="compare-row">
+              <span>CSOSN</span>
+              <strong>${displayValue(item.csosn)}</strong>
             </div>
           </div>
         </div>
@@ -280,12 +491,12 @@ function renderSuggestion(result: any, item: any) {
               <strong>${displayValue(suggestion.cofins_cst)}</strong>
             </div>
             <div class="compare-row">
-              <span>Cod. rec. PIS</span>
-              <strong>${displayValue(suggestion.pis_revenue_code)}</strong>
+              <span>IPI CST</span>
+              <strong>${displayValue(suggestion.ipi_cst)}</strong>
             </div>
             <div class="compare-row">
-              <span>Cod. rec. COFINS</span>
-              <strong>${displayValue(suggestion.cofins_revenue_code)}</strong>
+              <span>CEnq IPI</span>
+              <strong>${displayValue(suggestion.ipi_cenq)}</strong>
             </div>
           </div>
         </div>
@@ -333,6 +544,10 @@ function renderSuggestion(result: any, item: any) {
           <div class="tax-pill tax-pill--soft">
             <span>Aliq. COFINS</span>
             <strong>${displayValue(suggestion.cofins_rate)}</strong>
+          </div>
+          <div class="tax-pill tax-pill--soft">
+            <span>Aliq. IPI</span>
+            <strong>${displayValue(suggestion.ipi_rate)}</strong>
           </div>
         </div>
       </div>
@@ -480,6 +695,7 @@ async function loadInvoice() {
             source_pis_rate: item.pis_rate || "",
             source_cofins_cst: item.cofins_cst || "",
             source_cofins_rate: item.cofins_rate || "",
+            source_cfop: item.cfop || "",
           });
 
           target.innerHTML = renderSuggestion(result, item);

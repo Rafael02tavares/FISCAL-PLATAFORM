@@ -169,6 +169,39 @@ import adminCBenefScript from "../../../scripts/admin-cbenef.ts?url";
     </section>
   </div>
 
+  <section class="card card--padded cbenef-reference-card">
+    <div class="section-heading section-heading--tight">
+      <div>
+        <span class="section-heading__eyebrow">Obrigatoriedade estadual</span>
+        <h3>UFs com exigencia operacional de cBenef</h3>
+      </div>
+    </div>
+
+    <div class="cbenef-reference-grid">
+      <article>
+        <h4>Estados monitorados</h4>
+        <p><strong>SP</strong> Beneficios como isencao, reducao de base e tratamentos diferenciados.</p>
+        <p><strong>PR</strong> Tabela especifica no ambiente estadual.</p>
+        <p><strong>RS</strong> Exigencia em notas com beneficios fiscais.</p>
+        <p><strong>SC</strong> Regras por ATO DIAT e tabela estadual.</p>
+        <p><strong>RJ</strong> Codigos publicados pela SEFAZ.</p>
+        <p><strong>GO</strong> Obrigatoriedade por Decreto/IN estadual.</p>
+        <p><strong>DF</strong> Obrigatoriedade por Portaria distrital.</p>
+        <p><strong>ES</strong> Exigencia conforme norma estadual recente.</p>
+      </article>
+
+      <article>
+        <h4>Quando alertar</h4>
+        <p><strong>CST 20</strong> Reducao de base de calculo.</p>
+        <p><strong>CST 30/70</strong> Beneficio combinado com substituicao tributaria.</p>
+        <p><strong>CST 40/41</strong> Isencao ou nao tributada.</p>
+        <p><strong>CST 50</strong> Suspensao.</p>
+        <p><strong>CST 51</strong> Diferimento.</p>
+        <p><strong>CSOSN 103/203/300/400/900</strong> Tratamentos diferenciados no Simples.</p>
+      </article>
+    </div>
+  </section>
+
   <script type="module" src={adminCBenefScript}></script>
 
   <style>
@@ -287,6 +320,46 @@ import adminCBenefScript from "../../../scripts/admin-cbenef.ts?url";
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
+    }
+
+    .cbenef-reference-card {
+      margin-top: 18px;
+    }
+
+    .cbenef-reference-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .cbenef-reference-grid article {
+      border: 1px solid #dbe4ee;
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .cbenef-reference-grid h4 {
+      margin: 0 0 12px;
+      color: #0f172a;
+    }
+
+    .cbenef-reference-grid p {
+      display: flex;
+      gap: 10px;
+      margin: 0;
+      padding: 9px 0;
+      border-bottom: 1px dashed #dbe4ee;
+      color: #475569;
+    }
+
+    .cbenef-reference-grid p:last-child {
+      border-bottom: none;
+    }
+
+    .cbenef-reference-grid strong {
+      min-width: 76px;
+      color: #b45309;
     }
 
     .cbenef-form label {
@@ -485,6 +558,7 @@ import adminCBenefScript from "../../../scripts/admin-cbenef.ts?url";
     @media (max-width: 720px) {
       .cbenef-form,
       .cbenef-stats,
+      .cbenef-reference-grid,
       .rule-card__grid {
         grid-template-columns: 1fr;
       }

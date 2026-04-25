@@ -23,7 +23,7 @@ const { title, subtitle } = Astro.props;
     <section class="content" data-filter-root>
       <div class="page-filter" data-page-filter>
         <label class="page-filter__field">
-          <span class="page-filter__label">Filtro rapido da tela</span>
+          <span class="page-filter__label">Filtro</span>
           <input
             type="search"
             placeholder={`Filtrar ${title.toLowerCase()} por nome, codigo, UF, regra ou descricao`}
@@ -31,9 +31,7 @@ const { title, subtitle } = Astro.props;
           />
         </label>
         <button type="button" class="page-filter__clear" data-global-filter-clear hidden>Limpar</button>
-        <p class="page-filter__hint" data-global-filter-status>
-          Digite para filtrar cards, listas e linhas da tela atual.
-        </p>
+        <p class="page-filter__hint" data-global-filter-status>Pronto</p>
       </div>
       <slot />
     </section>
@@ -96,7 +94,7 @@ const { title, subtitle } = Astro.props;
       });
 
       if (status instanceof HTMLElement) {
-        status.textContent = "Digite para filtrar cards, listas e linhas da tela atual.";
+        status.textContent = "Pronto";
       }
       return;
     }
@@ -114,8 +112,8 @@ const { title, subtitle } = Astro.props;
     if (status instanceof HTMLElement) {
       status.textContent =
         visibleCount > 0
-          ? `${visibleCount} item(ns) visivel(is) com o filtro atual.`
-          : "Nenhum item encontrado com esse filtro na tela atual.";
+          ? `${visibleCount} resultado(s)`
+          : "Sem resultados";
     }
   }
 

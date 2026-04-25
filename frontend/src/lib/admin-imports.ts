@@ -35,3 +35,40 @@ export async function uploadCFOPCatalog(file: File, sourceName: string, versionL
     body: formData,
   });
 }
+
+export async function uploadCESTCatalog(file: File | null, sourceName: string, versionLabel: string, content = "") {
+  const formData = new FormData();
+  if (file) {
+    formData.append("file", file);
+  }
+  formData.append("source_name", sourceName);
+  formData.append("version_label", versionLabel);
+  if (content.trim()) {
+    formData.append("content", content.trim());
+  }
+
+  return apiFetch("/admin/imports/cest", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function uploadCBenefCatalog(file: File | null, sourceName: string, versionLabel: string, content = "", uf = "") {
+  const formData = new FormData();
+  if (file) {
+    formData.append("file", file);
+  }
+  formData.append("source_name", sourceName);
+  formData.append("version_label", versionLabel);
+  if (uf.trim()) {
+    formData.append("uf", uf.trim().toUpperCase());
+  }
+  if (content.trim()) {
+    formData.append("content", content.trim());
+  }
+
+  return apiFetch("/admin/imports/cbenef", {
+    method: "POST",
+    body: formData,
+  });
+}

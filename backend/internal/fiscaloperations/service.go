@@ -1,6 +1,9 @@
 package fiscaloperations
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 type Service struct {
 	repo *Repository
@@ -19,5 +22,45 @@ func (s *Service) ResolveOperation(ctx context.Context, code string) (*FiscalOpe
 		return s.repo.FindDefault(ctx)
 	}
 
-	return s.repo.FindByCode(ctx, code)
+	operation, err := s.repo.FindByCode(ctx, code)
+	if err == nil {
+		return operation, nil
+	}
+
+	if fallback := fallbackOperation(code); fallback != nil {
+		return fallback, nil
+	}
+
+	return nil, err
+}
+
+func fallbackOperation(code string) *FiscalOperation {
+	switch strings.TrimSpace(code) {
+	case "sale_st_internal":
+		return &FiscalOperation{
+			Code:        "sale_st_internal",
+			Name:        "Venda interna de mercadoria sujeita a ST",
+			Direction:   "saida",
+			DefaultCFOP: "5405",
+			Active:      true,
+		}
+	case "sale_st_interstate":
+		return &FiscalOperation{
+			Code:        "sale_st_interstate",
+			Name:        "Venda interestadual de mercadoria sujeita a ST",
+			Direction:   "saida",
+			DefaultCFOP: "6404",
+			Active:      true,
+		}
+	case "sale_interstate":
+		return &FiscalOperation{
+			Code:        "sale_interstate",
+			Name:        "Venda interestadual",
+			Direction:   "saida",
+			DefaultCFOP: "6102",
+			Active:      true,
+		}
+	default:
+		return nil
+	}
 }

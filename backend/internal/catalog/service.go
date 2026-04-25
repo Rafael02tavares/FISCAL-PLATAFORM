@@ -169,13 +169,14 @@ func (s *Service) RegisterObservedItem(ctx context.Context, p RegisterObservedIt
 	})
 }
 
-func (s *Service) SaveManualProduct(ctx context.Context, p SaveManualProductParams) error {
+func (s *Service) SaveManualProduct(ctx context.Context, p SaveManualProductParams) (string, error) {
+	p = normalizeManualProductParams(p)
 	productID, err := s.resolveProductID(ctx, p.ProductID, p.ProductCode, p.GTIN, p.Description)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return s.repo.CreateTaxProfile(ctx, CreateTaxProfileParams{
+	if err := s.repo.CreateTaxProfile(ctx, CreateTaxProfileParams{
 		ProductID:       productID,
 		OrganizationID:  p.OrganizationID,
 		SourceInvoiceID: "",
@@ -218,7 +219,44 @@ func (s *Service) SaveManualProduct(ctx context.Context, p SaveManualProductPara
 		ObservedCRT:       p.ObservedCRT,
 		ConfidenceScore:   0.99,
 		SourceType:        "manual_entry",
-	})
+	}); err != nil {
+		return "", err
+	}
+
+	return productID, nil
+}
+
+func normalizeManualProductParams(p SaveManualProductParams) SaveManualProductParams {
+	if strings.TrimSpace(p.OperationCode) == "" {
+		p.OperationCode = "sale_consumer_final"
+	}
+
+	p.ICMSValue = normalizeDecimalInput(p.ICMSValue)
+	p.IPIValue = normalizeDecimalInput(p.IPIValue)
+	p.PISValue = normalizeDecimalInput(p.PISValue)
+	p.COFINSValue = normalizeDecimalInput(p.COFINSValue)
+	p.PISRate = normalizeDecimalInput(p.PISRate)
+	p.COFINSRate = normalizeDecimalInput(p.COFINSRate)
+	p.ICMSRate = normalizeDecimalInput(p.ICMSRate)
+	p.ICMSBaseReduction = normalizeDecimalInput(p.ICMSBaseReduction)
+	p.FCPRate = normalizeDecimalInput(p.FCPRate)
+	p.ICMSSTRate = normalizeDecimalInput(p.ICMSSTRate)
+	p.IBSRate = normalizeDecimalInput(p.IBSRate)
+	p.CBSRate = normalizeDecimalInput(p.CBSRate)
+	p.SelectiveTaxRate = normalizeDecimalInput(p.SelectiveTaxRate)
+	return p
+}
+
+func normalizeDecimalInput(value string) string {
+	value = strings.TrimSpace(value)
+	value = strings.ReplaceAll(value, "%", "")
+	value = strings.ReplaceAll(value, " ", "")
+
+	if strings.Contains(value, ",") && strings.Contains(value, ".") {
+		value = strings.ReplaceAll(value, ".", "")
+	}
+	value = strings.ReplaceAll(value, ",", ".")
+	return value
 }
 
 func (s *Service) ListCatalogProducts(ctx context.Context, organizationID, query string) ([]CatalogProductView, error) {

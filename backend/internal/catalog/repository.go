@@ -16,6 +16,7 @@ type catalogSchemaSupport struct {
 	productCodeColumn bool
 	enhancedProfile   bool
 	regimeContext     bool
+	uniqueGTINIndex   bool
 }
 
 func NewRepository(db *pgxpool.Pool) *Repository {
@@ -165,6 +166,10 @@ func (r *Repository) CreateProduct(ctx context.Context, productCode, gtin, norma
 		return "", fmt.Errorf("check catalog schema: %w", err)
 	}
 
+	if schema.uniqueGTINIndex && strings.TrimSpace(normalizedGTIN) != "" {
+		return r.upsertProductByGTIN(ctx, schema, productCode, gtin, normalizedGTIN, description, normalizedDescription)
+	}
+
 	query := `
 		INSERT INTO products (gtin, normalized_gtin, description, normalized_description)
 		VALUES ($1, $2, $3, $4)
@@ -184,6 +189,59 @@ func (r *Repository) CreateProduct(ctx context.Context, productCode, gtin, norma
 	err = r.db.QueryRow(ctx, query, args...).Scan(&productID)
 	if err != nil {
 		return "", fmt.Errorf("create product: %w", err)
+	}
+
+	return productID, nil
+}
+
+func (r *Repository) upsertProductByGTIN(ctx context.Context, schema catalogSchemaSupport, productCode, gtin, normalizedGTIN, description, normalizedDescription string) (string, error) {
+	query := `
+		INSERT INTO products (gtin, normalized_gtin, description, normalized_description)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (normalized_gtin) WHERE NULLIF(TRIM(normalized_gtin), '') IS NOT NULL
+		DO UPDATE SET
+			gtin = EXCLUDED.gtin,
+			description = CASE
+				WHEN NULLIF(TRIM(EXCLUDED.description), '') IS NULL THEN products.description
+				ELSE EXCLUDED.description
+			END,
+			normalized_description = CASE
+				WHEN NULLIF(TRIM(EXCLUDED.normalized_description), '') IS NULL THEN products.normalized_description
+				ELSE EXCLUDED.normalized_description
+			END,
+			updated_at = NOW()
+		RETURNING id
+	`
+	args := []any{gtin, normalizedGTIN, description, normalizedDescription}
+
+	if schema.productCodeColumn {
+		query = `
+			INSERT INTO products (product_code, gtin, normalized_gtin, description, normalized_description)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (normalized_gtin) WHERE NULLIF(TRIM(normalized_gtin), '') IS NOT NULL
+			DO UPDATE SET
+				product_code = CASE
+					WHEN NULLIF(TRIM(EXCLUDED.product_code), '') IS NULL THEN products.product_code
+					ELSE EXCLUDED.product_code
+				END,
+				gtin = EXCLUDED.gtin,
+				description = CASE
+					WHEN NULLIF(TRIM(EXCLUDED.description), '') IS NULL THEN products.description
+					ELSE EXCLUDED.description
+				END,
+				normalized_description = CASE
+					WHEN NULLIF(TRIM(EXCLUDED.normalized_description), '') IS NULL THEN products.normalized_description
+					ELSE EXCLUDED.normalized_description
+				END,
+				updated_at = NOW()
+			RETURNING id
+		`
+		args = []any{productCode, gtin, normalizedGTIN, description, normalizedDescription}
+	}
+
+	var productID string
+	if err := r.db.QueryRow(ctx, query, args...).Scan(&productID); err != nil {
+		return "", fmt.Errorf("upsert product by gtin: %w", err)
 	}
 
 	return productID, nil
@@ -332,7 +390,11 @@ func (r *Repository) CreateTaxProfile(ctx context.Context, p CreateTaxProfilePar
 			NULLIF($24, '')::numeric,
 			NULLIF($25, '')::numeric,
 			NULLIF($26, '')::numeric,
-			NULLIF($27, ''),
+			CASE
+				WHEN NULLIF($27, '') IS NULL THEN NULL
+				WHEN EXISTS (SELECT 1 FROM fiscal_operations fo WHERE fo.code = $27) THEN $27
+				ELSE NULL
+			END,
 			$28, $29, $30, $31, $32, $33, $34, $35, $36
 		)
 	`
@@ -436,7 +498,11 @@ func (r *Repository) CreateTaxProfile(ctx context.Context, p CreateTaxProfilePar
 				NULLIF($27, '')::numeric,
 				$28,
 				NULLIF($29, '')::numeric,
-				NULLIF($30, ''),
+				CASE
+					WHEN NULLIF($30, '') IS NULL THEN NULL
+					WHEN EXISTS (SELECT 1 FROM fiscal_operations fo WHERE fo.code = $30) THEN $30
+					ELSE NULL
+				END,
 				$31, $32, $33, $34, $35, $36, $37, $38, $39
 			)
 		`
@@ -839,7 +905,8 @@ func (r *Repository) getCatalogSchemaSupport(ctx context.Context) (catalogSchema
 				FROM information_schema.columns
 				WHERE table_name = 'product_tax_profiles'
 				  AND column_name = 'target_tax_regime'
-			)
+			),
+			to_regclass('public.idx_products_normalized_gtin_unique') IS NOT NULL
 	`
 
 	var productCodeColumn bool
@@ -847,7 +914,8 @@ func (r *Repository) getCatalogSchemaSupport(ctx context.Context) (catalogSchema
 	var selectiveCode bool
 	var selectiveRate bool
 	var targetTaxRegime bool
-	if err := r.db.QueryRow(ctx, query).Scan(&productCodeColumn, &ncmEx, &selectiveCode, &selectiveRate, &targetTaxRegime); err != nil {
+	var uniqueGTINIndex bool
+	if err := r.db.QueryRow(ctx, query).Scan(&productCodeColumn, &ncmEx, &selectiveCode, &selectiveRate, &targetTaxRegime, &uniqueGTINIndex); err != nil {
 		return catalogSchemaSupport{}, err
 	}
 
@@ -855,5 +923,6 @@ func (r *Repository) getCatalogSchemaSupport(ctx context.Context) (catalogSchema
 		productCodeColumn: productCodeColumn,
 		enhancedProfile:   ncmEx && selectiveCode && selectiveRate,
 		regimeContext:     targetTaxRegime,
+		uniqueGTINIndex:   uniqueGTINIndex,
 	}, nil
 }

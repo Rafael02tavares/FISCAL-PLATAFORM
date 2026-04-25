@@ -185,6 +185,102 @@ const { id } = Astro.params;
       gap: 16px;
     }
 
+    .fiscal-analysis {
+      margin: 18px 0;
+      border-radius: 22px;
+      padding: 18px;
+      border: 1px solid #dbe4ee;
+      background: linear-gradient(135deg, #ffffff, #f8fafc);
+    }
+
+    .fiscal-analysis__head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .fiscal-analysis__head h4 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+      color: #0f172a;
+    }
+
+    .fiscal-analysis__head p {
+      margin: 0;
+      color: #475569;
+      max-width: 78ch;
+    }
+
+    .fiscal-analysis__head > strong {
+      padding: 9px 13px;
+      border-radius: 999px;
+      white-space: nowrap;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .fiscal-analysis__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .fiscal-analysis__grid > div {
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .fiscal-analysis h5 {
+      margin: 0 0 10px;
+      color: #0f172a;
+      font-size: 0.95rem;
+    }
+
+    .fiscal-analysis ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #334155;
+    }
+
+    .fiscal-analysis li + li {
+      margin-top: 8px;
+    }
+
+    .fiscal-analysis--success {
+      border-color: #99f6e4;
+      background: linear-gradient(135deg, #ecfeff, #f0fdfa);
+    }
+
+    .fiscal-analysis--success .fiscal-analysis__head > strong {
+      background: #ccfbf1;
+      color: #0f766e;
+    }
+
+    .fiscal-analysis--warning {
+      border-color: #fde68a;
+      background: linear-gradient(135deg, #fffbeb, #fff7ed);
+    }
+
+    .fiscal-analysis--warning .fiscal-analysis__head > strong {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .fiscal-analysis--danger {
+      border-color: #fecaca;
+      background: linear-gradient(135deg, #fff1f2, #fff7ed);
+    }
+
+    .fiscal-analysis--danger .fiscal-analysis__head > strong {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
     .compare-box {
       border: 1px solid #dbe4ee;
       border-radius: 20px;
@@ -358,6 +454,34 @@ const { id } = Astro.params;
       box-shadow: 0 10px 24px rgba(148, 163, 184, 0.08);
     }
 
+    .legal-item--retail-default {
+      border-color: rgba(20, 184, 166, 0.26);
+      background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.14), transparent 34%),
+        linear-gradient(180deg, #f0fdfa, #ffffff);
+    }
+
+    .retail-default-note,
+    .legal-basis-muted {
+      margin: 0 0 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(20, 184, 166, 0.22);
+      background: #f0fdfa;
+      color: #0f766e;
+      padding: 14px;
+    }
+
+    .retail-default-note p {
+      margin: 6px 0 0;
+      color: #475569;
+    }
+
+    .legal-basis-muted {
+      background: #fff7ed;
+      border-color: #fed7aa;
+      color: #9a3412;
+    }
+
     .legal-item div {
       margin: 4px 0;
     }
@@ -365,6 +489,7 @@ const { id } = Astro.params;
     @media (max-width: 900px) {
       .invoice-meta-grid,
       .suggestion-grid,
+      .fiscal-analysis__grid,
       .suggestion-summary,
       .tax-pill-grid {
         grid-template-columns: 1fr;
@@ -376,6 +501,7 @@ const { id } = Astro.params;
 
       .tax-breakdown__header,
       .suggestion-top,
+      .fiscal-analysis__head,
       .compare-row {
         grid-template-columns: 1fr;
         display: grid;

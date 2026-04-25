@@ -77,6 +77,15 @@ type CFOPMatch struct {
 	ConfidenceScore float64
 }
 
+type CESTMatch struct {
+	Code            string
+	NCMCode         string
+	Segment         string
+	Description     string
+	LegalSource     string
+	ConfidenceScore float64
+}
+
 func normalizeOptionalNumeric(value string) string {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -160,9 +169,27 @@ func (r *Repository) FindBestMatch(
 	}
 
 	if normalizedNCMCode != "" {
-		match, err := r.findByNCMCatalog(ctx, normalizedNCMCode)
-		if err == nil && match != nil {
-			return match, nil
+		profileMatch, profileErr := r.findByNCMProfile(
+			ctx,
+			normalizedNCMCode,
+			organizationID,
+			taxRegime,
+			targetCRT,
+			operationCode,
+			emitterUF,
+			recipientUF,
+		)
+		if profileErr == nil && profileMatch != nil {
+			profileMatch.MatchType = "ncm_profile"
+			if profileMatch.ConfidenceScore == 0 {
+				profileMatch.ConfidenceScore = 0.72
+			}
+			return profileMatch, nil
+		}
+
+		catalogMatch, catalogErr := r.findByNCMCatalog(ctx, normalizedNCMCode)
+		if catalogErr == nil && catalogMatch != nil {
+			return catalogMatch, nil
 		}
 	}
 
@@ -695,6 +722,175 @@ func (r *Repository) findByDescription(
 	return &item, nil
 }
 
+func (r *Repository) findByNCMProfile(
+	ctx context.Context,
+	normalizedNCMCode string,
+	organizationID string,
+	taxRegime string,
+	targetCRT string,
+	operationCode string,
+	emitterUF string,
+	recipientUF string,
+) (*TaxMatch, error) {
+	schema, err := r.getSuggestionSchemaSupport(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("check suggestion schema: %w", err)
+	}
+	if !schema.profileRegimeContext {
+		return nil, fmt.Errorf("ncm profile lookup requires enhanced profile schema")
+	}
+
+	query := `
+		SELECT
+			p.id,
+			COALESCE(ptp.organization_id::text, ''),
+			COALESCE(ptp.confidence_score, 0),
+
+			COALESCE(ptp.ncm, ''),
+			COALESCE(ptp.ncm_ex, ''),
+			COALESCE(ptp.cest, ''),
+			COALESCE(ptp.cclas_trib, ''),
+			COALESCE(ptp.cfop, ''),
+			COALESCE(ptp.csosn, ''),
+
+			COALESCE(ptp.pis_cst, ''),
+			COALESCE(ptp.cofins_cst, ''),
+			COALESCE(ptp.pis_revenue_code, ''),
+			COALESCE(ptp.cofins_revenue_code, ''),
+
+			COALESCE(ptp.icms_cst, ''),
+			COALESCE(ptp.icms_value::text, ''),
+			COALESCE(ptp.ipi_value::text, ''),
+			COALESCE(ptp.pis_value::text, ''),
+			COALESCE(ptp.cofins_value::text, ''),
+			COALESCE(ptp.pis_rate::text, ''),
+			COALESCE(ptp.cofins_rate::text, ''),
+			COALESCE(ptp.icms_rate::text, ''),
+			COALESCE(ptp.icms_base_reduction::text, ''),
+			COALESCE(ptp.fcp_rate::text, ''),
+			COALESCE(ptp.icms_st_rate::text, ''),
+			COALESCE(ptp.cbenef, ''),
+
+			COALESCE(ptp.ibs_rate::text, ''),
+			COALESCE(ptp.cbs_rate::text, ''),
+			COALESCE(ptp.selective_tax_code, ''),
+			COALESCE(ptp.selective_tax_rate::text, ''),
+			COALESCE(ptp.operation_code, ''),
+			COALESCE(ptp.emitter_uf, ''),
+			COALESCE(ptp.recipient_uf, ''),
+			COALESCE(ptp.source_type, ''),
+			COALESCE(ptp.target_tax_regime, ''),
+			COALESCE(ptp.observed_tax_regime, ''),
+			COALESCE(ptp.target_crt, ''),
+			COALESCE(ptp.observed_crt, '')
+		FROM products p
+		INNER JOIN product_tax_profiles ptp ON ptp.product_id = p.id
+		WHERE ptp.ncm = $1
+		  AND (ptp.organization_id = $2::uuid OR ptp.organization_id IS NULL)
+		  AND (
+			COALESCE(NULLIF(ptp.operation_code, ''), '') = ''
+			OR LOWER(ptp.operation_code) = LOWER($3)
+		  )
+		  AND (
+			COALESCE(NULLIF(ptp.emitter_uf, ''), '') = ''
+			OR UPPER(ptp.emitter_uf) = UPPER($4)
+		  )
+		  AND (
+			COALESCE(NULLIF(ptp.recipient_uf, ''), '') = ''
+			OR UPPER(ptp.recipient_uf) = UPPER($5)
+		  )
+		  AND (
+			COALESCE(NULLIF(ptp.target_tax_regime, ''), '') = ''
+			OR LOWER(ptp.target_tax_regime) = LOWER($6)
+		  )
+		  AND (
+			COALESCE(NULLIF(ptp.target_crt, ''), '') = ''
+			OR ptp.target_crt = $7
+		  )
+		ORDER BY
+			CASE WHEN ptp.organization_id = $2::uuid THEN 0 ELSE 1 END,
+			CASE WHEN ptp.source_type = 'manual_entry' THEN 0 ELSE 1 END,
+			CASE
+				WHEN LOWER(COALESCE(ptp.operation_code, '')) = LOWER($3) AND $3 <> '' THEN 0
+				WHEN COALESCE(NULLIF(ptp.operation_code, ''), '') = '' THEN 1
+				ELSE 2
+			END,
+			CASE
+				WHEN UPPER(COALESCE(ptp.emitter_uf, '')) = UPPER($4) AND $4 <> '' THEN 0
+				WHEN COALESCE(NULLIF(ptp.emitter_uf, ''), '') = '' THEN 1
+				ELSE 2
+			END,
+			CASE
+				WHEN UPPER(COALESCE(ptp.recipient_uf, '')) = UPPER($5) AND $5 <> '' THEN 0
+				WHEN COALESCE(NULLIF(ptp.recipient_uf, ''), '') = '' THEN 1
+				ELSE 2
+			END,
+			CASE
+				WHEN LOWER(COALESCE(ptp.target_tax_regime, '')) = LOWER($6) AND $6 <> '' THEN 0
+				WHEN COALESCE(NULLIF(ptp.target_tax_regime, ''), '') = '' THEN 1
+				ELSE 2
+			END,
+			CASE
+				WHEN COALESCE(ptp.target_crt, '') = $7 AND $7 <> '' THEN 0
+				WHEN COALESCE(NULLIF(ptp.target_crt, ''), '') = '' THEN 1
+				ELSE 2
+			END,
+			ptp.confidence_score DESC,
+			ptp.created_at DESC
+		LIMIT 1
+	`
+
+	var item TaxMatch
+	err = r.db.QueryRow(ctx, query, normalizedNCMCode, organizationID, operationCode, emitterUF, recipientUF, taxRegime, targetCRT).Scan(
+		&item.ProductID,
+		&item.OrganizationID,
+		&item.ConfidenceScore,
+
+		&item.NCM,
+		&item.NCMEx,
+		&item.CEST,
+		&item.CClasTrib,
+		&item.CFOP,
+		&item.CSOSN,
+
+		&item.PISCST,
+		&item.COFINSCST,
+		&item.PISRevenueCode,
+		&item.COFINSRevenueCode,
+
+		&item.ICMSCST,
+		&item.ICMSValue,
+		&item.IPIValue,
+		&item.PISValue,
+		&item.COFINSValue,
+		&item.PISRate,
+		&item.COFINSRate,
+		&item.ICMSRate,
+		&item.ICMSBaseReduction,
+		&item.FCPRate,
+		&item.ICMSSTRate,
+		&item.CBenef,
+
+		&item.IBSRate,
+		&item.CBSRate,
+		&item.SelectiveTaxCode,
+		&item.SelectiveTaxRate,
+		&item.OperationCode,
+		&item.EmitterUF,
+		&item.RecipientUF,
+		&item.SourceType,
+		&item.TargetTaxRegime,
+		&item.ObservedTaxRegime,
+		&item.TargetCRT,
+		&item.ObservedCRT,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("find tax profile by ncm: %w", err)
+	}
+
+	return &item, nil
+}
+
 func (r *Repository) findByNCMCatalog(ctx context.Context, normalizedNCMCode string) (*TaxMatch, error) {
 	query := `
 		SELECT
@@ -718,9 +914,102 @@ func (r *Repository) findByNCMCatalog(ctx context.Context, normalizedNCMCode str
 	return &item, nil
 }
 
+func (r *Repository) FindSuggestedCEST(ctx context.Context, ncmCode string, currentCEST string) (*CESTMatch, error) {
+	currentCEST = normalizeCESTCode(currentCEST)
+	ncmCode = normalizeNCMCode(ncmCode)
+
+	if currentCEST != "" {
+		item, err := r.findCESTByCode(ctx, currentCEST)
+		if err == nil && item != nil {
+			item.ConfidenceScore = 0.96
+			return item, nil
+		}
+	}
+
+	if ncmCode == "" {
+		return nil, fmt.Errorf("ncm code is required to suggest cest")
+	}
+
+	query := `
+		SELECT
+			COALESCE(code, ''),
+			COALESCE(ncm_code, ''),
+			COALESCE(segment, ''),
+			COALESCE(description, ''),
+			COALESCE(legal_source, '')
+		FROM cest_catalog
+		WHERE is_active = TRUE
+		  AND (
+			ncm_code = $1
+			OR ncm_code LIKE ($1 || '%')
+			OR $1 LIKE (ncm_code || '%')
+		  )
+		ORDER BY
+			CASE
+				WHEN ncm_code = $1 THEN 0
+				WHEN ncm_code LIKE ($1 || '%') THEN 1
+				WHEN $1 LIKE (ncm_code || '%') THEN 2
+				ELSE 3
+			END,
+			code
+		LIMIT 1
+	`
+
+	var item CESTMatch
+	if err := r.db.QueryRow(ctx, query, ncmCode).Scan(
+		&item.Code,
+		&item.NCMCode,
+		&item.Segment,
+		&item.Description,
+		&item.LegalSource,
+	); err != nil {
+		return nil, fmt.Errorf("find cest by ncm: %w", err)
+	}
+
+	item.ConfidenceScore = 0.68
+	return &item, nil
+}
+
+func (r *Repository) findCESTByCode(ctx context.Context, code string) (*CESTMatch, error) {
+	query := `
+		SELECT
+			COALESCE(code, ''),
+			COALESCE(ncm_code, ''),
+			COALESCE(segment, ''),
+			COALESCE(description, ''),
+			COALESCE(legal_source, '')
+		FROM cest_catalog
+		WHERE code = $1
+		  AND is_active = TRUE
+		ORDER BY updated_at DESC
+		LIMIT 1
+	`
+
+	var item CESTMatch
+	if err := r.db.QueryRow(ctx, query, code).Scan(
+		&item.Code,
+		&item.NCMCode,
+		&item.Segment,
+		&item.Description,
+		&item.LegalSource,
+	); err != nil {
+		return nil, fmt.Errorf("find cest by code: %w", err)
+	}
+
+	return &item, nil
+}
+
 func normalizeNCMCode(value string) string {
 	value = strings.TrimSpace(value)
 	value = strings.ReplaceAll(value, ".", "")
+	value = strings.ReplaceAll(value, " ", "")
+	return value
+}
+
+func normalizeCESTCode(value string) string {
+	value = strings.TrimSpace(value)
+	value = strings.ReplaceAll(value, ".", "")
+	value = strings.ReplaceAll(value, "-", "")
 	value = strings.ReplaceAll(value, " ", "")
 	return value
 }
@@ -873,9 +1162,9 @@ func (r *Repository) findCFOPByHeuristics(ctx context.Context, operationName str
 func normalizeOperationDirection(value string) string {
 	value = strings.ToLower(strings.TrimSpace(value))
 	switch {
-	case strings.Contains(value, "entr"):
+	case strings.Contains(value, "entr"), strings.Contains(value, "inbound"):
 		return "entrada"
-	case strings.Contains(value, "exit"), strings.Contains(value, "sa"):
+	case strings.Contains(value, "exit"), strings.Contains(value, "sa"), strings.Contains(value, "outbound"):
 		return "saida"
 	default:
 		return ""

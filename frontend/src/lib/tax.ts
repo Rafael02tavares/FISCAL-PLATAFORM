@@ -15,6 +15,7 @@ export async function suggestTax(payload: {
   source_pis_rate?: string
   source_cofins_cst?: string
   source_cofins_rate?: string
+  source_cfop?: string
 }) {
   return apiFetch("/tax/suggest", {
     method: "POST",

@@ -20,10 +20,14 @@ const coverageBox = document.getElementById("catalog-coverage");
 const governanceBox = document.getElementById("catalog-governance");
 const summaryBox = document.getElementById("catalog-search-summary");
 const adminPanel = document.querySelector(".catalog-admin-panel") as HTMLDetailsElement | null;
+const quickFilterButtons = Array.from(document.querySelectorAll("[data-product-filter]")) as HTMLButtonElement[];
+const newProductButton = document.getElementById("new-product-button") as HTMLButtonElement | null;
 
 let items: CatalogProductItem[] = [];
 let organization: OrganizationItem | null = null;
 let lastQuery = "";
+let activeProductFilter = "all";
+let lastSavedProductId = "";
 const PRODUCT_PREFILL_KEY = "catalog_product_prefill";
 
 function normalizeText(value: unknown) {
@@ -53,6 +57,23 @@ function getTaxRegimeLabel() {
   if (taxRegime.includes("presum")) return "Lucro Presumido";
   if (taxRegime.includes("real")) return "Lucro Real";
   return normalizeText(organization?.tax_regime) || "Regime nao informado";
+}
+
+function getProductFilterLabel() {
+  switch (activeProductFilter) {
+    case "missing_ncm":
+      return "sem NCM";
+    case "missing_cest":
+      return "sem CEST";
+    case "missing_icms":
+      return "pendentes de ICMS";
+    case "missing_contributions":
+      return "sem PIS/COFINS";
+    case "missing_reform":
+      return "sem IBS/CBS";
+    default:
+      return "todos";
+  }
 }
 
 function isSimplesNacional() {
@@ -175,9 +196,9 @@ function renderSearchSummary(list: CatalogProductItem[]) {
 
   if (!query) {
     summaryBox.innerHTML = `
-      <strong>${items.length} produtos disponiveis para consulta</strong>
+      <strong>${list.length} de ${items.length} produtos disponiveis para consulta</strong>
       <span>
-        Contexto atual: ${escapeHtml(getTaxRegimeLabel())}.
+        Filtro atual: ${escapeHtml(getProductFilterLabel())}. Contexto: ${escapeHtml(getTaxRegimeLabel())}.
         Pesquise por descricao, GTIN, NCM, CEST, ${flowLabel} ou codigo interno para localizar o perfil fiscal.
       </span>
     `;
@@ -188,7 +209,7 @@ function renderSearchSummary(list: CatalogProductItem[]) {
     summaryBox.innerHTML = `
       <strong>Nenhum produto encontrado para "${escapeHtml(query)}"</strong>
       <span>
-        Tente buscar por um termo mais curto, GTIN, NCM, CEST, ${flowLabel} ou descricao parcial do item.
+        Filtro atual: ${escapeHtml(getProductFilterLabel())}. Tente buscar por um termo mais curto, GTIN, NCM, CEST, ${flowLabel} ou descricao parcial do item.
       </span>
     `;
     return;
@@ -197,7 +218,7 @@ function renderSearchSummary(list: CatalogProductItem[]) {
   summaryBox.innerHTML = `
     <strong>${list.length} resultado(s) para "${escapeHtml(query)}"</strong>
     <span>
-      Primeiro destaque: ${displayValue(highlighted?.description)} | NCM ${displayValue(profile.ncm)} | ${flowLabel} ${displayValue(flowValue)}.
+      Filtro atual: ${escapeHtml(getProductFilterLabel())}. Primeiro destaque: ${displayValue(highlighted?.description)} | NCM ${displayValue(profile.ncm)} | ${flowLabel} ${displayValue(flowValue)}.
     </span>
   `;
 }
@@ -211,13 +232,242 @@ function taxPill(label: string, value: unknown, tone = "teal") {
   `;
 }
 
+type ProductDiagnostic = {
+  area: string;
+  status: "ready" | "attention" | "missing";
+  title: string;
+  action: string;
+};
+
+function buildProductDiagnostics(item: CatalogProductItem): ProductDiagnostic[] {
+  const profile = item.profile || {};
+  const diagnostics: ProductDiagnostic[] = [];
+
+  if (hasValue(profile.ncm) && hasValue(profile.cest)) {
+    diagnostics.push({
+      area: "Classificacao",
+      status: "ready",
+      title: "NCM e CEST preenchidos",
+      action: "Base pronta para regras por produto e ICMS ST.",
+    });
+  } else if (hasValue(profile.ncm)) {
+    diagnostics.push({
+      area: "Classificacao",
+      status: "attention",
+      title: "CEST pendente",
+      action: "Revise CEST quando houver possibilidade de ICMS ST.",
+    });
+  } else {
+    diagnostics.push({
+      area: "Classificacao",
+      status: "missing",
+      title: "NCM ausente",
+      action: "Informe NCM para destravar a consulta tributaria.",
+    });
+  }
+
+  if (hasValue(profile.cfop) || hasValue(profile.csosn) || hasValue(profile.operation_code)) {
+    diagnostics.push({
+      area: "Operacao",
+      status: "ready",
+      title: "Fluxo fiscal informado",
+      action: "Operacao pronta para sugestao e simulacao.",
+    });
+  } else {
+    diagnostics.push({
+      area: "Operacao",
+      status: "missing",
+      title: "CFOP/operacao ausente",
+      action: "Vincule CFOP ou operacao padrao do produto.",
+    });
+  }
+
+  if (isSimplesNacional()) {
+    diagnostics.push(
+      hasValue(profile.csosn)
+        ? {
+            area: "ICMS",
+            status: "ready",
+            title: "CSOSN definido",
+            action: "Revise ST, FCP e beneficios quando aplicavel.",
+          }
+        : {
+            area: "ICMS",
+            status: "missing",
+            title: "CSOSN pendente",
+            action: "Preencha CSOSN para o regime Simples.",
+          },
+    );
+  } else if (hasValue(profile.icms_cst) && hasValue(profile.icms_rate)) {
+    diagnostics.push({
+      area: "ICMS",
+      status: "ready",
+      title: "CST e aliquota definidos",
+      action: "Revise reducao, FCP, ST e excecoes estaduais.",
+    });
+  } else if (hasValue(profile.icms_cst) || hasValue(profile.icms_rate) || hasValue(profile.fcp_rate)) {
+    diagnostics.push({
+      area: "ICMS",
+      status: "attention",
+      title: "ICMS parcial",
+      action: "Complete CST, aliquota e regras estaduais.",
+    });
+  } else {
+    diagnostics.push({
+      area: "ICMS",
+      status: "missing",
+      title: "ICMS ausente",
+      action: "Cadastre CST/aliquota de ICMS ou CSOSN.",
+    });
+  }
+
+  const hasContributionCST = hasValue(profile.pis_cst) && hasValue(profile.cofins_cst);
+  const hasContributionRates = hasValue(profile.pis_rate) && hasValue(profile.cofins_rate);
+  if (hasContributionCST && hasContributionRates) {
+    diagnostics.push({
+      area: "PIS/COFINS",
+      status: "ready",
+      title: "Contribuicoes completas",
+      action: "Valide receitas e excecoes monofasicas.",
+    });
+  } else if (hasContributionCST || hasContributionRates) {
+    diagnostics.push({
+      area: "PIS/COFINS",
+      status: "attention",
+      title: "Contribuicoes parciais",
+      action: "Complete CST e aliquotas por regime.",
+    });
+  } else {
+    diagnostics.push({
+      area: "PIS/COFINS",
+      status: "missing",
+      title: "Contribuicoes ausentes",
+      action: "Cadastre PIS/COFINS para consulta completa.",
+    });
+  }
+
+  if (hasValue(profile.cclas_trib) && (hasValue(profile.ibs_rate) || hasValue(profile.cbs_rate))) {
+    diagnostics.push({
+      area: "Reforma",
+      status: "ready",
+      title: "IBS/CBS preparados",
+      action: "Revise vigencia e regras transitorias.",
+    });
+  } else if (hasValue(profile.cclas_trib) || hasValue(profile.ibs_rate) || hasValue(profile.cbs_rate)) {
+    diagnostics.push({
+      area: "Reforma",
+      status: "attention",
+      title: "Reforma parcial",
+      action: "Complete cClasTrib, IBS e CBS.",
+    });
+  } else {
+    diagnostics.push({
+      area: "Reforma",
+      status: "missing",
+      title: "IBS/CBS ausentes",
+      action: "Alimente os dados da reforma tributaria.",
+    });
+  }
+
+  return diagnostics;
+}
+
+function diagnosticLabel(status: ProductDiagnostic["status"]) {
+  if (status === "ready") return "Pronto";
+  if (status === "missing") return "Pendente";
+  return "Atencao";
+}
+
+function renderProductDiagnostics(item: CatalogProductItem) {
+  const diagnostics = buildProductDiagnostics(item);
+  const ready = diagnostics.filter((entry) => entry.status === "ready").length;
+  const attention = diagnostics.filter((entry) => entry.status === "attention").length;
+  const missing = diagnostics.filter((entry) => entry.status === "missing").length;
+  const score = Math.round((ready / diagnostics.length) * 100);
+
+  return `
+    <section class="product-diagnostic">
+      <div class="product-diagnostic__header">
+        <div>
+          <span>Cobertura fiscal</span>
+          <strong>${score}% completo</strong>
+        </div>
+        <div class="product-diagnostic__counts">
+          <span>${ready} prontos</span>
+          <span>${attention} atencao</span>
+          <span>${missing} pendentes</span>
+        </div>
+      </div>
+      <div class="product-diagnostic__bar">
+        <div style="width:${score}%"></div>
+      </div>
+      <div class="product-diagnostic__grid">
+        ${diagnostics
+          .map(
+            (entry) => `
+              <article class="product-diagnostic-card product-diagnostic-card--${entry.status}">
+                <div>
+                  <span>${escapeHtml(entry.area)}</span>
+                  <strong>${diagnosticLabel(entry.status)}</strong>
+                </div>
+                <h5>${escapeHtml(entry.title)}</h5>
+                <p>${escapeHtml(entry.action)}</p>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function productMatchesQuickFilter(item: CatalogProductItem) {
+  const profile = item.profile || {};
+  switch (activeProductFilter) {
+    case "missing_ncm":
+      return !hasValue(profile.ncm);
+    case "missing_cest":
+      return hasValue(profile.ncm) && !hasValue(profile.cest);
+    case "missing_icms":
+      return isSimplesNacional()
+        ? !hasValue(profile.csosn)
+        : !(hasValue(profile.icms_cst) && hasValue(profile.icms_rate));
+    case "missing_contributions":
+      return !(hasValue(profile.pis_cst) && hasValue(profile.cofins_cst) && hasValue(profile.pis_rate) && hasValue(profile.cofins_rate));
+    case "missing_reform":
+      return !(hasValue(profile.cclas_trib) && (hasValue(profile.ibs_rate) || hasValue(profile.cbs_rate)));
+    default:
+      return true;
+  }
+}
+
+function productMatchesTextFilter(item: CatalogProductItem, query: string) {
+  if (!query) return true;
+
+  return [
+    item.product_code,
+    item.gtin,
+    item.description,
+    item.profile?.ncm,
+    item.profile?.ncm_ex,
+    item.profile?.cest,
+    item.profile?.cfop,
+    item.profile?.csosn,
+    item.profile?.cclas_trib,
+  ]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(query));
+}
+
 function buildProductCard(item: CatalogProductItem) {
   const profile = item.profile || {};
   const flowLabel = isSimplesNacional() ? "CSOSN" : "CFOP";
   const flowValue = isSimplesNacional() ? profile.csosn : profile.cfop;
+  const editPayload = escapeHtml(JSON.stringify(buildProductEditPayload(item)));
+  const highlightClass = item.id === lastSavedProductId ? " product-card--saved" : "";
 
   return `
-    <article class="product-card">
+    <article class="product-card${highlightClass}" data-product-id="${escapeHtml(item.id)}">
       <div class="product-card__top">
         <div>
           <span class="product-chip">${displayValue(item.product_code, "Sem codigo")}</span>
@@ -251,10 +501,59 @@ function buildProductCard(item: CatalogProductItem) {
       <div class="product-card__footer">
         <span>Operacao: ${displayValue(profile.operation_code)}</span>
         <span>UF: ${displayValue(profile.emitter_uf, "--")} -> ${displayValue(profile.recipient_uf, "--")}</span>
+        <span>Regime alvo: ${displayValue(profile.target_tax_regime || getTaxRegimeLabel())}</span>
+        <span>CRT: ${displayValue(profile.target_crt)}</span>
         <span>Confianca: ${hasValue(profile.confidence_score) ? escapeHtml(profile.confidence_score) : "0.99"}</span>
+        <button class="product-edit-button" type="button" data-product-edit="${editPayload}">Completar cadastro</button>
       </div>
+
+      ${renderProductDiagnostics(item)}
     </article>
   `;
+}
+
+function buildProductEditPayload(item: CatalogProductItem) {
+  const profile = item.profile || {};
+  return {
+    product_id: item.id,
+    product_code: item.product_code || "",
+    gtin: item.gtin || "",
+    description: item.description || "",
+    ncm: profile.ncm || "",
+    ncm_ex: profile.ncm_ex || "",
+    cest: profile.cest || "",
+    cclas_trib: profile.cclas_trib || "",
+    cfop: profile.cfop || "",
+    csosn: profile.csosn || "",
+    icms_cst: profile.icms_cst || "",
+    pis_cst: profile.pis_cst || "",
+    cofins_cst: profile.cofins_cst || "",
+    pis_revenue_code: profile.pis_revenue_code || "",
+    cofins_revenue_code: profile.cofins_revenue_code || "",
+    cbenef: profile.cbenef || "",
+    icms_value: profile.icms_value || "",
+    ipi_value: profile.ipi_value || "",
+    pis_value: profile.pis_value || "",
+    cofins_value: profile.cofins_value || "",
+    pis_rate: profile.pis_rate || "",
+    cofins_rate: profile.cofins_rate || "",
+    icms_rate: profile.icms_rate || "",
+    icms_base_reduction: profile.icms_base_reduction || "",
+    fcp_rate: profile.fcp_rate || "",
+    icms_st_rate: profile.icms_st_rate || "",
+    ibs_rate: profile.ibs_rate || "",
+    cbs_rate: profile.cbs_rate || "",
+    selective_tax_code: profile.selective_tax_code || "",
+    selective_tax_rate: profile.selective_tax_rate || "",
+    operation_code: profile.operation_code || "sale_consumer_final",
+    emitter_uf: profile.emitter_uf || "",
+    recipient_uf: profile.recipient_uf || "",
+    operation_nature: profile.operation_nature || "",
+    target_tax_regime: profile.target_tax_regime || "",
+    observed_tax_regime: profile.observed_tax_regime || "",
+    target_crt: profile.target_crt || "",
+    observed_crt: profile.observed_crt || "",
+  };
 }
 
 function renderProducts(list: CatalogProductItem[]) {
@@ -276,34 +575,70 @@ function renderProducts(list: CatalogProductItem[]) {
   }
 
   result.innerHTML = `<div class="catalog-products-list">${list.map(buildProductCard).join("")}</div>`;
+  wireProductEditButtons();
+}
+
+function wireProductEditButtons() {
+  const buttons = Array.from(document.querySelectorAll("[data-product-edit]")) as HTMLButtonElement[];
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const raw = button.dataset.productEdit || "{}";
+      try {
+        const payload = JSON.parse(raw) as Record<string, string>;
+        fillProductForm(payload);
+      } catch {
+        setMessage("Nao foi possivel carregar os dados do produto para edicao.", "error");
+      }
+    });
+  });
+}
+
+function fillProductForm(payload: Record<string, string>) {
+  if (!form) return;
+
+  Object.entries(payload).forEach(([key, value]) => {
+    const field = form.elements.namedItem(key);
+    if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) {
+      field.value = String(value || "");
+    }
+  });
+
+  if (adminPanel) {
+    adminPanel.open = true;
+  }
+
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+  setMessage("Produto carregado para complementar o cadastro fiscal. Ao salvar, o perfil manual sera priorizado.", "success");
+}
+
+function startNewProduct() {
+  if (!form) return;
+
+  form.reset();
+  lastSavedProductId = "";
+  if (adminPanel) {
+    adminPanel.open = true;
+  }
+
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+  setMessage("Formulario limpo para cadastrar um novo produto fiscal.", "muted");
 }
 
 function applyFilter() {
   const query = normalizeText(filterInput?.value).toLowerCase();
-  if (!query) {
-    renderSearchSummary(items);
-    renderProducts(items);
-    return;
-  }
-
-  const filtered = items.filter((item) =>
-    [
-      item.product_code,
-      item.gtin,
-      item.description,
-      item.profile?.ncm,
-      item.profile?.ncm_ex,
-      item.profile?.cest,
-      item.profile?.cfop,
-      item.profile?.csosn,
-      item.profile?.cclas_trib,
-    ]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(query)),
-  );
+  const filtered = items.filter((item) => productMatchesQuickFilter(item) && productMatchesTextFilter(item, query));
 
   renderSearchSummary(filtered);
   renderProducts(filtered);
+}
+
+function setActiveQuickFilter(filter: string) {
+  activeProductFilter = filter || "all";
+  quickFilterButtons.forEach((button) => {
+    const isActive = button.dataset.productFilter === activeProductFilter;
+    button.classList.toggle("quick-chip--active", isActive);
+  });
+  applyFilter();
 }
 
 async function handleSearchSubmit(event: SubmitEvent) {
@@ -364,6 +699,12 @@ function buildPayload(formData: FormData) {
 
   normalized.emitter_uf = normalized.emitter_uf.toUpperCase();
   normalized.recipient_uf = normalized.recipient_uf.toUpperCase();
+  if (!normalized.target_tax_regime && organization?.tax_regime) {
+    normalized.target_tax_regime = normalizeText(organization.tax_regime);
+  }
+  if (!normalized.target_crt && organization?.crt) {
+    normalized.target_crt = normalizeText(organization.crt);
+  }
   return normalized;
 }
 
@@ -431,17 +772,39 @@ async function handleSubmit(event: SubmitEvent) {
 
   try {
     setMessage("Salvando produto tributario...", "success");
-    const response = await saveCatalogProduct(buildPayload(new FormData(form)));
+    const payload = buildPayload(new FormData(form));
+    const response = await saveCatalogProduct(payload);
     items = Array.isArray(response?.items) ? response.items : [];
+    lastSavedProductId = String(response?.product_id || payload.product_id || "");
+    if (!lastSavedProductId) {
+      const savedDescription = normalizeText(payload.description).toLowerCase();
+      const savedGTIN = normalizeText(payload.gtin);
+      const savedProduct = items.find((item) => {
+        const sameGTIN = savedGTIN && normalizeText(item.gtin) === savedGTIN;
+        const sameDescription = savedDescription && normalizeText(item.description).toLowerCase() === savedDescription;
+        return Boolean(sameGTIN || sameDescription);
+      });
+      lastSavedProductId = savedProduct?.id || "";
+    }
     renderStats();
     renderCoverage();
     renderGovernance();
     if (filterInput) {
-      filterInput.value = lastQuery;
+      filterInput.value = normalizeText(payload.description) || lastQuery;
     }
+    activeProductFilter = "all";
+    quickFilterButtons.forEach((button) => {
+      button.classList.toggle("quick-chip--active", button.dataset.productFilter === "all");
+    });
     applyFilter();
     form.reset();
     setMessage(response?.message || "Produto tributario salvo com sucesso.", "success");
+    if (lastSavedProductId) {
+      setTimeout(() => {
+        const savedCard = document.querySelector(`[data-product-id="${CSS.escape(lastSavedProductId)}"]`);
+        savedCard?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 80);
+    }
   } catch (error) {
     setMessage(`Falha ao salvar produto: ${String(error)}`, "error");
   }
@@ -501,5 +864,11 @@ searchForm?.addEventListener("submit", (event) => {
 form?.addEventListener("submit", (event) => {
   void handleSubmit(event as SubmitEvent);
 });
+quickFilterButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setActiveQuickFilter(button.dataset.productFilter || "all");
+  });
+});
+newProductButton?.addEventListener("click", startNewProduct);
 
 void initialize();

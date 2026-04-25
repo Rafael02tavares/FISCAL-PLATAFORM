@@ -57,6 +57,8 @@ func (s *Service) AcceptCandidate(ctx context.Context, organizationID, invoiceIt
 		return errors.New("o item da nota nao possui informacoes tributarias suficientes para captura")
 	}
 
+	operationCode := inferOperationCodeFromCFOP(item.CFOP)
+
 	err = s.catalogService.RegisterObservedItem(ctx, catalog.RegisterObservedItemParams{
 		OrganizationID:    organizationID,
 		SourceInvoiceID:   item.InvoiceID,
@@ -81,7 +83,7 @@ func (s *Service) AcceptCandidate(ctx context.Context, organizationID, invoiceIt
 		ICMSRate:          item.ICMSRate,
 		IBSRate:           "",
 		CBSRate:           "",
-		OperationCode:     "",
+		OperationCode:     operationCode,
 		EmitterUF:         strings.ToUpper(strings.TrimSpace(item.EmitterUF)),
 		RecipientUF:       strings.ToUpper(strings.TrimSpace(item.RecipientUF)),
 		OperationNature:   item.OperationNature,
@@ -99,14 +101,14 @@ func (s *Service) AcceptCandidate(ctx context.Context, organizationID, invoiceIt
 		return nil
 	}
 
-	if err := s.integrateIntoLegalRules(ctx, item, strings.TrimSpace(targetTaxRegime)); err != nil {
+	if err := s.integrateIntoLegalRules(ctx, item, strings.TrimSpace(targetTaxRegime), operationCode); err != nil {
 		return fmt.Errorf("integrate observed rule into legal rules: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Service) integrateIntoLegalRules(ctx context.Context, item *Candidate, targetTaxRegime string) error {
+func (s *Service) integrateIntoLegalRules(ctx context.Context, item *Candidate, targetTaxRegime string, operationCode string) error {
 	title := fmt.Sprintf("Regra observada NF %s serie %s item %d", item.InvoiceNumber, item.InvoiceSeries, item.ItemNumber)
 	description := fmt.Sprintf(
 		"Regra capturada automaticamente da nota fiscal para o produto %s. Emitente %s -> destino %s.",
@@ -143,6 +145,7 @@ func (s *Service) integrateIntoLegalRules(ctx context.Context, item *Candidate, 
 
 		mappings = append(mappings, legalbasis.CreateLegalRuleMappingParams{
 			LegalSourceID:  legalSourceID,
+			OperationCode:  operationCode,
 			TaxType:        "ncm",
 			TaxRegime:      targetTaxRegime,
 			NCMCode:        strings.TrimSpace(item.NCM),
@@ -170,6 +173,7 @@ func (s *Service) integrateIntoLegalRules(ctx context.Context, item *Candidate, 
 
 		mappings = append(mappings, legalbasis.CreateLegalRuleMappingParams{
 			LegalSourceID:  legalSourceID,
+			OperationCode:  operationCode,
 			TaxType:        "icms",
 			TaxRegime:      targetTaxRegime,
 			NCMCode:        strings.TrimSpace(item.NCM),
@@ -197,6 +201,7 @@ func (s *Service) integrateIntoLegalRules(ctx context.Context, item *Candidate, 
 
 		mappings = append(mappings, legalbasis.CreateLegalRuleMappingParams{
 			LegalSourceID:  legalSourceID,
+			OperationCode:  operationCode,
 			TaxType:        "pis",
 			TaxRegime:      targetTaxRegime,
 			NCMCode:        strings.TrimSpace(item.NCM),
@@ -223,6 +228,7 @@ func (s *Service) integrateIntoLegalRules(ctx context.Context, item *Candidate, 
 
 		mappings = append(mappings, legalbasis.CreateLegalRuleMappingParams{
 			LegalSourceID:  legalSourceID,
+			OperationCode:  operationCode,
 			TaxType:        "cofins",
 			TaxRegime:      targetTaxRegime,
 			NCMCode:        strings.TrimSpace(item.NCM),
@@ -245,6 +251,31 @@ func (s *Service) integrateIntoLegalRules(ctx context.Context, item *Candidate, 
 	}
 
 	return nil
+}
+
+func inferOperationCodeFromCFOP(cfop string) string {
+	switch onlyDigits(cfop) {
+	case "5403", "5405":
+		return "sale_st_internal"
+	case "6403", "6404":
+		return "sale_st_interstate"
+	case "5101", "5102":
+		return "sale_consumer_final"
+	case "6101", "6102":
+		return "sale_interstate"
+	default:
+		return ""
+	}
+}
+
+func onlyDigits(value string) string {
+	var builder strings.Builder
+	for _, char := range value {
+		if char >= '0' && char <= '9' {
+			builder.WriteRune(char)
+		}
+	}
+	return builder.String()
 }
 
 func marshalValueContent(payload map[string]string) (string, error) {

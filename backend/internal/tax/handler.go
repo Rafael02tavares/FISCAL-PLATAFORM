@@ -116,6 +116,7 @@ func (r *SuggestRequest) normalize() {
 	r.SourcePISRate = strings.TrimSpace(r.SourcePISRate)
 	r.SourceCOFINSCST = strings.TrimSpace(r.SourceCOFINSCST)
 	r.SourceCOFINSRate = strings.TrimSpace(r.SourceCOFINSRate)
+	r.SourceCFOP = strings.TrimSpace(r.SourceCFOP)
 }
 
 func (r *SuggestRequest) validate() error {

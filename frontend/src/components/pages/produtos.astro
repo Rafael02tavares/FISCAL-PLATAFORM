@@ -96,10 +96,12 @@ import produtosScript from "../../scripts/produtos.ts?url";
         </form>
 
         <div class="consultation-quick-actions">
-          <span class="quick-chip">Descricao do item</span>
-          <span class="quick-chip">Codigo de barras / GTIN</span>
-          <span class="quick-chip">NCM e NCM EX</span>
-          <span class="quick-chip">CFOP ou CSOSN</span>
+          <button class="quick-chip quick-chip--active" type="button" data-product-filter="all">Todos</button>
+          <button class="quick-chip" type="button" data-product-filter="missing_ncm">Sem NCM</button>
+          <button class="quick-chip" type="button" data-product-filter="missing_cest">Sem CEST</button>
+          <button class="quick-chip" type="button" data-product-filter="missing_icms">Pendentes de ICMS</button>
+          <button class="quick-chip" type="button" data-product-filter="missing_contributions">Sem PIS/COFINS</button>
+          <button class="quick-chip" type="button" data-product-filter="missing_reform">Sem IBS/CBS</button>
         </div>
 
         <div id="catalog-search-summary" class="consultation-summary">
@@ -164,6 +166,8 @@ import produtosScript from "../../scripts/produtos.ts?url";
         </summary>
 
         <form id="catalog-product-form" class="catalog-form">
+          <input name="product_id" type="hidden" />
+
           <label>
             Codigo interno
             <input name="product_code" type="text" placeholder="SKU-001" />
@@ -311,7 +315,7 @@ import produtosScript from "../../scripts/produtos.ts?url";
 
           <label>
             Operacao
-            <input name="operation_code" type="text" placeholder="VENDA_ESTADUAL" />
+            <input name="operation_code" type="text" placeholder="sale_consumer_final" />
           </label>
 
           <label>
@@ -329,8 +333,29 @@ import produtosScript from "../../scripts/produtos.ts?url";
             <input name="operation_nature" type="text" placeholder="Venda para contribuinte" />
           </label>
 
+          <label>
+            Regime alvo
+            <select name="target_tax_regime">
+              <option value="">Usar regime da organizacao</option>
+              <option value="lucro_real">Lucro Real</option>
+              <option value="lucro_presumido">Lucro Presumido</option>
+              <option value="simples_nacional">Simples Nacional</option>
+            </select>
+          </label>
+
+          <label>
+            CRT alvo
+            <select name="target_crt">
+              <option value="">Automatico</option>
+              <option value="1">1 - Simples Nacional</option>
+              <option value="2">2 - Simples excesso sublimite</option>
+              <option value="3">3 - Regime Normal</option>
+            </select>
+          </label>
+
           <div class="form-actions full-width">
             <button class="primary-button" type="submit">Salvar produto tributario</button>
+            <button id="new-product-button" class="secondary-button" type="button">Novo produto</button>
             <p class="form-hint">O cadastro fica disponivel para sugestao fiscal e simulacao sem depender da nota original.</p>
           </div>
         </form>
@@ -554,6 +579,7 @@ import produtosScript from "../../scripts/produtos.ts?url";
 
     .quick-chip {
       display: inline-flex;
+      appearance: none;
       padding: 8px 12px;
       border-radius: 999px;
       background: #f8fafc;
@@ -561,6 +587,23 @@ import produtosScript from "../../scripts/produtos.ts?url";
       color: #334155;
       font-size: 13px;
       font-weight: 700;
+      cursor: pointer;
+      transition:
+        transform 150ms ease,
+        border-color 150ms ease,
+        background 150ms ease;
+    }
+
+    .quick-chip:hover {
+      transform: translateY(-1px);
+      border-color: #0ea5e9;
+    }
+
+    .quick-chip--active {
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+      border-color: transparent;
+      color: white;
+      box-shadow: 0 12px 24px rgba(15, 118, 110, 0.18);
     }
 
     .consultation-summary {
@@ -599,6 +642,22 @@ import produtosScript from "../../scripts/produtos.ts?url";
       padding: 12px 18px;
       cursor: pointer;
       box-shadow: 0 16px 30px rgba(15, 118, 110, 0.18);
+    }
+
+    .secondary-button {
+      border: 1px solid #cbd5e1;
+      border-radius: 14px;
+      background: white;
+      color: #0f172a;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 800;
+      padding: 12px 18px;
+    }
+
+    .secondary-button:hover {
+      border-color: #0ea5e9;
+      background: #f8fafc;
     }
 
     .primary-button--ghost {
@@ -677,6 +736,23 @@ import produtosScript from "../../scripts/produtos.ts?url";
         linear-gradient(180deg, #ffffff, #f8fafc);
     }
 
+    .product-card--saved {
+      border-color: #14b8a6;
+      box-shadow:
+        0 0 0 3px rgba(20, 184, 166, 0.12),
+        0 24px 50px rgba(15, 118, 110, 0.16);
+      animation: savedPulse 1200ms ease;
+    }
+
+    @keyframes savedPulse {
+      0% {
+        transform: translateY(-2px);
+      }
+      100% {
+        transform: translateY(0);
+      }
+    }
+
     .catalog-admin-panel {
       overflow: hidden;
     }
@@ -724,6 +800,22 @@ import produtosScript from "../../scripts/produtos.ts?url";
       gap: 12px;
       flex-wrap: wrap;
       align-items: start;
+    }
+
+    .product-edit-button {
+      border: 1px solid #0ea5e9;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #075985;
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 8px 12px;
+    }
+
+    .product-edit-button:hover {
+      background: #dbeafe;
     }
 
     .product-card__top h4 {
@@ -777,9 +869,134 @@ import produtosScript from "../../scripts/produtos.ts?url";
     .tax-pill--sky { background: #eff6ff; }
     .tax-pill--rose { background: #fff1f2; }
 
+    .product-diagnostic {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid #cbd5e1;
+      background:
+        radial-gradient(circle at top right, rgba(20, 184, 166, 0.12), transparent 32%),
+        linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .product-diagnostic__header {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: start;
+      flex-wrap: wrap;
+    }
+
+    .product-diagnostic__header span,
+    .product-diagnostic-card span {
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .product-diagnostic__header strong {
+      display: block;
+      margin-top: 4px;
+      color: #0f172a;
+      font-size: 22px;
+    }
+
+    .product-diagnostic__counts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .product-diagnostic__counts span {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #334155;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .product-diagnostic__bar {
+      height: 10px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+
+    .product-diagnostic__bar div {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+    }
+
+    .product-diagnostic__grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .product-diagnostic-card {
+      display: grid;
+      gap: 6px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+    }
+
+    .product-diagnostic-card--ready {
+      border-color: #99f6e4;
+      background: linear-gradient(180deg, #f0fdfa, #ffffff);
+    }
+
+    .product-diagnostic-card--attention {
+      border-color: #fde68a;
+      background: linear-gradient(180deg, #fffbeb, #ffffff);
+    }
+
+    .product-diagnostic-card--missing {
+      border-color: #fecdd3;
+      background: linear-gradient(180deg, #fff1f2, #ffffff);
+    }
+
+    .product-diagnostic-card div {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .product-diagnostic-card div strong {
+      color: #0f172a;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .product-diagnostic-card h5,
+    .product-diagnostic-card p {
+      margin: 0;
+    }
+
+    .product-diagnostic-card h5 {
+      color: #0f172a;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .product-diagnostic-card p {
+      color: #475569;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
     @media (max-width: 1200px) {
       .catalog-form,
-      .catalog-field-grid {
+      .catalog-field-grid,
+      .product-diagnostic__grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
@@ -794,6 +1011,7 @@ import produtosScript from "../../scripts/produtos.ts?url";
     @media (max-width: 720px) {
       .catalog-form,
       .catalog-field-grid,
+      .product-diagnostic__grid,
       .insight-card__grid {
         grid-template-columns: 1fr;
       }

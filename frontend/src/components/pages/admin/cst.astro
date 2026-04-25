@@ -208,6 +208,96 @@ import adminCSTScript from "../../../scripts/admin-cst.ts?url";
     </section>
   </div>
 
+  <section class="card card--padded cst-reference-card">
+    <div class="section-heading section-heading--tight">
+      <div>
+        <span class="section-heading__eyebrow">Referencia rapida</span>
+        <h3>CST ICMS e CSOSN mais usados</h3>
+      </div>
+      <a class="secondary-link" href="https://cdmcontabilidade.com.br/tabela-cst-icms/" target="_blank" rel="noreferrer">
+        Ver referencia externa
+      </a>
+    </div>
+
+    <div class="cst-reference-grid">
+      <article>
+        <h4>CST ICMS - regime normal</h4>
+        <p><strong>Origem</strong> 1o digito: 0 nacional, 1 importacao direta, 2 adquirida no mercado interno, 3-8 variacoes de origem/conteudo importado.</p>
+        <p><strong>00</strong> Tributada integralmente</p>
+        <p><strong>10</strong> Tributada e com cobranca de ICMS ST</p>
+        <p><strong>20</strong> Com reducao de base de calculo</p>
+        <p><strong>40/41</strong> Isenta ou nao tributada</p>
+        <p><strong>51</strong> Diferimento</p>
+        <p><strong>60</strong> ICMS cobrado anteriormente por ST</p>
+        <p><strong>70</strong> Reducao de base com ICMS ST</p>
+        <p><strong>90</strong> Outras</p>
+      </article>
+
+      <article>
+        <h4>CSOSN - Simples Nacional</h4>
+        <p><strong>CRT 1</strong> Empresas do Simples usam CSOSN, nao CST ICMS de regime normal.</p>
+        <p><strong>101</strong> Tributada com permissao de credito</p>
+        <p><strong>102</strong> Tributada sem permissao de credito</p>
+        <p><strong>201/202/203</strong> Operacoes com ICMS ST</p>
+        <p><strong>300</strong> Imune</p>
+        <p><strong>400</strong> Nao tributada pelo Simples</p>
+        <p><strong>500</strong> ICMS cobrado anteriormente por ST ou antecipacao</p>
+        <p><strong>900</strong> Outros</p>
+      </article>
+
+      <article>
+        <h4>CST PIS/COFINS - saidas</h4>
+        <p><strong>01</strong> Operacao tributavel com aliquota basica</p>
+        <p><strong>02</strong> Operacao tributavel com aliquota diferenciada</p>
+        <p><strong>03</strong> Tributavel por unidade de medida</p>
+        <p><strong>04</strong> Monofasica - revenda a aliquota zero</p>
+        <p><strong>05</strong> Tributavel por substituicao tributaria</p>
+        <p><strong>06/07/08/09</strong> Aliquota zero, isenta, sem incidencia ou suspensao</p>
+        <p><strong>49</strong> Outras operacoes de saida</p>
+      </article>
+
+      <article>
+        <h4>PIS/COFINS por regime</h4>
+        <p><strong>Cumulativo</strong> Lucro Presumido geralmente usa 01 para saidas tributadas, com aliquotas usuais 0,65% e 3%.</p>
+        <p><strong>Nao cumulativo</strong> Lucro Real usa 01/02/03 em vendas e 50-56 nas entradas com credito.</p>
+        <p><strong>Simples</strong> Em geral usa CST 99 para PIS/COFINS como classificacao operacional.</p>
+        <p><strong>Monofasico</strong> CST 04 indica revenda monofasica/alíquota zero conforme produto.</p>
+      </article>
+
+      <article>
+        <h4>CST PIS/COFINS - entradas</h4>
+        <p><strong>50-56</strong> Operacoes com direito a credito</p>
+        <p><strong>60-67</strong> Credito presumido</p>
+        <p><strong>70</strong> Aquisicao sem direito a credito</p>
+        <p><strong>71-74</strong> Isencao, suspensao, aliquota zero ou sem incidencia</p>
+        <p><strong>75</strong> Aquisicao por substituicao tributaria</p>
+        <p><strong>98/99</strong> Outras operacoes de entrada ou outras operacoes</p>
+      </article>
+
+      <article>
+        <h4>CST IPI - entradas</h4>
+        <p><strong>00</strong> Entrada com recuperacao de credito</p>
+        <p><strong>01</strong> Entrada tributavel com aliquota zero</p>
+        <p><strong>02</strong> Entrada isenta</p>
+        <p><strong>03</strong> Entrada nao tributada</p>
+        <p><strong>04</strong> Entrada imune</p>
+        <p><strong>05</strong> Entrada com suspensao</p>
+        <p><strong>49</strong> Outras entradas</p>
+      </article>
+
+      <article>
+        <h4>CST IPI - saidas</h4>
+        <p><strong>50</strong> Saida tributada</p>
+        <p><strong>51</strong> Saida tributavel com aliquota zero</p>
+        <p><strong>52</strong> Saida isenta</p>
+        <p><strong>53</strong> Saida nao tributada</p>
+        <p><strong>54</strong> Saida imune</p>
+        <p><strong>55</strong> Saida com suspensao</p>
+        <p><strong>99</strong> Outras saidas</p>
+      </article>
+    </div>
+  </section>
+
   <script type="module" src={adminCSTScript}></script>
 
   <style>
@@ -326,6 +416,46 @@ import adminCSTScript from "../../../scripts/admin-cst.ts?url";
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
+    }
+
+    .cst-reference-card {
+      margin-top: 18px;
+    }
+
+    .cst-reference-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .cst-reference-grid article {
+      border: 1px solid #dbe4ee;
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .cst-reference-grid h4 {
+      margin: 0 0 12px;
+      color: #0f172a;
+    }
+
+    .cst-reference-grid p {
+      display: flex;
+      gap: 10px;
+      margin: 0;
+      padding: 9px 0;
+      border-bottom: 1px dashed #dbe4ee;
+      color: #475569;
+    }
+
+    .cst-reference-grid p:last-child {
+      border-bottom: none;
+    }
+
+    .cst-reference-grid strong {
+      min-width: 58px;
+      color: #0f766e;
     }
 
     .cst-form label {
@@ -532,6 +662,7 @@ import adminCSTScript from "../../../scripts/admin-cst.ts?url";
     @media (max-width: 720px) {
       .cst-form,
       .cst-stats,
+      .cst-reference-grid,
       .rule-card__grid {
         grid-template-columns: 1fr;
       }

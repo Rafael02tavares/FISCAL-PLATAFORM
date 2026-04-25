@@ -8,114 +8,126 @@ type NavItem = {
 };
 
 type NavSection = {
-  kicker: string;
   title: string;
-  description: string;
   adminOnly?: boolean;
-  tone?: "default" | "accent";
   items: NavItem[];
 };
 
+const workspaces = [
+  { href: "/", label: "Cliente", description: "consulta e operacao", adminOnly: false },
+  { href: "/admin", label: "Fiscal Lab", description: "engenharia e governanca", adminOnly: true },
+];
+
 const sections: NavSection[] = [
   {
-    kicker: "Fluxo 1",
-    title: "Consulta operacional",
-    description: "Area do usuario final para consultar tributos, importar notas e revisar a memoria fiscal aplicada.",
+    title: "Consulta",
     items: [
-      { href: "/", label: "Painel de consulta" },
-      { href: "/simulacao", label: "Consultar tributos" },
-      { href: "/produtos", label: "Consulta de produtos" },
+      { href: "/", label: "Dashboard" },
+      { href: "/simulacao", label: "Simulacao tributaria" },
+      { href: "/produtos", label: "Produtos" },
+      { href: "/invoices", label: "Notas fiscais" },
       { href: "/importacoes", label: "Importacoes" },
-      { href: "/invoices", label: "Notas" },
+    ],
+  },
+  {
+    title: "Base fiscal",
+    items: [
+      { href: "/ncm", label: "NCM" },
+      { href: "/cest", label: "CEST" },
+      { href: "/cfop", label: "CFOP" },
       { href: "/organizations", label: "Empresa ativa" },
     ],
   },
   {
-    kicker: "Apoio de consulta",
-    title: "Tabelas consultaveis",
-    description: "Bases abertas para consulta tecnica rapida quando for preciso confirmar classificacoes e codigos.",
-    items: [
-      { href: "/ncm", label: "NCM" },
-      { href: "/cfop", label: "CFOP" },
-    ],
-  },
-  {
-    kicker: "Fluxo 2",
-    title: "Engenharia fiscal",
-    description: "Cadastre tributos por blocos isolados, componha regras e governe o motor sem misturar tudo na mesma tela.",
+    title: "Tributos",
     adminOnly: true,
-    tone: "accent",
     items: [
       { href: "/admin", label: "Matriz fiscal", adminOnly: true },
       { href: "/admin/icms", label: "ICMS", adminOnly: true },
       { href: "/admin/pis-cofins", label: "PIS e COFINS", adminOnly: true },
       { href: "/admin/reforma", label: "IBS, CBS e cClasTrib", adminOnly: true },
-      { href: "/admin/capture-rules", label: "Triagem de regras", adminOnly: true },
-      { href: "/admin/cst", label: "CST e enquadramentos", adminOnly: true },
-      { href: "/admin/icms-partilha", label: "Partilha de ICMS", adminOnly: true },
-      { href: "/admin/cbenef", label: "cBenef", adminOnly: true },
-      { href: "/admin/legal-rules", label: "Regras tributarias", adminOnly: true },
     ],
   },
   {
-    kicker: "Controle da plataforma",
-    title: "Administracao",
-    description: "Usuarios, importacoes oficiais e configuracoes de suporte da ferramenta.",
+    title: "Motor",
     adminOnly: true,
-    tone: "accent",
     items: [
-      { href: "/admin", label: "Central administrativa", adminOnly: true },
+      { href: "/admin/legal-rules", label: "Regras fiscais", adminOnly: true },
+      { href: "/admin/capture-rules", label: "Triagem", adminOnly: true },
+      { href: "/admin/cst", label: "CST e enquadramentos", adminOnly: true },
+      { href: "/admin/icms-partilha", label: "Partilha de ICMS", adminOnly: true },
+      { href: "/admin/cbenef", label: "cBenef", adminOnly: true },
+    ],
+  },
+  {
+    title: "Plataforma",
+    adminOnly: true,
+    items: [
+      { href: "/admin/fiscal-watcher", label: "Fiscal Watcher", adminOnly: true },
+      { href: "/admin/imports", label: "Importacoes oficiais", adminOnly: true },
       { href: "/admin/users", label: "Usuarios e acessos", adminOnly: true },
-      { href: "/admin/imports", label: "Importar catalogos", adminOnly: true },
       { href: "/configuracoes", label: "Configuracoes", adminOnly: true },
     ],
   },
 ];
 
 function isActive(href: string) {
-  if (href === "/") {
-    return currentPath === "/";
-  }
-
+  if (href === "/") return currentPath === "/";
   return currentPath === href || currentPath.startsWith(`${href}/`);
+}
+
+function isWorkspaceActive(href: string) {
+  if (href === "/admin") return currentPath.startsWith("/admin");
+  return !currentPath.startsWith("/admin");
 }
 ---
 
 <aside class="sidebar">
-  <div class="sidebar__brand">
-    <span class="sidebar__brand-kicker">Plataforma fiscal SaaS</span>
-    <span class="sidebar__brand-title">Fiscal Platform</span>
-    <span class="sidebar__brand-subtitle">
-      Portal de consulta tributaria com base fiscal, notas importadas e motor de decisao.
+  <a class="sidebar__brand" href="/" aria-label="Fiscal Platform">
+    <img class="sidebar__brand-mark" src="/brand-mark.svg" alt="" width="54" height="54" loading="eager" />
+    <span class="sidebar__brand-copy">
+      <span class="sidebar__brand-kicker">Fiscal Platform</span>
+      <span class="sidebar__brand-title">Inteligencia tributaria</span>
     </span>
+  </a>
+
+  <div class="sidebar__workspace-picker">
+    {workspaces.map((workspace) => (
+      <a
+        href={workspace.href}
+        class={`sidebar__workspace ${isWorkspaceActive(workspace.href) ? "sidebar__workspace--active" : ""}`}
+        data-workspace-role={workspace.adminOnly ? "admin" : "all"}
+      >
+        <strong>{workspace.label}</strong>
+        <span>{workspace.description}</span>
+      </a>
+    ))}
   </div>
 
-  {sections.map((section, sectionIndex) => (
-    <div
-      class={`sidebar__section ${section.adminOnly ? "sidebar__section--admin" : ""} ${section.tone === "accent" ? "sidebar__section--accent" : ""}`}
-      data-section-role={section.adminOnly ? "admin" : "all"}
-    >
-      <div class="sidebar__section-head">
-        <span class="sidebar__section-kicker">{section.kicker}</span>
-        <strong>{section.title}</strong>
-        <p>{section.description}</p>
-      </div>
+  <div class="sidebar__panel">
+    {sections.map((section) => (
+      <section
+        class="sidebar__section"
+        data-section-role={section.adminOnly ? "admin" : "all"}
+      >
+        <header class="sidebar__section-head">
+          <span>{section.title}</span>
+        </header>
 
-      <nav class="sidebar__nav" aria-label={section.title}>
-        {section.items.map((item) => (
-          <a
-            href={item.href}
-            class={`sidebar__link ${section.adminOnly ? "sidebar__link--admin" : ""} ${isActive(item.href) ? "sidebar__link--active" : ""}`}
-            data-link-role={item.adminOnly ? "admin" : "all"}
-          >
-            {item.label}
-          </a>
-        ))}
-      </nav>
-
-      {sectionIndex < sections.length - 1 ? <div class="sidebar__divider" aria-hidden="true"></div> : null}
-    </div>
-  ))}
+        <nav class="sidebar__nav" aria-label={section.title}>
+          {section.items.map((item) => (
+            <a
+              href={item.href}
+              class={`sidebar__link ${isActive(item.href) ? "sidebar__link--active" : ""}`}
+              data-link-role={item.adminOnly ? "admin" : "all"}
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+      </section>
+    ))}
+  </div>
 </aside>
 
 <script>
@@ -133,13 +145,15 @@ function isActive(href: string) {
       normalizedRole === "owner" || normalizedRole === "admin" || normalizedRole === "analyst";
 
     document.querySelectorAll("[data-section-role='admin']").forEach((element) => {
-      if (!(element instanceof HTMLElement)) return;
-      element.hidden = !hasAdminArea;
+      if (element instanceof HTMLElement) element.hidden = !hasAdminArea;
     });
 
     document.querySelectorAll("[data-link-role='admin']").forEach((element) => {
-      if (!(element instanceof HTMLElement)) return;
-      element.hidden = !hasAdminArea;
+      if (element instanceof HTMLElement) element.hidden = !hasAdminArea;
+    });
+
+    document.querySelectorAll("[data-workspace-role='admin']").forEach((element) => {
+      if (element instanceof HTMLElement) element.hidden = !hasAdminArea;
     });
   }
 

@@ -16,6 +16,7 @@ type SuggestRequest struct {
 	SourcePISRate    string `json:"source_pis_rate"`
 	SourceCOFINSCST  string `json:"source_cofins_cst"`
 	SourceCOFINSRate string `json:"source_cofins_rate"`
+	SourceCFOP       string `json:"source_cfop"`
 }
 
 type SelectedOperation struct {
@@ -39,6 +40,9 @@ type Suggestion struct {
 
 	ICMSCST             string `json:"icms_cst"`
 	ICMSValue           string `json:"icms_value"`
+	IPICST              string `json:"ipi_cst"`
+	IPIRate             string `json:"ipi_rate"`
+	IPICEnq             string `json:"ipi_cenq"`
 	IPIValue            string `json:"ipi_value"`
 	PISValue            string `json:"pis_value"`
 	COFINSValue         string `json:"cofins_value"`
@@ -60,6 +64,14 @@ type Suggestion struct {
 	SelectiveTaxRate string `json:"selective_tax_rate"`
 }
 
+type CESTReference struct {
+	Code        string `json:"code"`
+	NCMCode     string `json:"ncm_code"`
+	Segment     string `json:"segment"`
+	Description string `json:"description"`
+	LegalSource string `json:"legal_source"`
+}
+
 type LegalBasisItem struct {
 	LegalSourceID string `json:"legal_source_id"`
 	TaxType       string `json:"tax_type"`
@@ -71,11 +83,40 @@ type LegalBasisItem struct {
 	Weight        string `json:"weight"`
 }
 
+type TaxDiagnosticItem struct {
+	Area   string `json:"area"`
+	Status string `json:"status"`
+	Title  string `json:"title"`
+	Detail string `json:"detail"`
+	Action string `json:"action"`
+}
+
+type TaxDiagnostics struct {
+	Ready     int                 `json:"ready"`
+	Attention int                 `json:"attention"`
+	Missing   int                 `json:"missing"`
+	Items     []TaxDiagnosticItem `json:"items"`
+}
+
+type DecisionSummary struct {
+	Status               string   `json:"status"`
+	Severity             string   `json:"severity"`
+	Title                string   `json:"title"`
+	Message              string   `json:"message"`
+	CanUseOperationally  bool     `json:"can_use_operationally"`
+	RequiresManualReview bool     `json:"requires_manual_review"`
+	BlockingReasons      []string `json:"blocking_reasons"`
+	NextActions          []string `json:"next_actions"`
+}
+
 type SuggestResponse struct {
 	SelectedOperation SelectedOperation `json:"selected_operation"`
 	MatchType         string            `json:"match_type"`
 	ConfidenceScore   float64           `json:"confidence_score"`
 	Suggestion        Suggestion        `json:"suggestion"`
+	CESTReference     *CESTReference    `json:"cest_reference,omitempty"`
 	LegalBasis        []LegalBasisItem  `json:"legal_basis"`
 	Warnings          []string          `json:"warnings"`
+	Diagnostics       TaxDiagnostics    `json:"diagnostics"`
+	DecisionSummary   DecisionSummary   `json:"decision_summary"`
 }

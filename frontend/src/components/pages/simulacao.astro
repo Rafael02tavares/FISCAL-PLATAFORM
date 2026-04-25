@@ -31,9 +31,9 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
 
     <div class="simulation-hero__visual">
         <div class="simulation-score-card">
-        <span>Leitura da consulta</span>
-        <strong id="simulation-score">Aguardando envio</strong>
-        <p id="simulation-score-detail">Use a base cadastrada para gerar um comparativo tributario completo.</p>
+        <span>Consulta fiscal</span>
+        <strong id="simulation-score">Pronta para consultar</strong>
+        <p id="simulation-score-detail">Informe descricao, GTIN ou NCM para cruzar produto, operacao e regras fiscais.</p>
         </div>
 
       <div class="simulation-illustration" aria-hidden="true">
@@ -215,6 +215,7 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
     const legalBasisBox = document.getElementById("simulation-legal-basis");
     const score = document.getElementById("simulation-score");
     const scoreDetail = document.getElementById("simulation-score-detail");
+    const LEGAL_RULE_DRAFT_KEY = "legal_rule_prefill";
 
     function readStorage(key) {
       try {
@@ -256,6 +257,9 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
         suggestion.icms_rate,
         suggestion.pis_rate,
         suggestion.cofins_rate,
+        suggestion.ipi_cst,
+        suggestion.ipi_rate,
+        suggestion.ipi_cenq,
         suggestion.ibs_rate,
         suggestion.cbs_rate,
         suggestion.selective_tax_code,
@@ -339,6 +343,7 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
       if (!comparison) return;
 
       const suggestion = payload?.suggestion || {};
+      const cestReference = payload?.cest_reference || null;
       comparison.innerHTML = `
         <div class="comparison-grid">
           <article class="comparison-card">
@@ -358,9 +363,23 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
             <p>PIS ${displayValue(suggestion.pis_cst)} | COFINS ${displayValue(suggestion.cofins_cst)} | cBenef ${displayValue(suggestion.cbenef)}</p>
           </article>
           <article class="comparison-card">
+            <h4>IPI</h4>
+            <p>CST ${displayValue(suggestion.ipi_cst)} | CEnq ${displayValue(suggestion.ipi_cenq)} | Aliq. ${displayValue(suggestion.ipi_rate)}</p>
+          </article>
+          <article class="comparison-card">
             <h4>Reforma</h4>
             <p>IBS ${displayValue(suggestion.ibs_rate)} | CBS ${displayValue(suggestion.cbs_rate)} | IS ${displayValue(suggestion.selective_tax_code)}</p>
           </article>
+          ${
+            cestReference
+              ? `
+                <article class="comparison-card comparison-card--accent">
+                  <h4>Referencia CEST</h4>
+                  <p>${displayValue(cestReference.code)} | ${displayValue(cestReference.segment)} | NCM ${displayValue(cestReference.ncm_code)}</p>
+                </article>
+              `
+              : ""
+          }
         </div>
       `;
     }
@@ -369,6 +388,8 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
       if (!legalBasisBox) return;
 
       const items = Array.isArray(payload?.legal_basis) ? payload.legal_basis : [];
+      const retailDefaults = items.filter((item) => item?.tax_type === "RETAIL_DEFAULT");
+      const legalItems = items.filter((item) => item?.tax_type !== "RETAIL_DEFAULT");
       const warnings = Array.isArray(payload?.warnings) ? payload.warnings : [];
       if (!items.length) {
         legalBasisBox.innerHTML = `
@@ -403,7 +424,18 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
               : ""
           }
           <div class="legal-basis-list">
-          ${items
+          ${
+            retailDefaults.length
+              ? `
+                <article class="legal-chip legal-chip--retail-default">
+                  <strong>Perfil padrao varejista</strong>
+                  <span>Usado quando ainda nao existe regra legal especifica para o produto.</span>
+                  <small>Serve como ponto de partida operacional, nao como regra fiscal publicada.</small>
+                </article>
+              `
+              : ""
+          }
+          ${legalItems
             .map(
               (item) => `
                 <article class="legal-chip">
@@ -415,6 +447,16 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
             )
             .join("")}
           </div>
+          ${
+            retailDefaults.length && !legalItems.length
+              ? `
+                <div class="dashboard-empty dashboard-empty--attention">
+                  <strong>Sem regra legal especifica ainda.</strong>
+                  <p>A consulta ficou funcional pelo default de varejo. Cadastre uma regra fiscal para transformar essa sugestao em decisao oficial da plataforma.</p>
+                </div>
+              `
+              : ""
+          }
         </div>
       `;
     }
@@ -423,12 +465,202 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
       if (!score || !scoreDetail) return;
 
       const confidence = Number(payload?.confidence_score || 0);
+      const diagnostics = payload?.diagnostics || {};
+      const ready = Number(diagnostics.ready || 0);
+      const attention = Number(diagnostics.attention || 0);
+      const missing = Number(diagnostics.missing || 0);
         score.textContent =
         confidence >= 0.9 ? "Alta confianca" :
         confidence >= 0.7 ? "Boa confianca" :
         confidence >= 0.5 ? "Confianca moderada" :
         "Confianca baixa";
-      scoreDetail.textContent = `Match ${displayValue(payload?.match_type, "-")} com score ${confidence.toFixed(2)}.`;
+      scoreDetail.textContent = `Match ${displayValue(payload?.match_type, "-")} com score ${confidence.toFixed(2)}. Diagnostico: ${ready} pronto(s), ${attention} em atencao, ${missing} pendente(s).`;
+    }
+
+    function diagnosticTone(status) {
+      if (status === "ready") return "ready";
+      if (status === "missing") return "missing";
+      return "attention";
+    }
+
+    function diagnosticLabel(status) {
+      if (status === "ready") return "Pronto";
+      if (status === "missing") return "Pendente";
+      return "Atencao";
+    }
+
+    function renderDiagnostics(payload) {
+      const diagnostics = payload?.diagnostics || {};
+      const items = Array.isArray(diagnostics.items) ? diagnostics.items : [];
+
+      if (!items.length) {
+        return "";
+      }
+
+      return `
+        <section class="diagnostic-panel">
+          <div class="diagnostic-panel__header">
+            <div>
+              <span>Leitura do motor</span>
+              <strong>O que esta pronto e o que falta</strong>
+            </div>
+            <div class="diagnostic-counter">
+              <span>${Number(diagnostics.ready || 0)} prontos</span>
+              <span>${Number(diagnostics.attention || 0)} atencao</span>
+              <span>${Number(diagnostics.missing || 0)} pendentes</span>
+            </div>
+          </div>
+          <div class="diagnostic-grid">
+            ${items
+              .map((item) => {
+                const tone = diagnosticTone(item.status);
+                return `
+                  <article class="diagnostic-card diagnostic-card--${tone}">
+                    <div class="diagnostic-card__top">
+                      <span>${displayValue(item.area, "-")}</span>
+                      <strong>${diagnosticLabel(item.status)}</strong>
+                    </div>
+                    <h4>${displayValue(item.title, "-")}</h4>
+                    <p>${displayValue(item.detail, "-")}</p>
+                    <small>${displayValue(item.action, "-")}</small>
+                  </article>
+                `;
+              })
+              .join("")}
+          </div>
+        </section>
+      `;
+    }
+
+    function decisionSummaryTone(severity) {
+      if (severity === "success") return "success";
+      if (severity === "danger") return "danger";
+      if (severity === "info") return "info";
+      return "warning";
+    }
+
+    function renderDecisionSummary(payload) {
+      const summary = payload?.decision_summary || null;
+      if (!summary?.status) {
+        return "";
+      }
+
+      const tone = decisionSummaryTone(summary.severity);
+      const nextActions = Array.isArray(summary.next_actions) ? summary.next_actions : [];
+      const blockingReasons = Array.isArray(summary.blocking_reasons) ? summary.blocking_reasons : [];
+
+      return `
+        <section class="decision-summary decision-summary--${tone}">
+          <div class="decision-summary__header">
+            <div>
+              <span>${displayValue(summary.status, "-")}</span>
+              <strong>${displayValue(summary.title, "-")}</strong>
+            </div>
+            <div class="decision-summary__badges">
+              <span>${summary.can_use_operationally ? "Uso operacional" : "Nao publicar ainda"}</span>
+              <span>${summary.requires_manual_review ? "Revisao fiscal" : "Automatico"}</span>
+            </div>
+          </div>
+          <p>${displayValue(summary.message, "-")}</p>
+          ${
+            blockingReasons.length
+              ? `
+                <div class="decision-summary__list">
+                  <strong>Bloqueios</strong>
+                  ${blockingReasons.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
+                </div>
+              `
+              : ""
+          }
+          ${
+            nextActions.length
+              ? `
+                <div class="decision-summary__list">
+                  <strong>Proximas acoes</strong>
+                  ${nextActions.slice(0, 4).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
+                </div>
+              `
+              : ""
+          }
+          <div class="decision-summary__actions">
+            <button id="create-rule-from-suggestion" class="decision-action" type="button">
+              Criar regra com estes dados
+            </button>
+            <a class="decision-action decision-action--link" href="/admin/legal-rules">
+              Abrir regras fiscais
+            </a>
+          </div>
+        </section>
+      `;
+    }
+
+    function inferRuleDraft(payload) {
+      const suggestion = payload?.suggestion || {};
+      const selectedOperation = payload?.selected_operation || {};
+      const summary = payload?.decision_summary || {};
+      const needsICMS = String(summary.blocking_reasons || "").toLowerCase().includes("icms");
+      const needsPISCOFINS = String(summary.blocking_reasons || "").toLowerCase().includes("pis");
+      const taxType = needsICMS ? "icms" : needsPISCOFINS ? "pis" : "ncm";
+      const valueType = needsICMS || needsPISCOFINS ? "cst_rule" : "classification_rule";
+
+      const content = {
+        ncm: suggestion.ncm || "",
+        ncm_ex: suggestion.ncm_ex || "",
+        cest: suggestion.cest || "",
+        cfop: suggestion.cfop || "",
+        icms_cst: suggestion.icms_cst || "",
+        csosn: suggestion.csosn || "",
+        pis_cst: suggestion.pis_cst || "",
+        cofins_cst: suggestion.cofins_cst || "",
+        pis_rate: suggestion.pis_rate || "",
+        cofins_rate: suggestion.cofins_rate || "",
+        icms_rate: suggestion.icms_rate || "",
+        fcp_rate: suggestion.fcp_rate || "",
+        icms_st_rate: suggestion.icms_st_rate || "",
+        cbenef: suggestion.cbenef || "",
+        cclas_trib: suggestion.cclas_trib || "",
+        ibs_rate: suggestion.ibs_rate || "",
+        cbs_rate: suggestion.cbs_rate || "",
+        selective_tax_code: suggestion.selective_tax_code || "",
+        selective_tax_rate: suggestion.selective_tax_rate || "",
+        ipi_cst: suggestion.ipi_cst || "",
+        ipi_rate: suggestion.ipi_rate || "",
+        ipi_cenq: suggestion.ipi_cenq || "",
+      };
+
+      return {
+        tax_type: taxType,
+        value_type: valueType,
+        operation_code: selectedOperation.code || "",
+        tax_regime: document.getElementById("tax-regime")?.value || "",
+        ncm_code: suggestion.ncm || "",
+        cest: suggestion.cest || "",
+        cclas_trib: suggestion.cclas_trib || "",
+        cfop: suggestion.cfop || selectedOperation.cfop || "",
+        pis_cst: suggestion.pis_cst || "",
+        cofins_cst: suggestion.cofins_cst || "",
+        icms_cst: suggestion.icms_cst || "",
+        csosn: suggestion.csosn || "",
+        cbenef: suggestion.cbenef || "",
+        emitter_uf: document.getElementById("emitter-uf")?.value || "",
+        recipient_uf: document.getElementById("recipient-uf")?.value || "",
+        value_content: JSON.stringify(content, null, 2),
+        priority: 120,
+        confidence_base: String(payload?.confidence_score || "0.70"),
+      };
+    }
+
+    function wireSuggestionActions(payload) {
+      const button = document.getElementById("create-rule-from-suggestion");
+      button?.addEventListener("click", () => {
+        const draft = inferRuleDraft(payload);
+        try {
+          localStorage.setItem(LEGAL_RULE_DRAFT_KEY, JSON.stringify(draft));
+        } catch {
+          // Se o storage falhar, ainda abrimos a tela de regras.
+        }
+        window.location.href = "/admin/legal-rules";
+      });
     }
 
     function renderResult(payload) {
@@ -436,6 +668,7 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
 
       const suggestion = payload?.suggestion || {};
       const selectedOperation = payload?.selected_operation || {};
+      const cestReference = payload?.cest_reference || null;
 
       result.innerHTML = `
         <div class="result-shell">
@@ -451,6 +684,8 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
               <p>Match ${displayValue(payload?.match_type, "-")}</p>
             </article>
           </div>
+
+          ${renderDecisionSummary(payload)}
 
           <div class="result-grid">
             ${pill("NCM", suggestion.ncm, "teal")}
@@ -468,6 +703,9 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
             ${pill("Dif. DIFAL", suggestion.difal_difference_rate, "amber")}
             ${pill("Aliq. PIS", suggestion.pis_rate, "rose")}
             ${pill("Aliq. COFINS", suggestion.cofins_rate, "rose")}
+            ${pill("IPI CST", suggestion.ipi_cst, "amber")}
+            ${pill("Aliq. IPI", suggestion.ipi_rate, "amber")}
+            ${pill("CEnq IPI", suggestion.ipi_cenq, "amber")}
             ${pill("FCP", suggestion.fcp_rate, "amber")}
             ${pill("ICMS ST", suggestion.icms_st_rate, "amber")}
             ${pill("IBS", suggestion.ibs_rate, "teal")}
@@ -479,8 +717,20 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
             ${pill("Valor PIS", suggestion.pis_value, "rose")}
             ${pill("Valor COFINS", suggestion.cofins_value, "rose")}
           </div>
+          ${
+            cestReference
+              ? `
+                <div class="result-note result-note--accent">
+                  <strong>CEST ${displayValue(cestReference.code)}</strong>
+                  <p>${displayValue(cestReference.description)} ${cestReference.segment ? `Segmento: ${displayValue(cestReference.segment)}.` : ""}</p>
+                </div>
+              `
+              : ""
+          }
+          ${renderDiagnostics(payload)}
         </div>
       `;
+      wireSuggestionActions(payload);
     }
 
     function getDefaultOperationCode() {
@@ -891,6 +1141,17 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
       gap: 4px;
     }
 
+    .legal-chip--retail-default {
+      border: 1px solid rgba(20, 184, 166, 0.25);
+      background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.15), transparent 38%),
+        linear-gradient(180deg, #f0fdfa, #ffffff);
+    }
+
+    .legal-chip--retail-default strong {
+      color: #0f766e;
+    }
+
     .warning-list {
       display: grid;
       gap: 10px;
@@ -964,6 +1225,237 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
     .tax-pill--sky { background: #eff6ff; }
     .tax-pill--rose { background: #fff1f2; }
 
+    .decision-summary {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid #cbd5e1;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .decision-summary--success {
+      border-color: #99f6e4;
+      background:
+        radial-gradient(circle at top right, rgba(20, 184, 166, 0.16), transparent 32%),
+        linear-gradient(180deg, #f0fdfa, #ffffff);
+    }
+
+    .decision-summary--info {
+      border-color: #bae6fd;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 32%),
+        linear-gradient(180deg, #eff6ff, #ffffff);
+    }
+
+    .decision-summary--warning {
+      border-color: #fde68a;
+      background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 32%),
+        linear-gradient(180deg, #fffbeb, #ffffff);
+    }
+
+    .decision-summary--danger {
+      border-color: #fecdd3;
+      background:
+        radial-gradient(circle at top right, rgba(244, 63, 94, 0.14), transparent 32%),
+        linear-gradient(180deg, #fff1f2, #ffffff);
+    }
+
+    .decision-summary__header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .decision-summary__header span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .decision-summary__header strong {
+      display: block;
+      margin-top: 4px;
+      color: #0f172a;
+      font-size: 24px;
+      line-height: 1.1;
+    }
+
+    .decision-summary p {
+      margin: 0;
+      color: #334155;
+      line-height: 1.5;
+    }
+
+    .decision-summary__badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .decision-summary__badges span,
+    .decision-summary__list span {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: #334155;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .decision-summary__list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .decision-summary__list strong {
+      color: #0f172a;
+      font-size: 13px;
+    }
+
+    .decision-summary__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .decision-action {
+      border: 1px solid #0f766e;
+      border-radius: 999px;
+      background: #0f766e;
+      color: white;
+      cursor: pointer;
+      display: inline-flex;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 10px 14px;
+      text-decoration: none;
+    }
+
+    .decision-action--link {
+      background: white;
+      color: #0f766e;
+    }
+
+    .diagnostic-panel {
+      display: grid;
+      gap: 16px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid #cbd5e1;
+      background:
+        radial-gradient(circle at top left, rgba(20, 184, 166, 0.14), transparent 34%),
+        linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .diagnostic-panel__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .diagnostic-panel__header span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .diagnostic-panel__header strong {
+      display: block;
+      margin-top: 4px;
+      color: #0f172a;
+      font-size: 20px;
+    }
+
+    .diagnostic-counter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .diagnostic-counter span {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #334155;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .diagnostic-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .diagnostic-card {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+    }
+
+    .diagnostic-card--ready {
+      border-color: #99f6e4;
+      background: linear-gradient(180deg, #f0fdfa, #ffffff);
+    }
+
+    .diagnostic-card--attention {
+      border-color: #fde68a;
+      background: linear-gradient(180deg, #fffbeb, #ffffff);
+    }
+
+    .diagnostic-card--missing {
+      border-color: #fecdd3;
+      background: linear-gradient(180deg, #fff1f2, #ffffff);
+    }
+
+    .diagnostic-card__top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .diagnostic-card__top strong {
+      color: #0f172a;
+    }
+
+    .diagnostic-card h4,
+    .diagnostic-card p {
+      margin: 0;
+    }
+
+    .diagnostic-card h4 {
+      color: #0f172a;
+      font-size: 16px;
+    }
+
+    .diagnostic-card p,
+    .diagnostic-card small {
+      color: #475569;
+      line-height: 1.45;
+    }
+
     .message-box {
       margin-top: 14px;
       border-radius: 14px;
@@ -983,7 +1475,8 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
     @media (max-width: 1080px) {
       .simulation-hero,
       .simulation-grid,
-      .result-grid {
+      .result-grid,
+      .diagnostic-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -995,6 +1488,14 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
       .comparison-grid,
       .result-shell__header {
         grid-template-columns: 1fr;
+      }
+
+      .diagnostic-panel__header {
+        display: grid;
+      }
+
+      .diagnostic-counter {
+        justify-content: flex-start;
       }
     }
   </style>

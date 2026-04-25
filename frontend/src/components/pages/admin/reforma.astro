@@ -173,6 +173,57 @@ import adminReformaScript from "../../../scripts/admin-reforma.ts?url";
     </section>
   </div>
 
+  <section class="card card--padded reform-reference-card">
+    <div class="section-heading section-heading--tight">
+      <div>
+        <span class="section-heading__eyebrow">Fonte oficial</span>
+        <h3>Classificacao Tributaria IBS/CBS</h3>
+      </div>
+      <a
+        class="secondary-link"
+        href="https://dfe-portal.svrs.rs.gov.br/CFF/ClassificacaoTributaria"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Abrir Portal DF-e
+      </a>
+    </div>
+
+    <div class="reform-reference-grid">
+      <article>
+        <h4>CST da reforma</h4>
+        <p><strong>000</strong> Tributacao integral</p>
+        <p><strong>010/011</strong> Aliquotas uniformes</p>
+        <p><strong>200</strong> Aliquota reduzida</p>
+        <p><strong>220/221</strong> Aliquota fixa</p>
+        <p><strong>222</strong> Reducao de base de calculo</p>
+        <p><strong>400/410</strong> Isencao, imunidade ou nao incidencia</p>
+        <p><strong>510/515</strong> Diferimento</p>
+        <p><strong>550</strong> Suspensao</p>
+        <p><strong>620</strong> Tributacao monofasica</p>
+      </article>
+
+      <article>
+        <h4>Exemplos de cClassTrib</h4>
+        <p><strong>000001</strong> Situacoes tributadas integralmente pelo IBS e CBS</p>
+        <p><strong>200003</strong> Produtos destinados a alimentacao humana</p>
+        <p><strong>200014</strong> Horticolas, frutas e ovos</p>
+        <p><strong>410004</strong> Exportacoes de bens e servicos</p>
+        <p><strong>410008</strong> Livros, jornais, periodicos e papel de impressao</p>
+        <p><strong>410029</strong> Operacoes acobertadas somente pelo ICMS</p>
+        <p><strong>620001</strong> Tributacao monofasica sobre combustiveis</p>
+      </article>
+
+      <article>
+        <h4>Base legal LC 214/2025</h4>
+        <p><strong>Art. 4</strong> IBS e CBS incidem sobre operacoes onerosas com bens ou servicos.</p>
+        <p><strong>§ 1</strong> Operacoes nao onerosas so sao tributadas nas hipoteses expressamente previstas.</p>
+        <p><strong>§ 2</strong> Operacao onerosa inclui compra e venda, troca, permuta, locacao, licenciamento, cessao, arrendamento e prestacao de servicos.</p>
+        <p><strong>Uso interno</strong> Antes de aplicar cClassTrib, valide se a operacao entra no campo de incidencia da LC 214.</p>
+      </article>
+    </div>
+  </section>
+
   <script type="module" src={adminReformaScript}></script>
 
   <style>
@@ -291,6 +342,46 @@ import adminReformaScript from "../../../scripts/admin-reforma.ts?url";
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
+    }
+
+    .reform-reference-card {
+      margin-top: 18px;
+    }
+
+    .reform-reference-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .reform-reference-grid article {
+      border: 1px solid #dbe4ee;
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .reform-reference-grid h4 {
+      margin: 0 0 12px;
+      color: #0f172a;
+    }
+
+    .reform-reference-grid p {
+      display: flex;
+      gap: 10px;
+      margin: 0;
+      padding: 9px 0;
+      border-bottom: 1px dashed #dbe4ee;
+      color: #475569;
+    }
+
+    .reform-reference-grid p:last-child {
+      border-bottom: none;
+    }
+
+    .reform-reference-grid strong {
+      min-width: 74px;
+      color: #b45309;
     }
 
     .reform-form label {
@@ -502,6 +593,7 @@ import adminReformaScript from "../../../scripts/admin-reforma.ts?url";
     @media (max-width: 720px) {
       .reform-form,
       .reform-stats,
+      .reform-reference-grid,
       .rule-card__grid {
         grid-template-columns: 1fr;
       }
