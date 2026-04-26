@@ -39,8 +39,10 @@ type ProductTaxProfile struct {
 	SourceInvoiceID string `json:"source_invoice_id"`
 
 	NCM               string `json:"ncm"`
+	NCMDescription    string `json:"ncm_description"`
 	NCMEx             string `json:"ncm_ex"`
 	CEST              string `json:"cest"`
+	CESTDescription   string `json:"cest_description"`
 	CFOP              string `json:"cfop"`
 	CClasTrib         string `json:"cclas_trib"`
 	PISCST            string `json:"pis_cst"`
@@ -557,7 +559,7 @@ func (r *Repository) CreateTaxProfile(ctx context.Context, p CreateTaxProfilePar
 	return nil
 }
 
-func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, rawQuery string) ([]CatalogProductView, error) {
+func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, rawQuery string, limit, offset int) ([]CatalogProductView, error) {
 	schema, err := r.getCatalogSchemaSupport(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("check catalog schema: %w", err)
@@ -572,12 +574,31 @@ func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, ra
 			'' AS product_code,
 			COALESCE(p.gtin, ''),
 			COALESCE(p.description, ''),
-			COALESCE(ptp.id, ''),
+			COALESCE(ptp.id::text, ''),
 			COALESCE(ptp.organization_id::text, ''),
 			COALESCE(ptp.source_invoice_id::text, ''),
 			COALESCE(ptp.ncm, ''),
+			COALESCE((
+				SELECT COALESCE(NULLIF(nc.full_description, ''), nc.description)
+				FROM ncm_catalog nc
+				WHERE nc.code = ptp.ncm
+				  AND nc.is_active = TRUE
+				ORDER BY nc.created_at DESC
+				LIMIT 1
+			), ''),
 			'' AS ncm_ex,
 			COALESCE(ptp.cest, ''),
+			COALESCE((
+				SELECT CONCAT_WS(' - ', NULLIF(cc.segment, ''), NULLIF(cc.description, ''))
+				FROM cest_catalog cc
+				WHERE cc.code = ptp.cest
+				  AND cc.is_active = TRUE
+				  AND (COALESCE(ptp.ncm, '') = '' OR COALESCE(cc.ncm_code, '') = '' OR cc.ncm_code = ptp.ncm)
+				ORDER BY
+					CASE WHEN cc.ncm_code = ptp.ncm THEN 0 ELSE 1 END,
+					cc.segment NULLS LAST
+				LIMIT 1
+			), ''),
 			COALESCE(ptp.cfop, ''),
 			COALESCE(ptp.cclas_trib, ''),
 			COALESCE(ptp.pis_cst, ''),
@@ -612,7 +633,7 @@ func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, ra
 			COALESCE(ptp.confidence_score, 0),
 			COALESCE(ptp.source_type, '')
 		FROM products p
-		INNER JOIN LATERAL (
+		LEFT JOIN LATERAL (
 			SELECT *
 			FROM product_tax_profiles ptp
 			WHERE ptp.product_id = p.id
@@ -640,8 +661,11 @@ func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, ra
 				WHEN p.description ILIKE ('%' || $2 || '%') THEN 3
 				ELSE 4
 			END,
+			CASE
+				WHEN $2 = '' AND $3 = '' THEN GREATEST(COALESCE(ptp.created_at, p.created_at), COALESCE(p.updated_at, p.created_at))
+			END DESC NULLS LAST,
 			p.description ASC
-		LIMIT 200
+		LIMIT $4 OFFSET $5
 	`
 	if schema.productCodeColumn && schema.enhancedProfile && schema.regimeContext {
 		query = `
@@ -650,12 +674,33 @@ func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, ra
 				COALESCE(p.product_code, ''),
 				COALESCE(p.gtin, ''),
 				COALESCE(p.description, ''),
-				COALESCE(ptp.id, ''),
+				COALESCE(ptp.id::text, ''),
 				COALESCE(ptp.organization_id::text, ''),
 				COALESCE(ptp.source_invoice_id::text, ''),
 				COALESCE(ptp.ncm, ''),
+				COALESCE((
+					SELECT COALESCE(NULLIF(nc.full_description, ''), nc.description)
+					FROM ncm_catalog nc
+					WHERE nc.code = ptp.ncm
+					  AND nc.is_active = TRUE
+					ORDER BY
+						CASE WHEN COALESCE(nc.ex_code, '') = COALESCE(ptp.ncm_ex, '') THEN 0 ELSE 1 END,
+						nc.created_at DESC
+					LIMIT 1
+				), ''),
 				COALESCE(ptp.ncm_ex, ''),
 				COALESCE(ptp.cest, ''),
+				COALESCE((
+					SELECT CONCAT_WS(' - ', NULLIF(cc.segment, ''), NULLIF(cc.description, ''))
+					FROM cest_catalog cc
+					WHERE cc.code = ptp.cest
+					  AND cc.is_active = TRUE
+					  AND (COALESCE(ptp.ncm, '') = '' OR COALESCE(cc.ncm_code, '') = '' OR cc.ncm_code = ptp.ncm)
+					ORDER BY
+						CASE WHEN cc.ncm_code = ptp.ncm THEN 0 ELSE 1 END,
+						cc.segment NULLS LAST
+					LIMIT 1
+				), ''),
 				COALESCE(ptp.cfop, ''),
 				COALESCE(ptp.cclas_trib, ''),
 				COALESCE(ptp.pis_cst, ''),
@@ -690,7 +735,7 @@ func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, ra
 				COALESCE(ptp.confidence_score, 0),
 				COALESCE(ptp.source_type, '')
 			FROM products p
-			INNER JOIN LATERAL (
+			LEFT JOIN LATERAL (
 				SELECT *
 				FROM product_tax_profiles ptp
 				WHERE ptp.product_id = p.id
@@ -720,8 +765,11 @@ func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, ra
 					WHEN COALESCE(p.product_code, '') ILIKE ('%' || $2 || '%') THEN 4
 					ELSE 5
 				END,
+				CASE
+					WHEN $2 = '' AND $3 = '' THEN GREATEST(COALESCE(ptp.created_at, p.created_at), COALESCE(p.updated_at, p.created_at))
+				END DESC NULLS LAST,
 				p.description ASC
-			LIMIT 200
+			LIMIT $4 OFFSET $5
 		`
 	} else if schema.productCodeColumn && schema.enhancedProfile {
 		query = `
@@ -730,12 +778,33 @@ func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, ra
 				COALESCE(p.product_code, ''),
 				COALESCE(p.gtin, ''),
 				COALESCE(p.description, ''),
-				COALESCE(ptp.id, ''),
+				COALESCE(ptp.id::text, ''),
 				COALESCE(ptp.organization_id::text, ''),
 				COALESCE(ptp.source_invoice_id::text, ''),
 				COALESCE(ptp.ncm, ''),
+				COALESCE((
+					SELECT COALESCE(NULLIF(nc.full_description, ''), nc.description)
+					FROM ncm_catalog nc
+					WHERE nc.code = ptp.ncm
+					  AND nc.is_active = TRUE
+					ORDER BY
+						CASE WHEN COALESCE(nc.ex_code, '') = COALESCE(ptp.ncm_ex, '') THEN 0 ELSE 1 END,
+						nc.created_at DESC
+					LIMIT 1
+				), ''),
 				COALESCE(ptp.ncm_ex, ''),
 				COALESCE(ptp.cest, ''),
+				COALESCE((
+					SELECT CONCAT_WS(' - ', NULLIF(cc.segment, ''), NULLIF(cc.description, ''))
+					FROM cest_catalog cc
+					WHERE cc.code = ptp.cest
+					  AND cc.is_active = TRUE
+					  AND (COALESCE(ptp.ncm, '') = '' OR COALESCE(cc.ncm_code, '') = '' OR cc.ncm_code = ptp.ncm)
+					ORDER BY
+						CASE WHEN cc.ncm_code = ptp.ncm THEN 0 ELSE 1 END,
+						cc.segment NULLS LAST
+					LIMIT 1
+				), ''),
 				COALESCE(ptp.cfop, ''),
 				COALESCE(ptp.cclas_trib, ''),
 				COALESCE(ptp.pis_cst, ''),
@@ -770,7 +839,7 @@ func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, ra
 				COALESCE(ptp.confidence_score, 0),
 				COALESCE(ptp.source_type, '')
 			FROM products p
-			INNER JOIN LATERAL (
+			LEFT JOIN LATERAL (
 				SELECT *
 				FROM product_tax_profiles ptp
 				WHERE ptp.product_id = p.id
@@ -800,12 +869,15 @@ func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, ra
 					WHEN COALESCE(p.product_code, '') ILIKE ('%' || $2 || '%') THEN 4
 					ELSE 5
 				END,
+				CASE
+					WHEN $2 = '' AND $3 = '' THEN GREATEST(COALESCE(ptp.created_at, p.created_at), COALESCE(p.updated_at, p.created_at))
+				END DESC NULLS LAST,
 				p.description ASC
-			LIMIT 200
+			LIMIT $4 OFFSET $5
 		`
 	}
 
-	rows, err := r.db.Query(ctx, query, organizationID, trimmedQuery, normalizedQuery)
+	rows, err := r.db.Query(ctx, query, organizationID, trimmedQuery, normalizedQuery, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list catalog products: %w", err)
 	}
@@ -823,8 +895,10 @@ func (r *Repository) ListCatalogProducts(ctx context.Context, organizationID, ra
 			&item.Profile.OrganizationID,
 			&item.Profile.SourceInvoiceID,
 			&item.Profile.NCM,
+			&item.Profile.NCMDescription,
 			&item.Profile.NCMEx,
 			&item.Profile.CEST,
+			&item.Profile.CESTDescription,
 			&item.Profile.CFOP,
 			&item.Profile.CClasTrib,
 			&item.Profile.PISCST,

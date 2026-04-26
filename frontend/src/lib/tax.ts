@@ -10,6 +10,7 @@ export async function suggestTax(payload: {
   tax_regime?: string
   target_crt?: string
   source_icms_cst?: string
+  source_icms_csosn?: string
   source_icms_rate?: string
   source_pis_cst?: string
   source_pis_rate?: string

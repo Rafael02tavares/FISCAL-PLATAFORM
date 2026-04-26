@@ -116,6 +116,16 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
             </label>
 
             <label>
+              CRT
+              <select id="target-crt">
+                <option value="">Usar CRT da organizacao</option>
+                <option value="1">1 - Simples Nacional</option>
+                <option value="2">2 - Simples excesso sublimite</option>
+                <option value="3">3 - Regime Normal</option>
+              </select>
+            </label>
+
+            <label>
               UF emitente
               <input id="emitter-uf" type="text" maxlength="2" placeholder="UF da organizacao" />
             </label>
@@ -339,41 +349,81 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
       `;
     }
 
+    function fiscalCell(label, value) {
+      return `
+        <span class="simulation-tax-cell">
+          <small>${label}</small>
+          <strong>${displayValue(value)}</strong>
+        </span>
+      `;
+    }
+
+    function fiscalRow(title, tone, cells) {
+      return `
+        <tr class="simulation-tax-row simulation-tax-row--${tone}">
+          <th scope="row">${title}</th>
+          <td>${cells.join("")}</td>
+        </tr>
+      `;
+    }
+
+    function renderSimulationTaxTable(suggestion) {
+      return `
+        <table class="simulation-tax-table">
+          <tbody>
+            ${fiscalRow("Identidade fiscal", "teal", [
+              fiscalCell("NCM", suggestion.ncm),
+              fiscalCell("NCM EX", suggestion.ncm_ex),
+              fiscalCell("CEST", suggestion.cest),
+              fiscalCell("cClasTrib", suggestion.cclas_trib),
+            ])}
+            ${fiscalRow("Operacao e ICMS", "sky", [
+              fiscalCell("CFOP", suggestion.cfop),
+              fiscalCell("CSOSN", suggestion.csosn),
+              fiscalCell("ICMS CST", suggestion.icms_cst),
+              fiscalCell("Aliq. ICMS", suggestion.icms_rate),
+            ])}
+            ${fiscalRow("DIFAL e FCP", "amber", [
+              fiscalCell("Aliq. interna UF", suggestion.difal_internal_rate),
+              fiscalCell("Aliq. interestadual", suggestion.difal_interstate_rate),
+              fiscalCell("Dif. DIFAL", suggestion.difal_difference_rate),
+              fiscalCell("FCP", suggestion.fcp_rate),
+            ])}
+            ${fiscalRow("PIS e COFINS", "rose", [
+              fiscalCell("PIS CST", suggestion.pis_cst),
+              fiscalCell("COFINS CST", suggestion.cofins_cst),
+              fiscalCell("Aliq. PIS", suggestion.pis_rate),
+              fiscalCell("Aliq. COFINS", suggestion.cofins_rate),
+            ])}
+            ${fiscalRow("IPI", "amber", [
+              fiscalCell("IPI CST", suggestion.ipi_cst),
+              fiscalCell("Aliq. IPI", suggestion.ipi_rate),
+              fiscalCell("CEnq IPI", suggestion.ipi_cenq),
+              fiscalCell("Valor IPI", suggestion.ipi_value),
+            ])}
+            ${fiscalRow("Reforma", "teal", [
+              fiscalCell("IBS", suggestion.ibs_rate),
+              fiscalCell("CBS", suggestion.cbs_rate),
+              fiscalCell("Imp. seletivo", suggestion.selective_tax_code),
+              fiscalCell("Aliq. seletivo", suggestion.selective_tax_rate),
+            ])}
+          </tbody>
+        </table>
+      `;
+    }
+
     function renderComparison(payload) {
       if (!comparison) return;
 
       const suggestion = payload?.suggestion || {};
       const cestReference = payload?.cest_reference || null;
       comparison.innerHTML = `
-        <div class="comparison-grid">
-          <article class="comparison-card">
-            <h4>Classificacao</h4>
-            <p>NCM ${displayValue(suggestion.ncm)} | EX ${displayValue(suggestion.ncm_ex)} | CEST ${displayValue(suggestion.cest)}</p>
-          </article>
-          <article class="comparison-card">
-            <h4>Fluxo operacional</h4>
-            <p>CFOP ${displayValue(suggestion.cfop)} | CSOSN ${displayValue(suggestion.csosn)} | ICMS CST ${displayValue(suggestion.icms_cst)}</p>
-          </article>
-          <article class="comparison-card">
-            <h4>Partilha interestadual</h4>
-            <p>Modo ${displayValue(suggestion.difal_mode)} | interna ${displayValue(suggestion.difal_internal_rate)} | interestadual ${displayValue(suggestion.difal_interstate_rate)}</p>
-          </article>
-          <article class="comparison-card">
-            <h4>Contribuicoes</h4>
-            <p>PIS ${displayValue(suggestion.pis_cst)} | COFINS ${displayValue(suggestion.cofins_cst)} | cBenef ${displayValue(suggestion.cbenef)}</p>
-          </article>
-          <article class="comparison-card">
-            <h4>IPI</h4>
-            <p>CST ${displayValue(suggestion.ipi_cst)} | CEnq ${displayValue(suggestion.ipi_cenq)} | Aliq. ${displayValue(suggestion.ipi_rate)}</p>
-          </article>
-          <article class="comparison-card">
-            <h4>Reforma</h4>
-            <p>IBS ${displayValue(suggestion.ibs_rate)} | CBS ${displayValue(suggestion.cbs_rate)} | IS ${displayValue(suggestion.selective_tax_code)}</p>
-          </article>
+        <div class="simulation-tax-panel">
+          ${renderSimulationTaxTable(suggestion)}
           ${
             cestReference
               ? `
-                <article class="comparison-card comparison-card--accent">
+                <article class="comparison-card comparison-card--accent simulation-tax-reference">
                   <h4>Referencia CEST</h4>
                   <p>${displayValue(cestReference.code)} | ${displayValue(cestReference.segment)} | NCM ${displayValue(cestReference.ncm_code)}</p>
                 </article>
@@ -633,6 +683,7 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
         value_type: valueType,
         operation_code: selectedOperation.code || "",
         tax_regime: document.getElementById("tax-regime")?.value || "",
+        target_crt: document.getElementById("target-crt")?.value || "",
         ncm_code: suggestion.ncm || "",
         cest: suggestion.cest || "",
         cclas_trib: suggestion.cclas_trib || "",
@@ -687,36 +738,7 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
 
           ${renderDecisionSummary(payload)}
 
-          <div class="result-grid">
-            ${pill("NCM", suggestion.ncm, "teal")}
-            ${pill("NCM EX", suggestion.ncm_ex, "teal")}
-            ${pill("CEST", suggestion.cest, "amber")}
-            ${pill("cClasTrib", suggestion.cclas_trib, "sky")}
-            ${pill("CFOP", suggestion.cfop, "sky")}
-            ${pill("CSOSN", suggestion.csosn, "sky")}
-            ${pill("ICMS CST", suggestion.icms_cst, "sky")}
-            ${pill("PIS CST", suggestion.pis_cst, "rose")}
-            ${pill("COFINS CST", suggestion.cofins_cst, "rose")}
-            ${pill("Aliq. ICMS", suggestion.icms_rate, "sky")}
-            ${pill("Aliq. interna UF", suggestion.difal_internal_rate, "amber")}
-            ${pill("Aliq. interestadual", suggestion.difal_interstate_rate, "amber")}
-            ${pill("Dif. DIFAL", suggestion.difal_difference_rate, "amber")}
-            ${pill("Aliq. PIS", suggestion.pis_rate, "rose")}
-            ${pill("Aliq. COFINS", suggestion.cofins_rate, "rose")}
-            ${pill("IPI CST", suggestion.ipi_cst, "amber")}
-            ${pill("Aliq. IPI", suggestion.ipi_rate, "amber")}
-            ${pill("CEnq IPI", suggestion.ipi_cenq, "amber")}
-            ${pill("FCP", suggestion.fcp_rate, "amber")}
-            ${pill("ICMS ST", suggestion.icms_st_rate, "amber")}
-            ${pill("IBS", suggestion.ibs_rate, "teal")}
-            ${pill("CBS", suggestion.cbs_rate, "teal")}
-            ${pill("Imp. seletivo", suggestion.selective_tax_code, "amber")}
-            ${pill("Aliq. seletivo", suggestion.selective_tax_rate, "amber")}
-            ${pill("Valor ICMS", suggestion.icms_value, "sky")}
-            ${pill("Valor IPI", suggestion.ipi_value, "amber")}
-            ${pill("Valor PIS", suggestion.pis_value, "rose")}
-            ${pill("Valor COFINS", suggestion.cofins_value, "rose")}
-          </div>
+          ${renderSimulationTaxTable(suggestion)}
           ${
             cestReference
               ? `
@@ -749,10 +771,12 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
 
         const homeUF = String(active.home_uf || "").trim().toUpperCase();
         const taxRegime = String(active.tax_regime || "").trim();
+        const crt = String(active.crt || "").trim();
 
         const emitterInput = document.getElementById("emitter-uf");
         const recipientInput = document.getElementById("recipient-uf");
         const taxRegimeSelect = document.getElementById("tax-regime");
+        const crtSelect = document.getElementById("target-crt");
 
         if (emitterInput && !emitterInput.value && homeUF) {
           emitterInput.value = homeUF;
@@ -763,10 +787,14 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
         if (taxRegimeSelect && !taxRegimeSelect.value && taxRegime) {
           taxRegimeSelect.value = taxRegime;
         }
+        if (crtSelect && !crtSelect.value && crt) {
+          crtSelect.value = crt;
+        }
         if (defaultsText) {
+          const regimeLabel = taxRegime ? ` Regime: ${taxRegime}${crt ? `, CRT ${crt}` : ""}.` : "";
           defaultsText.textContent = homeUF
-            ? `Padrao atual: venda a consumidor final em ${homeUF} para ${homeUF}. Voce pode ajustar isso abaixo se precisar.`
-            : "Padrao atual: venda a consumidor final usando a UF da organizacao ativa. Voce pode ajustar isso abaixo se precisar.";
+            ? `Padrao atual: venda a consumidor final em ${homeUF} para ${homeUF}.${regimeLabel} Voce pode ajustar isso abaixo se precisar.`
+            : `Padrao atual: venda a consumidor final usando a UF da organizacao ativa.${regimeLabel}`;
         }
       } catch {
         if (defaultsText) {
@@ -844,6 +872,7 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
           ncm_code: ncmValue || catalogMatch?.profile?.ncm || "",
           operation_code: document.getElementById("operation-code")?.value || getDefaultOperationCode(),
           tax_regime: document.getElementById("tax-regime")?.value || "",
+          target_crt: document.getElementById("target-crt")?.value || "",
           emitter_uf: (document.getElementById("emitter-uf")?.value || "").trim().toUpperCase(),
           recipient_uf: (document.getElementById("recipient-uf")?.value || "").trim().toUpperCase(),
         };
@@ -1225,6 +1254,97 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
     .tax-pill--sky { background: #eff6ff; }
     .tax-pill--rose { background: #fff1f2; }
 
+    .simulation-tax-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .simulation-tax-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      font-size: 12px;
+    }
+
+    .simulation-tax-table th,
+    .simulation-tax-table td {
+      padding: 0;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+    }
+
+    .simulation-tax-table th {
+      width: 170px;
+      padding: 10px 12px;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 900;
+      text-align: left;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background: #f8fafc;
+    }
+
+    .simulation-tax-row--teal th {
+      border-left: 5px solid #0f766e;
+      background: #f0fdfa;
+    }
+
+    .simulation-tax-row--sky th {
+      border-left: 5px solid #0284c7;
+      background: #eff6ff;
+    }
+
+    .simulation-tax-row--rose th {
+      border-left: 5px solid #e11d48;
+      background: #fff1f2;
+    }
+
+    .simulation-tax-row--amber th {
+      border-left: 5px solid #f59e0b;
+      background: #fffbeb;
+    }
+
+    .simulation-tax-table td {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      background: #ffffff;
+    }
+
+    .simulation-tax-cell {
+      display: grid;
+      gap: 2px;
+      min-height: 48px;
+      padding: 8px 10px;
+      border-right: 1px solid #e2e8f0;
+    }
+
+    .simulation-tax-cell:last-child {
+      border-right: 0;
+    }
+
+    .simulation-tax-cell small {
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .simulation-tax-cell strong {
+      color: #0f172a;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .simulation-tax-reference {
+      margin-top: 4px;
+    }
+
     .decision-summary {
       display: grid;
       gap: 14px;
@@ -1479,6 +1599,10 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
       .diagnostic-grid {
         grid-template-columns: 1fr;
       }
+
+      .simulation-tax-table td {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+      }
     }
 
     @media (max-width: 760px) {
@@ -1496,6 +1620,24 @@ import DashboardLayout from "../../layouts/DashboardLayout.astro";
 
       .diagnostic-counter {
         justify-content: flex-start;
+      }
+
+      .simulation-tax-table,
+      .simulation-tax-table tbody,
+      .simulation-tax-table tr,
+      .simulation-tax-table th,
+      .simulation-tax-table td {
+        display: block;
+        width: 100%;
+      }
+
+      .simulation-tax-table th {
+        width: auto;
+      }
+
+      .simulation-tax-table td {
+        display: grid;
+        grid-template-columns: 1fr;
       }
     }
   </style>

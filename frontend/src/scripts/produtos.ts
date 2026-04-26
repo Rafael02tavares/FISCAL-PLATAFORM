@@ -1,6 +1,7 @@
 import { getOrganizationId, getToken } from "../lib/auth";
 import { listCatalogProducts, saveCatalogProduct, type CatalogProductItem } from "../lib/catalog-products";
 import { listOrganizations } from "../lib/organizations";
+import { suggestTax } from "../lib/tax";
 
 type OrganizationItem = {
   id: string;
@@ -19,6 +20,7 @@ const statsBox = document.getElementById("catalog-stats");
 const coverageBox = document.getElementById("catalog-coverage");
 const governanceBox = document.getElementById("catalog-governance");
 const summaryBox = document.getElementById("catalog-search-summary");
+const paginationBox = document.getElementById("catalog-pagination");
 const adminPanel = document.querySelector(".catalog-admin-panel") as HTMLDetailsElement | null;
 const quickFilterButtons = Array.from(document.querySelectorAll("[data-product-filter]")) as HTMLButtonElement[];
 const newProductButton = document.getElementById("new-product-button") as HTMLButtonElement | null;
@@ -28,7 +30,14 @@ let organization: OrganizationItem | null = null;
 let lastQuery = "";
 let activeProductFilter = "all";
 let lastSavedProductId = "";
+let suggestionByProductId: Record<string, any> = {};
+let suggestionLoadingProductId = "";
+let suggestionErrorByProductId: Record<string, string> = {};
+let suggestionExpandedByProductId: Record<string, boolean> = {};
 const PRODUCT_PREFILL_KEY = "catalog_product_prefill";
+const PAGE_SIZE = 24;
+let currentPage = 1;
+let catalogHasMore = false;
 
 function normalizeText(value: unknown) {
   return String(value || "").trim();
@@ -65,10 +74,10 @@ function getProductFilterLabel() {
       return "sem NCM";
     case "missing_cest":
       return "sem CEST";
-    case "missing_icms":
-      return "pendentes de ICMS";
-    case "missing_contributions":
-      return "sem PIS/COFINS";
+    case "missing_gtin":
+      return "sem GTIN";
+    case "missing_cst":
+      return "sem CST";
     case "missing_reform":
       return "sem IBS/CBS";
     default:
@@ -78,6 +87,14 @@ function getProductFilterLabel() {
 
 function isSimplesNacional() {
   return getTaxRegimeLabel().toLowerCase().includes("simples");
+}
+
+function getOrganizationUF() {
+  return normalizeText(organization?.home_uf).toUpperCase();
+}
+
+function getOrganizationCRT() {
+  return normalizeText(organization?.crt);
 }
 
 function setMessage(text: string, tone: "muted" | "success" | "error" = "muted") {
@@ -92,11 +109,17 @@ function setMessage(text: string, tone: "muted" | "success" | "error" = "muted")
 }
 
 function metricCard(label: string, value: number, tone = "") {
+  const percentage = items.length ? Math.round((value / items.length) * 100) : 0;
   return `
     <article class="metric-card ${tone ? `metric-card--${tone}` : ""}">
-      <span>${label}</span>
-      <strong>${value}</strong>
-      <p>${items.length ? `${Math.round((value / items.length) * 100)}% da base` : "Aguardando cadastro"}</p>
+      <div>
+        <span>${label}</span>
+        <strong>${value}</strong>
+      </div>
+      <div class="metric-card__bar">
+        <i style="width:${percentage}%"></i>
+      </div>
+      <p>${items.length ? `${percentage}% da base` : "Aguardando cadastro"}</p>
     </article>
   `;
 }
@@ -110,11 +133,10 @@ function renderStats() {
 
   statsBox.innerHTML = [
     metricCard("Produtos", items.length),
+    metricCard("Com GTIN", countWhere((item) => hasValue(item.gtin)), "sky"),
     metricCard("Com NCM", countWhere((item) => hasValue(item.profile?.ncm)), "teal"),
-    metricCard("Com PIS/COFINS", countWhere((item) => hasValue(item.profile?.pis_cst) || hasValue(item.profile?.cofins_cst)), "amber"),
-    metricCard("Com ICMS/CSOSN", countWhere((item) => hasValue(item.profile?.icms_cst) || hasValue(item.profile?.csosn)), "sky"),
-    metricCard("Com reforma", countWhere((item) => hasValue(item.profile?.ibs_rate) || hasValue(item.profile?.cbs_rate)), "rose"),
-    metricCard("Com operacao", countWhere((item) => hasValue(item.profile?.operation_code) || hasValue(item.profile?.cfop)), "sky"),
+    metricCard("Com CEST", countWhere((item) => hasValue(item.profile?.cest)), "amber"),
+    metricCard("Com CST", countWhere((item) => hasValue(item.profile?.icms_cst) || hasValue(item.profile?.csosn) || hasValue(item.profile?.pis_cst) || hasValue(item.profile?.cofins_cst)), "rose"),
   ].join("");
 }
 
@@ -138,10 +160,10 @@ function renderCoverage() {
   if (!coverageBox) return;
 
   coverageBox.innerHTML = [
-    coverageItem("Classificacao", countWhere((item) => hasValue(item.profile?.ncm) && hasValue(item.profile?.cclas_trib))),
-    coverageItem("Contribuicoes", countWhere((item) => hasValue(item.profile?.pis_cst) && hasValue(item.profile?.cofins_cst))),
-    coverageItem("ICMS / regime", countWhere((item) => hasValue(item.profile?.icms_cst) || hasValue(item.profile?.csosn))),
-    coverageItem("Reforma", countWhere((item) => hasValue(item.profile?.ibs_rate) || hasValue(item.profile?.cbs_rate) || hasValue(item.profile?.selective_tax_code))),
+    coverageItem("Codigo de barras", countWhere((item) => hasValue(item.gtin))),
+    coverageItem("Classificacao NCM", countWhere((item) => hasValue(item.profile?.ncm))),
+    coverageItem("CEST informado", countWhere((item) => hasValue(item.profile?.cest))),
+    coverageItem("CST base", countWhere((item) => hasValue(item.profile?.icms_cst) || hasValue(item.profile?.csosn) || hasValue(item.profile?.pis_cst) || hasValue(item.profile?.cofins_cst))),
   ].join("");
 }
 
@@ -150,18 +172,18 @@ function renderGovernance() {
 
   const cards = [
     {
-      title: "Classificacao fiscal",
-      text: "NCM, EX, CEST e cClasTrib prontos para consulta e sugestao.",
+      title: "Item como base",
+      text: "Descricao, GTIN, NCM, CEST e CST formam a identidade fiscal fixa.",
     },
     {
-      title: "Regime e incidencias",
+      title: "Sugestao por contexto",
       text: isSimplesNacional()
-        ? "A base privilegia CSOSN, PIS, COFINS e cenarios do Simples."
-        : "A base privilegia CST, CFOP e memoria de aliquotas por operacao.",
+        ? "A organizacao usa Simples Nacional; o motor prioriza CSOSN quando sugerir a saida."
+        : "A organizacao usa regime normal; o motor prioriza CST e aliquotas por UF.",
     },
     {
-      title: "Reforma tributaria",
-      text: "IBS, CBS e imposto seletivo ficam cadastrados no mesmo ativo fiscal.",
+      title: "Importacao como volume",
+      text: "O XML cadastra itens rapidamente; a tela de produto limpa e consolida essa base.",
     },
   ];
 
@@ -196,9 +218,9 @@ function renderSearchSummary(list: CatalogProductItem[]) {
 
   if (!query) {
     summaryBox.innerHTML = `
-      <strong>${list.length} de ${items.length} produtos disponiveis para consulta</strong>
+      <strong>${list.length} produto(s) nesta pagina fiscal</strong>
       <span>
-        Filtro atual: ${escapeHtml(getProductFilterLabel())}. Contexto: ${escapeHtml(getTaxRegimeLabel())}.
+        Pagina ${currentPage}. Filtro atual: ${escapeHtml(getProductFilterLabel())}. Contexto: ${escapeHtml(getTaxRegimeLabel())}.
         Pesquise por descricao, GTIN, NCM, CEST, ${flowLabel} ou codigo interno para localizar o perfil fiscal.
       </span>
     `;
@@ -218,7 +240,7 @@ function renderSearchSummary(list: CatalogProductItem[]) {
   summaryBox.innerHTML = `
     <strong>${list.length} resultado(s) para "${escapeHtml(query)}"</strong>
     <span>
-      Filtro atual: ${escapeHtml(getProductFilterLabel())}. Primeiro destaque: ${displayValue(highlighted?.description)} | NCM ${displayValue(profile.ncm)} | ${flowLabel} ${displayValue(flowValue)}.
+      Pagina ${currentPage}. Filtro atual: ${escapeHtml(getProductFilterLabel())}. Primeiro destaque: ${displayValue(highlighted?.description)} | NCM ${displayValue(profile.ncm)} | ${flowLabel} ${displayValue(flowValue)}.
     </span>
   `;
 }
@@ -229,6 +251,227 @@ function taxPill(label: string, value: unknown, tone = "teal") {
       <span>${label}</span>
       <strong>${displayValue(value)}</strong>
     </div>
+  `;
+}
+
+function fieldItem(label: string, value: unknown, tone = "teal") {
+  return `
+    <span class="field-item field-item--${tone}">
+      <small>${label}</small>
+      <strong>${displayValue(value, "-")}</strong>
+    </span>
+  `;
+}
+
+function taxSection(title: string, subtitle: string, tone: string, content: string) {
+  return `
+    <section class="tax-section tax-section--${tone}">
+      <div class="tax-section__title">
+        <span>${title}</span>
+        <p>${subtitle}</p>
+      </div>
+      <div class="tax-section__grid">
+        ${content}
+      </div>
+    </section>
+  `;
+}
+
+function fiscalInfoCard(title: string, codeLabel: string, code: unknown, description: unknown, tone = "teal") {
+  return `
+    <article class="fiscal-info-card fiscal-info-card--${tone}">
+      <span>${title}</span>
+      <strong>${codeLabel}: ${displayValue(code, "-")}</strong>
+      <p>${displayValue(description, "Descricao ainda nao encontrada no catalogo importado.")}</p>
+    </article>
+  `;
+}
+
+function getProductCompletion(item: CatalogProductItem) {
+  const profile = item.profile || {};
+  const checks = [
+    hasValue(item.description),
+    hasValue(item.gtin),
+    hasValue(profile.ncm),
+    hasValue(profile.cest),
+    hasValue(profile.icms_cst) || hasValue(profile.csosn) || hasValue(profile.pis_cst) || hasValue(profile.cofins_cst),
+  ];
+  const ready = checks.filter(Boolean).length;
+  return Math.round((ready / checks.length) * 100);
+}
+
+function getProductHealth(item: CatalogProductItem) {
+  const completion = getProductCompletion(item);
+
+  if (completion < 60) {
+    return {
+      label: "Critico",
+      tone: "rose",
+      text: "faltam dados fixos para localizar o item com seguranca",
+    };
+  }
+
+  if (completion < 100) {
+    return {
+      label: "Em revisao",
+      tone: "amber",
+      text: "identidade fiscal parcialmente preenchida",
+    };
+  }
+
+  return {
+    label: "Pronto",
+    tone: "teal",
+    text: "item pronto para sugestao por UF e regime",
+  };
+}
+
+function buildSuggestionPayload(item: CatalogProductItem) {
+  const profile = item.profile || {};
+  const uf = getOrganizationUF();
+  return {
+    gtin: normalizeText(item.gtin),
+    description: normalizeText(item.description),
+    ncm_code: normalizeText(profile.ncm),
+    operation_code: "sale_consumer_final",
+    tax_regime: normalizeText(organization?.tax_regime) || normalizeText(profile.target_tax_regime),
+    target_crt: getOrganizationCRT() || normalizeText(profile.target_crt),
+    emitter_uf: uf || normalizeText(profile.emitter_uf).toUpperCase(),
+    recipient_uf: uf || normalizeText(profile.recipient_uf).toUpperCase(),
+  };
+}
+
+function suggestionCell(label: string, value: unknown) {
+  return `
+    <span class="suggestion-cell">
+      <small>${label}</small>
+      <strong>${displayValue(value, "-")}</strong>
+    </span>
+  `;
+}
+
+function suggestionTaxRow(title: string, tone: string, cells: string[]) {
+  return `
+    <tr class="suggestion-tax-row suggestion-tax-row--${tone}">
+      <th scope="row">${escapeHtml(title)}</th>
+      <td>${cells.join("")}</td>
+    </tr>
+  `;
+}
+
+function renderProductSuggestion(item: CatalogProductItem) {
+  const loading = suggestionLoadingProductId === item.id;
+  const error = suggestionErrorByProductId[item.id];
+  const payload = suggestionByProductId[item.id];
+  const suggestion = payload?.suggestion || {};
+  const warnings = Array.isArray(payload?.warnings) ? payload.warnings : [];
+  const ai = payload?.ai_assistance;
+
+  if (loading) {
+    return `
+      <section class="product-suggestion product-suggestion--loading">
+        <strong>Consultando sugestao tributaria...</strong>
+        <p>Motor aplicando venda interna para consumidor final em ${escapeHtml(getOrganizationUF() || "UF da organizacao")} no regime ${escapeHtml(getTaxRegimeLabel())}.</p>
+      </section>
+    `;
+  }
+
+  if (error) {
+    return `
+      <section class="product-suggestion product-suggestion--error">
+        <strong>Nao foi possivel gerar sugestao</strong>
+        <p>${escapeHtml(error)}</p>
+      </section>
+    `;
+  }
+
+  if (!payload) {
+    return `
+      <section class="product-suggestion product-suggestion--empty">
+        <strong>Sugestao ainda nao consultada</strong>
+        <p>Clique em "Sugerir tributos" para calcular a saida conforme UF e regime da organizacao.</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="product-suggestion">
+      <div class="product-suggestion__header">
+        <div>
+          <span>Sugestao tributaria</span>
+          <strong>${displayValue(payload?.decision_summary?.title, "Resultado da consulta")}</strong>
+          <p>${displayValue(payload?.decision_summary?.message, "Cenario padrao aplicado pela plataforma.")}</p>
+        </div>
+        <span class="product-chip product-chip--source">Conf. ${displayValue(payload?.confidence_score, "0")}</span>
+      </div>
+      <table class="suggestion-tax-table">
+        <tbody>
+        ${suggestionTaxRow(
+          "Identidade fiscal",
+          "teal",
+          [
+            suggestionCell("NCM", suggestion.ncm),
+            suggestionCell("CEST", suggestion.cest),
+            suggestionCell("cClasTrib", suggestion.cclas_trib),
+          ],
+        )}
+        ${suggestionTaxRow(
+          "Operacao e ICMS",
+          "sky",
+          [
+            suggestionCell("CFOP", suggestion.cfop),
+            suggestionCell("ICMS CST", suggestion.icms_cst),
+            suggestionCell("CSOSN", suggestion.csosn),
+            suggestionCell("Aliq. ICMS", suggestion.icms_rate),
+          ],
+        )}
+        ${suggestionTaxRow(
+          "PIS e COFINS",
+          "rose",
+          [
+            suggestionCell("PIS CST", suggestion.pis_cst),
+            suggestionCell("COFINS CST", suggestion.cofins_cst),
+            suggestionCell("Aliq. PIS", suggestion.pis_rate),
+            suggestionCell("Aliq. COFINS", suggestion.cofins_rate),
+          ],
+        )}
+        ${suggestionTaxRow(
+          "Reforma",
+          "amber",
+          [
+            suggestionCell("IBS", suggestion.ibs_rate),
+            suggestionCell("CBS", suggestion.cbs_rate),
+          ],
+        )}
+        </tbody>
+      </table>
+      ${
+        ai
+          ? `<div class="product-ai-assist">
+              <div>
+                <span>OpenAI assistiva</span>
+                <strong>${displayValue(ai.category, "Classificacao de apoio")}</strong>
+                <p>${displayValue(ai.observation || ai.recommended_action, "IA usada apenas como apoio de triagem.")}</p>
+              </div>
+              <div class="product-ai-assist__meta">
+                <span>Modelo <strong>${displayValue(ai.model, "-")}</strong></span>
+                <span>Risco <strong>${displayValue(ai.risk, "-")}</strong></span>
+                <span>Conf. IA <strong>${displayValue(ai.confidence, "-")}</strong></span>
+              </div>
+              ${
+                Array.isArray(ai.signals) && ai.signals.length
+                  ? `<p class="product-ai-assist__signals"><strong>Sinais:</strong> ${ai.signals.slice(0, 5).map((signal: string) => escapeHtml(signal)).join(", ")}</p>`
+                  : ""
+              }
+            </div>`
+          : ""
+      }
+      ${
+        warnings.length
+          ? `<div class="product-suggestion__warnings"><strong>Pontos de revisao</strong>${warnings.slice(0, 4).map((item: string) => `<p>${escapeHtml(item)}</p>`).join("")}</div>`
+          : ""
+      }
+    </section>
   `;
 }
 
@@ -243,19 +486,35 @@ function buildProductDiagnostics(item: CatalogProductItem): ProductDiagnostic[] 
   const profile = item.profile || {};
   const diagnostics: ProductDiagnostic[] = [];
 
+  diagnostics.push(
+    hasValue(item.gtin)
+      ? {
+          area: "GTIN",
+          status: "ready",
+          title: "Codigo de barras definido",
+          action: "Produto pode ser encontrado e consolidado em novas importacoes.",
+        }
+      : {
+          area: "GTIN",
+          status: "missing",
+          title: "GTIN ausente",
+          action: "Informe o codigo de barras para reduzir duplicidades.",
+        },
+  );
+
   if (hasValue(profile.ncm) && hasValue(profile.cest)) {
     diagnostics.push({
       area: "Classificacao",
       status: "ready",
-      title: "NCM e CEST preenchidos",
-      action: "Base pronta para regras por produto e ICMS ST.",
+      title: "NCM e CEST definidos",
+      action: "Identidade fiscal suficiente para consultar regras por UF.",
     });
   } else if (hasValue(profile.ncm)) {
     diagnostics.push({
       area: "Classificacao",
       status: "attention",
       title: "CEST pendente",
-      action: "Revise CEST quando houver possibilidade de ICMS ST.",
+      action: "CEST ajuda o motor, mas nao confirma ST sozinho.",
     });
   } else {
     diagnostics.push({
@@ -266,83 +525,43 @@ function buildProductDiagnostics(item: CatalogProductItem): ProductDiagnostic[] 
     });
   }
 
-  if (hasValue(profile.cfop) || hasValue(profile.csosn) || hasValue(profile.operation_code)) {
-    diagnostics.push({
-      area: "Operacao",
-      status: "ready",
-      title: "Fluxo fiscal informado",
-      action: "Operacao pronta para sugestao e simulacao.",
-    });
-  } else {
-    diagnostics.push({
-      area: "Operacao",
-      status: "missing",
-      title: "CFOP/operacao ausente",
-      action: "Vincule CFOP ou operacao padrao do produto.",
-    });
-  }
-
-  if (isSimplesNacional()) {
-    diagnostics.push(
-      hasValue(profile.csosn)
-        ? {
-            area: "ICMS",
-            status: "ready",
-            title: "CSOSN definido",
-            action: "Revise ST, FCP e beneficios quando aplicavel.",
-          }
-        : {
-            area: "ICMS",
-            status: "missing",
-            title: "CSOSN pendente",
-            action: "Preencha CSOSN para o regime Simples.",
-          },
-    );
-  } else if (hasValue(profile.icms_cst) && hasValue(profile.icms_rate)) {
+  if (hasValue(profile.icms_cst) || hasValue(profile.csosn)) {
     diagnostics.push({
       area: "ICMS",
       status: "ready",
-      title: "CST e aliquota definidos",
-      action: "Revise reducao, FCP, ST e excecoes estaduais.",
+      title: "Situacao ICMS base registrada",
+      action: "A saida final sera decidida pela UF e regime da organizacao.",
     });
-  } else if (hasValue(profile.icms_cst) || hasValue(profile.icms_rate) || hasValue(profile.fcp_rate)) {
+  } else if (hasValue(profile.cest)) {
     diagnostics.push({
       area: "ICMS",
       status: "attention",
-      title: "ICMS parcial",
-      action: "Complete CST, aliquota e regras estaduais.",
+      title: "ICMS depende do motor",
+      action: "CEST existe, mas a regra de ST deve vir por UF/regime.",
     });
   } else {
     diagnostics.push({
       area: "ICMS",
       status: "missing",
-      title: "ICMS ausente",
-      action: "Cadastre CST/aliquota de ICMS ou CSOSN.",
+      title: "Situacao ICMS base ausente",
+      action: "Cadastre CST/CSOSN base ou deixe o motor sugerir pela regra.",
     });
   }
 
   const hasContributionCST = hasValue(profile.pis_cst) && hasValue(profile.cofins_cst);
-  const hasContributionRates = hasValue(profile.pis_rate) && hasValue(profile.cofins_rate);
-  if (hasContributionCST && hasContributionRates) {
+  if (hasContributionCST) {
     diagnostics.push({
       area: "PIS/COFINS",
       status: "ready",
-      title: "Contribuicoes completas",
-      action: "Valide receitas e excecoes monofasicas.",
-    });
-  } else if (hasContributionCST || hasContributionRates) {
-    diagnostics.push({
-      area: "PIS/COFINS",
-      status: "attention",
-      title: "Contribuicoes parciais",
-      action: "Complete CST e aliquotas por regime.",
+      title: "CST de contribuicoes registrado",
+      action: "Aliquotas variam conforme regime e regra do produto.",
     });
   } else {
     diagnostics.push({
       area: "PIS/COFINS",
       status: "missing",
-      title: "Contribuicoes ausentes",
-      action: "Cadastre PIS/COFINS para consulta completa.",
+      title: "CST PIS/COFINS ausente",
+      action: "Cadastre CST base para diferenciar normal, zero ou monofasico.",
     });
   }
 
@@ -389,7 +608,7 @@ function renderProductDiagnostics(item: CatalogProductItem) {
     <section class="product-diagnostic">
       <div class="product-diagnostic__header">
         <div>
-          <span>Cobertura fiscal</span>
+          <span>Identidade do item</span>
           <strong>${score}% completo</strong>
         </div>
         <div class="product-diagnostic__counts">
@@ -428,12 +647,10 @@ function productMatchesQuickFilter(item: CatalogProductItem) {
       return !hasValue(profile.ncm);
     case "missing_cest":
       return hasValue(profile.ncm) && !hasValue(profile.cest);
-    case "missing_icms":
-      return isSimplesNacional()
-        ? !hasValue(profile.csosn)
-        : !(hasValue(profile.icms_cst) && hasValue(profile.icms_rate));
-    case "missing_contributions":
-      return !(hasValue(profile.pis_cst) && hasValue(profile.cofins_cst) && hasValue(profile.pis_rate) && hasValue(profile.cofins_rate));
+    case "missing_gtin":
+      return !hasValue(item.gtin);
+    case "missing_cst":
+      return !(hasValue(profile.icms_cst) || hasValue(profile.csosn) || hasValue(profile.pis_cst) || hasValue(profile.cofins_cst));
     case "missing_reform":
       return !(hasValue(profile.cclas_trib) && (hasValue(profile.ibs_rate) || hasValue(profile.cbs_rate)));
     default:
@@ -459,56 +676,78 @@ function productMatchesTextFilter(item: CatalogProductItem, query: string) {
     .some((value) => String(value).toLowerCase().includes(query));
 }
 
-function buildProductCard(item: CatalogProductItem) {
-  const profile = item.profile || {};
-  const flowLabel = isSimplesNacional() ? "CSOSN" : "CFOP";
-  const flowValue = isSimplesNacional() ? profile.csosn : profile.cfop;
-  const editPayload = escapeHtml(JSON.stringify(buildProductEditPayload(item)));
-  const highlightClass = item.id === lastSavedProductId ? " product-card--saved" : "";
+function statusBadge(item: CatalogProductItem) {
+  const completion = getProductCompletion(item);
+  const health = getProductHealth(item);
+  return `<span class="product-status-badge product-status-badge--${health.tone}">${escapeHtml(health.label)} - ${completion}%</span>`;
+}
+
+function buildSuggestionDetailsRow(item: CatalogProductItem) {
+  if (!suggestionExpandedByProductId[item.id]) return "";
+
+  const hasSuggestionState = suggestionLoadingProductId === item.id || suggestionErrorByProductId[item.id] || suggestionByProductId[item.id];
+  if (!hasSuggestionState) return "";
 
   return `
-    <article class="product-card${highlightClass}" data-product-id="${escapeHtml(item.id)}">
-      <div class="product-card__top">
-        <div>
-          <span class="product-chip">${displayValue(item.product_code, "Sem codigo")}</span>
-          <h4>${displayValue(item.description)}</h4>
-          <p class="product-card__meta">
-            GTIN ${displayValue(item.gtin, "nao informado")} | Regime ${escapeHtml(getTaxRegimeLabel())}
-          </p>
-        </div>
-        <span class="product-chip product-chip--source">${displayValue(profile.source_type, "manual_entry")}</span>
-      </div>
+    <tr class="product-table__details" data-product-details="${escapeHtml(item.id)}">
+      <td colspan="10">
+        ${renderProductSuggestion(item)}
+      </td>
+    </tr>
+  `;
+}
 
-      <div class="catalog-field-grid">
-        ${taxPill("NCM", profile.ncm, "teal")}
-        ${taxPill("NCM EX", profile.ncm_ex, "teal")}
-        ${taxPill("CEST", profile.cest, "amber")}
-        ${taxPill("cClasTrib", profile.cclas_trib, "sky")}
-        ${taxPill(flowLabel, flowValue, "sky")}
-        ${taxPill("ICMS CST", profile.icms_cst, "sky")}
-        ${taxPill("PIS CST", profile.pis_cst, "rose")}
-        ${taxPill("COFINS CST", profile.cofins_cst, "rose")}
-        ${taxPill("Aliq. ICMS", profile.icms_rate, "sky")}
-        ${taxPill("Aliq. PIS", profile.pis_rate, "rose")}
-        ${taxPill("Aliq. COFINS", profile.cofins_rate, "rose")}
-        ${taxPill("FCP", profile.fcp_rate, "amber")}
-        ${taxPill("IBS", profile.ibs_rate, "teal")}
-        ${taxPill("CBS", profile.cbs_rate, "teal")}
-        ${taxPill("Imp. seletivo", profile.selective_tax_code, "amber")}
-        ${taxPill("Aliq. seletivo", profile.selective_tax_rate, "amber")}
-      </div>
+function getSuggestionButtonLabel(item: CatalogProductItem) {
+  if (suggestionLoadingProductId === item.id) return "Consultando...";
+  if (suggestionExpandedByProductId[item.id]) return "Recolher";
+  if (suggestionByProductId[item.id] || suggestionErrorByProductId[item.id]) return "Mostrar sugestao";
+  return "Sugerir";
+}
 
-      <div class="product-card__footer">
-        <span>Operacao: ${displayValue(profile.operation_code)}</span>
-        <span>UF: ${displayValue(profile.emitter_uf, "--")} -> ${displayValue(profile.recipient_uf, "--")}</span>
-        <span>Regime alvo: ${displayValue(profile.target_tax_regime || getTaxRegimeLabel())}</span>
-        <span>CRT: ${displayValue(profile.target_crt)}</span>
-        <span>Confianca: ${hasValue(profile.confidence_score) ? escapeHtml(profile.confidence_score) : "0.99"}</span>
-        <button class="product-edit-button" type="button" data-product-edit="${editPayload}">Completar cadastro</button>
-      </div>
+function buildProductRow(item: CatalogProductItem, index: number) {
+  const profile = item.profile || {};
+  const editPayload = escapeHtml(JSON.stringify(buildProductEditPayload(item)));
+  const highlightClass = item.id === lastSavedProductId ? " product-table__row--saved" : "";
+  const stripeClass = index % 2 === 0 ? " product-table__row--even" : " product-table__row--odd";
+  const icmsSituationLabel = isSimplesNacional() ? "CSOSN base" : "CST ICMS base";
+  const icmsSituationValue = isSimplesNacional() ? profile.csosn || profile.icms_cst : profile.icms_cst || profile.csosn;
+  const pisCofins = `${displayValue(profile.pis_cst, "-")} / ${displayValue(profile.cofins_cst, "-")}`;
 
-      ${renderProductDiagnostics(item)}
-    </article>
+  return `
+    <tr class="product-table__row${stripeClass}${highlightClass}" data-product-id="${escapeHtml(item.id)}">
+      <td class="product-table__index">${(currentPage - 1) * PAGE_SIZE + index + 1}</td>
+      <td class="product-table__product">
+        <strong>${displayValue(item.description)}</strong>
+        <span>Codigo: ${displayValue(item.product_code, "-")}</span>
+      </td>
+      <td>${displayValue(item.gtin, "-")}</td>
+      <td>
+        <strong class="product-table__ncm-code" title="${displayValue(profile.ncm_description, "Descricao NCM nao carregada")}">${displayValue(profile.ncm, "-")}</strong>
+        <span>Passe o mouse</span>
+      </td>
+      <td>
+        <strong>${displayValue(profile.cest, "-")}</strong>
+        <span>${displayValue(profile.cest_description, "Sem descricao CEST")}</span>
+      </td>
+      <td>
+        <strong>${displayValue(icmsSituationValue, "-")}</strong>
+        <span>${escapeHtml(icmsSituationLabel)}</span>
+      </td>
+      <td>
+        <strong>${pisCofins}</strong>
+        <span>PIS / COFINS</span>
+      </td>
+      <td>
+        <strong>${displayValue(profile.cclas_trib, "-")}</strong>
+        <span>cClasTrib</span>
+      </td>
+      <td>${statusBadge(item)}</td>
+      <td class="product-table__actions">
+          <button class="product-suggest-button" type="button" data-product-suggest="${escapeHtml(item.id)}">${getSuggestionButtonLabel(item)}</button>
+          <button class="product-edit-button" type="button" data-product-edit="${editPayload}">Editar</button>
+      </td>
+    </tr>
+    ${buildSuggestionDetailsRow(item)}
   `;
 }
 
@@ -520,8 +759,10 @@ function buildProductEditPayload(item: CatalogProductItem) {
     gtin: item.gtin || "",
     description: item.description || "",
     ncm: profile.ncm || "",
+    ncm_description: profile.ncm_description || "",
     ncm_ex: profile.ncm_ex || "",
     cest: profile.cest || "",
+    cest_description: profile.cest_description || "",
     cclas_trib: profile.cclas_trib || "",
     cfop: profile.cfop || "",
     csosn: profile.csosn || "",
@@ -574,8 +815,71 @@ function renderProducts(list: CatalogProductItem[]) {
     return;
   }
 
-  result.innerHTML = `<div class="catalog-products-list">${list.map(buildProductCard).join("")}</div>`;
+  result.innerHTML = `
+    <div class="product-table-wrap">
+      <table class="product-table">
+        <colgroup>
+          <col class="product-table__col-index" />
+          <col class="product-table__col-product" />
+          <col class="product-table__col-gtin" />
+          <col class="product-table__col-ncm" />
+          <col class="product-table__col-cest" />
+          <col class="product-table__col-icms" />
+          <col class="product-table__col-piscofins" />
+          <col class="product-table__col-reform" />
+          <col class="product-table__col-status" />
+          <col class="product-table__col-actions" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Produto</th>
+            <th>GTIN</th>
+            <th>NCM</th>
+            <th>CEST</th>
+            <th>ICMS</th>
+            <th>PIS/COFINS</th>
+            <th>IBS/CBS</th>
+            <th>Status</th>
+            <th>Acao</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${list.map((item, index) => buildProductRow(item, index)).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
   wireProductEditButtons();
+  wireProductSuggestButtons();
+}
+
+function renderPagination() {
+  if (!paginationBox) return;
+
+  const from = items.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
+  const to = (currentPage - 1) * PAGE_SIZE + items.length;
+  paginationBox.innerHTML = `
+    <div class="catalog-pagination__info">
+      <strong>Pagina ${currentPage}</strong>
+      <span>Mostrando ${from}-${to}. Use a busca para ir direto ao produto quando a base estiver grande.</span>
+    </div>
+    <div class="catalog-pagination__actions">
+      <button class="secondary-button" type="button" data-catalog-page="previous" ${currentPage <= 1 ? "disabled" : ""}>Anterior</button>
+      <button class="primary-button" type="button" data-catalog-page="next" ${!catalogHasMore ? "disabled" : ""}>Proxima</button>
+    </div>
+  `;
+
+  const previous = paginationBox.querySelector('[data-catalog-page="previous"]') as HTMLButtonElement | null;
+  const next = paginationBox.querySelector('[data-catalog-page="next"]') as HTMLButtonElement | null;
+  previous?.addEventListener("click", () => {
+    if (currentPage <= 1) return;
+    void refreshProducts(lastQuery, currentPage - 1);
+  });
+  next?.addEventListener("click", () => {
+    if (!catalogHasMore) return;
+    void refreshProducts(lastQuery, currentPage + 1);
+  });
 }
 
 function wireProductEditButtons() {
@@ -591,6 +895,58 @@ function wireProductEditButtons() {
       }
     });
   });
+}
+
+function wireProductSuggestButtons() {
+  const buttons = Array.from(document.querySelectorAll("[data-product-suggest]")) as HTMLButtonElement[];
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const productId = button.dataset.productSuggest || "";
+      const item = items.find((entry) => entry.id === productId);
+      if (!item) {
+        setMessage("Produto nao encontrado para gerar sugestao.", "error");
+        return;
+      }
+      void handleToggleProductSuggestion(item);
+    });
+  });
+}
+
+async function handleToggleProductSuggestion(item: CatalogProductItem) {
+  const hasSuggestionState = Boolean(suggestionByProductId[item.id] || suggestionErrorByProductId[item.id]);
+  if (suggestionExpandedByProductId[item.id] && hasSuggestionState) {
+    suggestionExpandedByProductId[item.id] = false;
+    applyFilter();
+    return;
+  }
+
+  suggestionExpandedByProductId[item.id] = true;
+  if (hasSuggestionState || suggestionLoadingProductId === item.id) {
+    applyFilter();
+    return;
+  }
+
+  await handleSuggestProduct(item);
+}
+
+async function handleSuggestProduct(item: CatalogProductItem) {
+  suggestionLoadingProductId = item.id;
+  suggestionExpandedByProductId[item.id] = true;
+  delete suggestionErrorByProductId[item.id];
+  applyFilter();
+
+  try {
+    const payload = buildSuggestionPayload(item);
+    const response = await suggestTax(payload);
+    suggestionByProductId[item.id] = response;
+    setMessage(`Sugestao gerada para ${normalizeText(item.description) || "produto selecionado"}.`, "success");
+  } catch (error) {
+    suggestionErrorByProductId[item.id] = String(error);
+    setMessage(`Falha ao gerar sugestao: ${String(error)}`, "error");
+  } finally {
+    suggestionLoadingProductId = "";
+    applyFilter();
+  }
 }
 
 function fillProductForm(payload: Record<string, string>) {
@@ -630,6 +986,7 @@ function applyFilter() {
 
   renderSearchSummary(filtered);
   renderProducts(filtered);
+  renderPagination();
 }
 
 function setActiveQuickFilter(filter: string) {
@@ -652,7 +1009,7 @@ async function handleSearchSubmit(event: SubmitEvent) {
       result.innerHTML = `<div class="dashboard-note">Consultando catalogo fiscal...</div>`;
     }
     renderSearchSummary([]);
-    await refreshProducts(query);
+    await refreshProducts(query, 1);
     setMessage(
       query
         ? `Consulta atualizada para "${query}".`
@@ -699,12 +1056,6 @@ function buildPayload(formData: FormData) {
 
   normalized.emitter_uf = normalized.emitter_uf.toUpperCase();
   normalized.recipient_uf = normalized.recipient_uf.toUpperCase();
-  if (!normalized.target_tax_regime && organization?.tax_regime) {
-    normalized.target_tax_regime = normalizeText(organization.tax_regime);
-  }
-  if (!normalized.target_crt && organization?.crt) {
-    normalized.target_crt = normalizeText(organization.crt);
-  }
   return normalized;
 }
 
@@ -750,9 +1101,15 @@ function applyProductPrefill() {
   clearProductPrefill();
 }
 
-async function refreshProducts(query = "") {
-  const response = await listCatalogProducts(query);
+async function refreshProducts(query = "", page = currentPage) {
+  currentPage = Math.max(1, page);
+  lastQuery = query;
+  const response = await listCatalogProducts(query, {
+    limit: PAGE_SIZE,
+    offset: (currentPage - 1) * PAGE_SIZE,
+  });
   items = Array.isArray(response?.items) ? response.items : [];
+  catalogHasMore = Boolean(response?.has_more);
   renderStats();
   renderCoverage();
   renderGovernance();
@@ -774,7 +1131,6 @@ async function handleSubmit(event: SubmitEvent) {
     setMessage("Salvando produto tributario...", "success");
     const payload = buildPayload(new FormData(form));
     const response = await saveCatalogProduct(payload);
-    items = Array.isArray(response?.items) ? response.items : [];
     lastSavedProductId = String(response?.product_id || payload.product_id || "");
     if (!lastSavedProductId) {
       const savedDescription = normalizeText(payload.description).toLowerCase();
@@ -786,17 +1142,15 @@ async function handleSubmit(event: SubmitEvent) {
       });
       lastSavedProductId = savedProduct?.id || "";
     }
-    renderStats();
-    renderCoverage();
-    renderGovernance();
     if (filterInput) {
       filterInput.value = normalizeText(payload.description) || lastQuery;
     }
+    lastQuery = normalizeText(payload.description) || lastQuery;
     activeProductFilter = "all";
     quickFilterButtons.forEach((button) => {
       button.classList.toggle("quick-chip--active", button.dataset.productFilter === "all");
     });
-    applyFilter();
+    await refreshProducts(lastQuery, 1);
     form.reset();
     setMessage(response?.message || "Produto tributario salvo com sucesso.", "success");
     if (lastSavedProductId) {

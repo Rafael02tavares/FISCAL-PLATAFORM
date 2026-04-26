@@ -1,21 +1,41 @@
 import { getOrganizationId, getToken } from "../lib/auth";
 import {
   acceptCaptureCandidate,
+  acceptProductReviews,
   listCaptureCandidates,
+  listProductReviews,
   type CaptureCandidate,
+  type ProductReview,
 } from "../lib/admin-capture";
 
 const statsBox = document.getElementById("capture-stats");
 const listBox = document.getElementById("capture-rules-list");
 const feedback = document.getElementById("capture-feedback");
+const productReviewFeedback = document.getElementById("product-review-feedback");
+const productReviewList = document.getElementById("product-review-list");
+const reviewProductsButton = document.getElementById("review-products-button") as HTMLButtonElement | null;
+const acceptReadyProductsButton = document.getElementById("accept-ready-products-button") as HTMLButtonElement | null;
 
 let cachedItems: CaptureCandidate[] = [];
+let productReviews: ProductReview[] = [];
 
 function setFeedback(message: string, tone: "muted" | "success" | "error" = "muted") {
   if (!feedback) return;
 
   feedback.textContent = message;
   feedback.className =
+    tone === "success"
+      ? "feedback feedback--success"
+      : tone === "error"
+        ? "feedback feedback--error"
+        : "dashboard-note";
+}
+
+function setProductReviewFeedback(message: string, tone: "muted" | "success" | "error" = "muted") {
+  if (!productReviewFeedback) return;
+
+  productReviewFeedback.textContent = message;
+  productReviewFeedback.className =
     tone === "success"
       ? "feedback feedback--success"
       : tone === "error"
@@ -51,6 +71,90 @@ function escapeHTML(value: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function displayValue(value: unknown, fallback = "-") {
+  const normalized = String(value || "").trim();
+  return escapeHTML(normalized || fallback);
+}
+
+function confidencePercent(value: number) {
+  return `${Math.round((Number(value) || 0) * 100)}%`;
+}
+
+function captureCell(label: string, value: unknown) {
+  return `
+    <span class="capture-tax-cell">
+      <small>${escapeHTML(label)}</small>
+      <strong>${displayValue(value)}</strong>
+    </span>
+  `;
+}
+
+function captureTaxRow(title: string, tone: string, cells: string[]) {
+  return `
+    <tr class="capture-tax-row capture-tax-row--${tone}">
+      <th scope="row">${escapeHTML(title)}</th>
+      <td>${cells.join("")}</td>
+    </tr>
+  `;
+}
+
+function renderCaptureTaxTable(item: CaptureCandidate) {
+  return `
+    <table class="capture-tax-table">
+      <tbody>
+        ${captureTaxRow("Classificacao", "teal", [
+          captureCell("NCM", item.ncm),
+          captureCell("CEST", item.cest),
+          captureCell("CFOP", item.cfop),
+          captureCell("Natureza", item.operation_nature),
+        ])}
+        ${captureTaxRow("ICMS observado", "amber", [
+          captureCell("CST", item.icms_cst),
+          captureCell("CSOSN", item.csosn),
+          captureCell("Aliquota", formatRate(item.icms_rate)),
+          captureCell("Valor", item.icms_value),
+        ])}
+        ${captureTaxRow("PIS e COFINS", "sky", [
+          captureCell("PIS CST", item.pis_cst),
+          captureCell("Aliq. PIS", formatRate(item.pis_rate)),
+          captureCell("COFINS CST", item.cofins_cst),
+          captureCell("Aliq. COFINS", formatRate(item.cofins_rate)),
+        ])}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderReviewTaxTable(suggestion: Record<string, any>) {
+  return `
+    <table class="capture-tax-table capture-tax-table--compact">
+      <tbody>
+        ${captureTaxRow("Identidade", "teal", [
+          captureCell("NCM", suggestion.ncm),
+          captureCell("CEST", suggestion.cest),
+          captureCell("cClasTrib", suggestion.cclas_trib),
+          captureCell("CFOP", suggestion.cfop),
+        ])}
+        ${captureTaxRow("Tributos", "sky", [
+          captureCell("ICMS", suggestion.csosn || suggestion.icms_cst),
+          captureCell("PIS", suggestion.pis_cst),
+          captureCell("COFINS", suggestion.cofins_cst),
+          captureCell("IBS/CBS", `${suggestion.ibs_rate || "-"} / ${suggestion.cbs_rate || "-"}`),
+        ])}
+      </tbody>
+    </table>
+  `;
+}
+
+function reviewChip(label: string, value: unknown) {
+  return `
+    <span class="review-chip">
+      <small>${escapeHTML(label)}</small>
+      <strong>${displayValue(value)}</strong>
+    </span>
+  `;
 }
 
 function renderStats(items: CaptureCandidate[]) {
@@ -119,40 +223,65 @@ function renderItems(items: CaptureCandidate[]) {
                 <span>GTIN ${escapeHTML(item.gtin || "-")}</span>
               </div>
 
-              <div class="capture-card__grid">
-                <section class="capture-panel capture-panel--teal">
-                  <h4>Classificacao</h4>
-                  <div class="capture-kpis">
-                    <p><strong>NCM</strong><span>${escapeHTML(item.ncm || "-")}</span></p>
-                    <p><strong>CEST</strong><span>${escapeHTML(item.cest || "-")}</span></p>
-                    <p><strong>CFOP</strong><span>${escapeHTML(item.cfop || "-")}</span></p>
-                    <p><strong>Natureza</strong><span>${escapeHTML(item.operation_nature || "-")}</span></p>
-                  </div>
-                </section>
-
-                <section class="capture-panel capture-panel--amber">
-                  <h4>ICMS observado</h4>
-                  <div class="capture-kpis">
-                    <p><strong>CST</strong><span>${escapeHTML(item.icms_cst || "-")}</span></p>
-                    <p><strong>CSOSN</strong><span>${escapeHTML(item.csosn || "-")}</span></p>
-                    <p><strong>Aliquota</strong><span>${escapeHTML(formatRate(item.icms_rate))}</span></p>
-                    <p><strong>Valor</strong><span>${escapeHTML(item.icms_value || "-")}</span></p>
-                  </div>
-                </section>
-
-                <section class="capture-panel capture-panel--sky">
-                  <h4>PIS e COFINS observados</h4>
-                  <div class="capture-kpis">
-                    <p><strong>PIS CST</strong><span>${escapeHTML(item.pis_cst || "-")}</span></p>
-                    <p><strong>PIS Aliquota</strong><span>${escapeHTML(formatRate(item.pis_rate))}</span></p>
-                    <p><strong>COFINS CST</strong><span>${escapeHTML(item.cofins_cst || "-")}</span></p>
-                    <p><strong>COFINS Aliquota</strong><span>${escapeHTML(formatRate(item.cofins_rate))}</span></p>
-                  </div>
-                </section>
-              </div>
+              ${renderCaptureTaxTable(item)}
             </article>
           `
         )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderProductReviews(items: ProductReview[]) {
+  if (!productReviewList) return;
+
+  const ready = items.filter((item) => item.can_accept && item.confidence_score >= 0.7);
+  if (acceptReadyProductsButton) {
+    acceptReadyProductsButton.disabled = ready.length === 0;
+    acceptReadyProductsButton.textContent = ready.length
+      ? `Aceitar ${ready.length} confiaveis em lote`
+      : "Aceitar confiaveis em lote";
+  }
+
+  if (!items.length) {
+    productReviewList.innerHTML = `
+      <div class="dashboard-empty">
+        <strong>Nenhum produto cadastrado para revisar.</strong>
+        <p>Importe notas ou cadastre produtos para alimentar essa fila automatica.</p>
+      </div>
+    `;
+    return;
+  }
+
+  productReviewList.innerHTML = `
+    <div class="capture-list">
+      ${items
+        .map((item) => {
+          const suggestion = item.suggestion || {};
+          return `
+            <article class="product-review-card product-review-card--${escapeHTML(item.status || "review")}">
+              <div class="product-review-card__head">
+                <div>
+                  <span class="capture-card__eyebrow">${displayValue(item.product_code || item.gtin, "Produto cadastrado")}</span>
+                  <h4>${displayValue(item.description, "Produto sem descricao")}</h4>
+                  <p>GTIN ${displayValue(item.gtin)} · Status ${displayValue(item.status)}</p>
+                </div>
+                <div class="capture-actions">
+                  <span class="confidence-pill">${confidencePercent(item.confidence_score)}</span>
+                  <button class="primary-button" type="button" data-accept-product-review="${escapeHTML(item.product_id)}" ${item.can_accept ? "" : "disabled"}>
+                    Aceitar
+                  </button>
+                </div>
+              </div>
+              ${renderReviewTaxTable(suggestion)}
+              ${
+                Array.isArray(item.warnings) && item.warnings.length
+                  ? `<p>${escapeHTML(item.warnings.slice(0, 2).join(" "))}</p>`
+                  : ""
+              }
+            </article>
+          `;
+        })
         .join("")}
     </div>
   `;
@@ -183,6 +312,46 @@ async function handleAccept(invoiceItemId: string, button: HTMLButtonElement) {
   }
 }
 
+async function handleReviewProducts() {
+  if (!reviewProductsButton) return;
+  reviewProductsButton.disabled = true;
+  reviewProductsButton.textContent = "Revisando...";
+  setProductReviewFeedback("Rodando motor tributario sobre os produtos cadastrados...", "muted");
+
+  try {
+    const response = await listProductReviews(150);
+    productReviews = Array.isArray(response?.items) ? response.items : [];
+    renderProductReviews(productReviews);
+    setProductReviewFeedback(`Revisao concluida: ${productReviews.length} produtos analisados.`, "success");
+  } catch (error) {
+    setProductReviewFeedback(`Falha na revisao automatica: ${String(error)}`, "error");
+  } finally {
+    reviewProductsButton.disabled = false;
+    reviewProductsButton.textContent = "Revisar produtos";
+  }
+}
+
+async function handleAcceptProductReviews(productIds: string[], acceptAll = false) {
+  if (acceptReadyProductsButton) {
+    acceptReadyProductsButton.disabled = true;
+  }
+  setProductReviewFeedback("Aceitando revisoes e gravando perfis fiscais revisados...", "muted");
+
+  try {
+    const response = await acceptProductReviews({
+      product_ids: productIds,
+      accept_all: acceptAll,
+      min_confidence: 0.7,
+    });
+    setProductReviewFeedback(`${response.accepted || 0} produto(s) aceitos. ${response.failures?.length ? `${response.failures.length} falharam.` : ""}`, "success");
+    await handleReviewProducts();
+  } catch (error) {
+    setProductReviewFeedback(`Falha ao aceitar revisoes: ${String(error)}`, "error");
+  } finally {
+    renderProductReviews(productReviews);
+  }
+}
+
 listBox?.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
@@ -194,6 +363,27 @@ listBox?.addEventListener("click", (event) => {
   if (!invoiceItemId) return;
 
   void handleAccept(invoiceItemId, button);
+});
+
+productReviewList?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  const button = target.closest<HTMLButtonElement>("[data-accept-product-review]");
+  if (!button) return;
+
+  const productId = button.dataset.acceptProductReview || "";
+  if (!productId) return;
+
+  void handleAcceptProductReviews([productId], false);
+});
+
+reviewProductsButton?.addEventListener("click", () => {
+  void handleReviewProducts();
+});
+
+acceptReadyProductsButton?.addEventListener("click", () => {
+  void handleAcceptProductReviews([], true);
 });
 
 async function bootstrap() {

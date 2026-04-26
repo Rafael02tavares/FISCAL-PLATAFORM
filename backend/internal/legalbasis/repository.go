@@ -424,7 +424,6 @@ func (r *Repository) FindApplicableRules(ctx context.Context, p FindApplicableRu
 		  AND (lrm.effective_from IS NULL OR lrm.effective_from <= CURRENT_DATE)
 		  AND (lrm.effective_to IS NULL OR lrm.effective_to >= CURRENT_DATE)
 		ORDER BY
-			lrm.priority ASC,
 			(
 				CASE WHEN COALESCE(NULLIF(lrm.operation_code, ''), '') <> '' AND LOWER(lrm.operation_code) = LOWER($1) THEN 16 ELSE 0 END +
 				CASE WHEN COALESCE(NULLIF(lrm.tax_regime, ''), '') <> '' AND LOWER(lrm.tax_regime) = LOWER($2) THEN 12 ELSE 0 END +
@@ -435,6 +434,7 @@ func (r *Repository) FindApplicableRules(ctx context.Context, p FindApplicableRu
 				CASE WHEN COALESCE(NULLIF(lrm.emitter_uf, ''), '') <> '' AND UPPER(lrm.emitter_uf) = UPPER($7) THEN 6 ELSE 0 END +
 				CASE WHEN COALESCE(NULLIF(lrm.recipient_uf, ''), '') <> '' AND UPPER(lrm.recipient_uf) = UPPER($8) THEN 6 ELSE 0 END
 			) DESC,
+			lrm.priority ASC,
 			lrm.created_at DESC
 	`
 

@@ -2,12 +2,13 @@ import {
   clearSession,
   getOrganizationId,
   getToken,
+  saveOrganizationHomeUF,
   saveOrganizationId,
   saveOrganizationCRT,
   saveOrganizationRole,
   saveOrganizationTaxRegime,
 } from "../lib/auth";
-import { createOrganization, listOrganizations } from "../lib/organizations";
+import { createOrganization, listOrganizations, updateOrganization } from "../lib/organizations";
 
 type Organization = {
   id: string;
@@ -24,7 +25,12 @@ function initOrganizationsPage() {
   const actionsBox = document.getElementById("organization-actions");
   const organizationsList = document.getElementById("organizations-list");
   const organizationForm = document.getElementById("organization-form");
+  const organizationContextForm = document.getElementById("organization-context-form") as HTMLFormElement | null;
   const organizationMessage = document.getElementById("organization-message");
+  const contextMessage = document.getElementById("organization-context-message");
+  const contextPanel = document.getElementById("organization-context-panel");
+
+  let loadedOrganizations: Organization[] = [];
 
   function renderAction(title: string, subtitle: string, badge: string, tone = "warning"): string {
     return `
@@ -59,6 +65,44 @@ function initOrganizationsPage() {
     organizationMessage.className = `organization-message is-visible ${
       tone === "error" ? "is-error" : "is-success"
     }`;
+  }
+
+  function showContextMessage(text: string, tone = "success"): void {
+    if (!contextMessage) return;
+    contextMessage.textContent = text;
+    contextMessage.className = `organization-message is-visible ${
+      tone === "error" ? "is-error" : "is-success"
+    }`;
+  }
+
+  function escapeHTML(value: unknown): string {
+    return String(value || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function fiscalPayloadFromForm(form: HTMLFormElement) {
+    const data = new FormData(form);
+    return {
+      name: String(data.get("name") || "").trim(),
+      cnpj: String(data.get("cnpj") || "").trim(),
+      tax_regime: String(data.get("tax_regime") || "").trim(),
+      crt: String(data.get("crt") || "").trim(),
+      state_registration: String(data.get("state_registration") || "").trim(),
+      home_uf: String(data.get("home_uf") || "").trim().toUpperCase(),
+    };
+  }
+
+  function persistOrganizationContext(organization: Organization): void {
+    if (!organization?.id) return;
+    saveOrganizationId(organization.id);
+    saveOrganizationRole(organization.role || "viewer");
+    saveOrganizationTaxRegime(organization.tax_regime || "");
+    saveOrganizationCRT(organization.crt || "");
+    saveOrganizationHomeUF(organization.home_uf || "");
   }
 
   function setSessionState(text: string): void {
@@ -119,16 +163,63 @@ function initOrganizationsPage() {
         if (!id) return;
 
         const organization = items.find((item) => item.id === id);
-        saveOrganizationId(id);
-        saveOrganizationRole(organization?.role || "viewer");
-        saveOrganizationTaxRegime(organization?.tax_regime || "");
-        saveOrganizationCRT(organization?.crt || "");
+        if (organization) {
+          persistOrganizationContext(organization);
+        } else {
+          saveOrganizationId(id);
+        }
         showMessage("Organizacao ativa atualizada. Redirecionando para a dashboard...", "success");
         window.setTimeout(() => {
           window.location.href = "/";
         }, 600);
       });
     });
+  }
+
+  function renderFiscalContextPanel(active: Organization | null): void {
+    if (!contextPanel || !organizationContextForm) return;
+
+    if (!active) {
+      contextPanel.innerHTML = `
+        <div class="dashboard-empty">
+          <strong>Nenhuma organizacao ativa.</strong>
+          <p>Selecione ou cadastre uma organizacao para definir UF e regime usados pelo motor tributario.</p>
+        </div>
+      `;
+      organizationContextForm.style.display = "none";
+      return;
+    }
+
+    organizationContextForm.style.display = "grid";
+    contextPanel.innerHTML = `
+      <div class="fiscal-context-summary">
+        <article>
+          <span>UF base</span>
+          <strong>${escapeHTML(active.home_uf || "-")}</strong>
+          <p>Usada como origem e destino padrao nas sugestoes internas.</p>
+        </article>
+        <article>
+          <span>Regime</span>
+          <strong>${escapeHTML(active.tax_regime || "-")}</strong>
+          <p>Define CST/CSOSN e padrao de PIS/COFINS.</p>
+        </article>
+        <article>
+          <span>CRT</span>
+          <strong>${escapeHTML(active.crt || "-")}</strong>
+          <p>CRT 1 usa CSOSN; CRT 3 usa CST ICMS.</p>
+        </article>
+      </div>
+    `;
+
+    (document.getElementById("context-org-name") as HTMLInputElement | null)!.value = active.name || "";
+    (document.getElementById("context-org-cnpj") as HTMLInputElement | null)!.value = active.cnpj || "";
+    (document.getElementById("context-org-tax-regime") as HTMLSelectElement | null)!.value =
+      active.tax_regime || "simples_nacional";
+    (document.getElementById("context-org-crt") as HTMLSelectElement | null)!.value = active.crt || "1";
+    (document.getElementById("context-org-state-registration") as HTMLInputElement | null)!.value =
+      active.state_registration || "";
+    (document.getElementById("context-org-home-uf") as HTMLInputElement | null)!.value =
+      (active.home_uf || "").toUpperCase();
   }
 
   async function loadOrganizationsScreen() {
@@ -175,8 +266,11 @@ function initOrganizationsPage() {
     try {
       const response = await listOrganizations();
       const organizations: Organization[] = response.organizations || [];
+      loadedOrganizations = organizations;
+      const activeOrganization = organizations.find((item) => item.id === activeOrganizationId) || organizations[0] || null;
 
       renderOrganizations(organizations, activeOrganizationId);
+      renderFiscalContextPanel(activeOrganization);
 
       const actions: string[] = [];
 
@@ -257,10 +351,13 @@ function initOrganizationsPage() {
       const organization = response.organization;
 
       if (organization?.id) {
-        saveOrganizationId(organization.id);
-        saveOrganizationRole(organization.role || "owner");
-        saveOrganizationTaxRegime(organization.tax_regime || payload.tax_regime || "");
-        saveOrganizationCRT(organization.crt || payload.crt || "");
+        persistOrganizationContext({
+          ...organization,
+          role: organization.role || "owner",
+          tax_regime: organization.tax_regime || payload.tax_regime,
+          crt: organization.crt || payload.crt,
+          home_uf: organization.home_uf || payload.home_uf,
+        });
       }
 
       showMessage("Organizacao criada com sucesso. Atualizando lista...", "success");
@@ -272,6 +369,32 @@ function initOrganizationsPage() {
       await loadOrganizationsScreen();
     } catch (error) {
       showMessage(`Erro ao salvar organizacao: ${String(error)}`, "error");
+    }
+  });
+
+  organizationContextForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const activeOrganizationId = getOrganizationId();
+    if (!activeOrganizationId) {
+      showContextMessage("Selecione uma organizacao ativa antes de editar o contexto fiscal.", "error");
+      return;
+    }
+
+    try {
+      showContextMessage("Atualizando contexto fiscal da organizacao...", "success");
+      const payload = fiscalPayloadFromForm(organizationContextForm);
+      const response = await updateOrganization(activeOrganizationId, payload);
+      const organization = response.organization as Organization;
+      const existing = loadedOrganizations.find((item) => item.id === activeOrganizationId);
+      persistOrganizationContext({
+        ...organization,
+        role: existing?.role || organization.role || "owner",
+      });
+      showContextMessage("Contexto fiscal atualizado. As proximas sugestoes usarao essa UF e regime.", "success");
+      await loadOrganizationsScreen();
+    } catch (error) {
+      showContextMessage(`Erro ao atualizar contexto fiscal: ${String(error)}`, "error");
     }
   });
 

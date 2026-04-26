@@ -6,8 +6,10 @@ export type CatalogProductProfile = {
   organization_id: string;
   source_invoice_id?: string;
   ncm?: string;
+  ncm_description?: string;
   ncm_ex?: string;
   cest?: string;
+  cest_description?: string;
   cfop?: string;
   cclas_trib?: string;
   pis_cst?: string;
@@ -51,6 +53,13 @@ export type CatalogProductItem = {
   profile: CatalogProductProfile;
 };
 
+export type CatalogProductPage = {
+  items: CatalogProductItem[];
+  limit?: number;
+  offset?: number;
+  has_more?: boolean;
+};
+
 export type SaveCatalogProductPayload = {
   product_id?: string;
   product_code?: string;
@@ -92,9 +101,20 @@ export type SaveCatalogProductPayload = {
   observed_crt?: string;
 };
 
-export async function listCatalogProducts(query = ""): Promise<{ items: CatalogProductItem[] }> {
-  const params = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
-  return apiFetch(`/catalog/products${params}`);
+export async function listCatalogProducts(query = "", options: { limit?: number; offset?: number } = {}): Promise<CatalogProductPage> {
+  const params = new URLSearchParams();
+  if (query.trim()) {
+    params.set("q", query.trim());
+  }
+  if (options.limit) {
+    params.set("limit", String(options.limit));
+  }
+  if (options.offset) {
+    params.set("offset", String(options.offset));
+  }
+
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiFetch(`/catalog/products${suffix}`);
 }
 
 export async function saveCatalogProduct(payload: SaveCatalogProductPayload): Promise<{ items: CatalogProductItem[]; message?: string; product_id?: string }> {

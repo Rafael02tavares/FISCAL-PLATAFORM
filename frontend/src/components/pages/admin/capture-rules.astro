@@ -29,6 +29,25 @@ import adminCaptureScript from "../../../scripts/admin-capture.ts?url";
   <section class="card card--padded">
     <div class="capture-head">
       <div>
+        <h3 class="section-title">Revisao automatica dos produtos cadastrados</h3>
+        <p class="capture-head__text">Rode o motor tributario sobre a base atual, confira as sugestoes e aceite em lote os produtos com boa confianca.</p>
+      </div>
+      <div class="capture-actions">
+        <button id="review-products-button" class="secondary-link" type="button">Revisar produtos</button>
+        <button id="accept-ready-products-button" class="primary-button" type="button" disabled>Aceitar confiaveis em lote</button>
+      </div>
+    </div>
+
+    <div id="product-review-feedback" class="dashboard-note">
+      Aguardando revisao automatica dos produtos cadastrados.
+    </div>
+
+    <div id="product-review-list" class="capture-rules-list"></div>
+  </section>
+
+  <section class="card card--padded">
+    <div class="capture-head">
+      <div>
         <h3 class="section-title">Fila de triagem</h3>
         <p class="capture-head__text">Aceite somente regras coerentes com a operacao real. Isso evita contaminar o motor tributario com excecoes indevidas.</p>
       </div>
@@ -132,6 +151,12 @@ import adminCaptureScript from "../../../scripts/admin-capture.ts?url";
       margin-bottom: 16px;
     }
 
+    .capture-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .capture-rules-list {
       margin-top: 16px;
     }
@@ -200,6 +225,153 @@ import adminCaptureScript from "../../../scripts/admin-capture.ts?url";
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
+    }
+
+    .product-review-card {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid #dbe4ee;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .product-review-card--ready {
+      border-color: #99f6e4;
+      background: linear-gradient(180deg, #f0fdfa, #ffffff);
+    }
+
+    .product-review-card--low_confidence,
+    .product-review-card--review {
+      border-color: #fde68a;
+      background: linear-gradient(180deg, #fffbeb, #ffffff);
+    }
+
+    .product-review-card__head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      flex-wrap: wrap;
+    }
+
+    .product-review-card h4 {
+      margin: 4px 0;
+      font-size: 20px;
+    }
+
+    .confidence-pill {
+      display: inline-flex;
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: #0f766e;
+      color: white;
+      font-weight: 900;
+    }
+
+    .review-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .review-chip {
+      display: grid;
+      gap: 4px;
+      padding: 11px;
+      border-radius: 14px;
+      border: 1px solid #dbe4ee;
+      background: white;
+    }
+
+    .review-chip small {
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .review-chip strong {
+      color: #0f172a;
+      overflow-wrap: anywhere;
+    }
+
+    :global(.capture-tax-table) {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      font-size: 12px;
+    }
+
+    :global(.capture-tax-table th),
+    :global(.capture-tax-table td) {
+      padding: 0;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+    }
+
+    :global(.capture-tax-table th) {
+      width: 170px;
+      padding: 10px 12px;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 900;
+      text-align: left;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background: #f8fafc;
+    }
+
+    :global(.capture-tax-row--teal th) {
+      border-left: 5px solid #0f766e;
+      background: #f0fdfa;
+    }
+
+    :global(.capture-tax-row--amber th) {
+      border-left: 5px solid #f59e0b;
+      background: #fffbeb;
+    }
+
+    :global(.capture-tax-row--sky th) {
+      border-left: 5px solid #0284c7;
+      background: #eff6ff;
+    }
+
+    :global(.capture-tax-table td) {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      background: #ffffff;
+    }
+
+    :global(.capture-tax-cell) {
+      display: grid;
+      gap: 2px;
+      min-height: 48px;
+      padding: 8px 10px;
+      border-right: 1px solid #e2e8f0;
+    }
+
+    :global(.capture-tax-cell:last-child) {
+      border-right: 0;
+    }
+
+    :global(.capture-tax-cell small) {
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    :global(.capture-tax-cell strong) {
+      color: #0f172a;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.2;
+      word-break: break-word;
     }
 
     .capture-panel {
@@ -312,8 +484,13 @@ import adminCaptureScript from "../../../scripts/admin-capture.ts?url";
     }
 
     @media (max-width: 1100px) {
-      .capture-card__grid {
+      .capture-card__grid,
+      .review-grid {
         grid-template-columns: 1fr;
+      }
+
+      :global(.capture-tax-table td) {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
       }
     }
 
@@ -325,6 +502,24 @@ import adminCaptureScript from "../../../scripts/admin-capture.ts?url";
 
     @media (max-width: 640px) {
       .capture-stat-grid {
+        grid-template-columns: 1fr;
+      }
+
+      :global(.capture-tax-table),
+      :global(.capture-tax-table tbody),
+      :global(.capture-tax-table tr),
+      :global(.capture-tax-table th),
+      :global(.capture-tax-table td) {
+        display: block;
+        width: 100%;
+      }
+
+      :global(.capture-tax-table th) {
+        width: auto;
+      }
+
+      :global(.capture-tax-table td) {
+        display: grid;
         grid-template-columns: 1fr;
       }
     }

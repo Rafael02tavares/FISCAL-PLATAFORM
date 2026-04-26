@@ -82,3 +82,46 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		"organizations": orgs,
 	})
 }
+
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		http.Error(w, "user not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	organizationID := r.PathValue("id")
+	if organizationID == "" {
+		http.Error(w, "organization id is required", http.StatusBadRequest)
+		return
+	}
+
+	var req createOrganizationRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	org, err := h.service.UpdateOrganization(
+		r.Context(),
+		userID,
+		organizationID,
+		req.Name,
+		req.CNPJ,
+		req.TaxRegime,
+		req.CRT,
+		req.StateRegistration,
+		req.HomeUF,
+	)
+	if err != nil {
+		http.Error(w, "cannot update organization: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"organization": org,
+	})
+}

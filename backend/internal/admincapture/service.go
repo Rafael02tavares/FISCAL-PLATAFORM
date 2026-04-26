@@ -9,20 +9,36 @@ import (
 
 	"github.com/rafa/fiscal-platform/backend/internal/catalog"
 	"github.com/rafa/fiscal-platform/backend/internal/legalbasis"
+	"github.com/rafa/fiscal-platform/backend/internal/tax"
 )
 
 type Service struct {
 	repo              *Repository
 	catalogService    *catalog.Service
 	legalBasisService *legalbasis.Service
+	taxService        *tax.Service
 }
 
-func NewService(repo *Repository, catalogService *catalog.Service, legalBasisService *legalbasis.Service) *Service {
+func NewService(repo *Repository, catalogService *catalog.Service, legalBasisService *legalbasis.Service, taxService *tax.Service) *Service {
 	return &Service{
 		repo:              repo,
 		catalogService:    catalogService,
 		legalBasisService: legalBasisService,
+		taxService:        taxService,
 	}
+}
+
+type ProductReview struct {
+	ProductID       string                    `json:"product_id"`
+	ProductCode     string                    `json:"product_code"`
+	GTIN            string                    `json:"gtin"`
+	Description     string                    `json:"description"`
+	CurrentProfile  catalog.ProductTaxProfile `json:"current_profile"`
+	Suggestion      tax.Suggestion            `json:"suggestion"`
+	ConfidenceScore float64                   `json:"confidence_score"`
+	Status          string                    `json:"status"`
+	CanAccept       bool                      `json:"can_accept"`
+	Warnings        []string                  `json:"warnings"`
 }
 
 func (s *Service) ListCandidates(ctx context.Context, organizationID string, limit int) ([]Candidate, error) {
@@ -106,6 +122,189 @@ func (s *Service) AcceptCandidate(ctx context.Context, organizationID, invoiceIt
 	}
 
 	return nil
+}
+
+func (s *Service) ReviewCatalogProducts(ctx context.Context, organizationID, taxRegime, crt, homeUF string, limit int) ([]ProductReview, error) {
+	organizationID = strings.TrimSpace(organizationID)
+	if organizationID == "" {
+		return nil, errors.New("organization_id is required")
+	}
+	if s.taxService == nil {
+		return nil, errors.New("tax service is required")
+	}
+	if limit <= 0 || limit > 300 {
+		limit = 150
+	}
+
+	page, err := s.catalogService.ListCatalogProducts(ctx, organizationID, "", limit, 0)
+	if err != nil {
+		return nil, fmt.Errorf("list catalog products: %w", err)
+	}
+	products := page.Items
+
+	reviews := make([]ProductReview, 0, len(products))
+	for _, product := range products {
+		resp, err := s.taxService.Suggest(ctx, buildProductReviewSuggestRequest(organizationID, product, taxRegime, crt, homeUF))
+		if err != nil {
+			reviews = append(reviews, ProductReview{
+				ProductID:       product.ID,
+				ProductCode:     product.ProductCode,
+				GTIN:            product.GTIN,
+				Description:     product.Description,
+				CurrentProfile:  product.Profile,
+				Status:          "error",
+				CanAccept:       false,
+				Warnings:        []string{err.Error()},
+				ConfidenceScore: 0,
+			})
+			continue
+		}
+
+		status := "review"
+		canAccept := resp.ConfidenceScore >= 0.70 && !isEmptySuggestion(resp.Suggestion)
+		if resp.ConfidenceScore >= 0.90 {
+			status = "ready"
+		} else if resp.ConfidenceScore < 0.70 {
+			status = "low_confidence"
+		}
+
+		reviews = append(reviews, ProductReview{
+			ProductID:       product.ID,
+			ProductCode:     product.ProductCode,
+			GTIN:            product.GTIN,
+			Description:     product.Description,
+			CurrentProfile:  product.Profile,
+			Suggestion:      resp.Suggestion,
+			ConfidenceScore: resp.ConfidenceScore,
+			Status:          status,
+			CanAccept:       canAccept,
+			Warnings:        resp.Warnings,
+		})
+	}
+
+	return reviews, nil
+}
+
+func (s *Service) AcceptProductReviews(ctx context.Context, organizationID string, productIDs []string, acceptAll bool, minConfidence float64, taxRegime, crt, homeUF string) (int, []string, error) {
+	if minConfidence <= 0 {
+		minConfidence = 0.70
+	}
+
+	reviews, err := s.ReviewCatalogProducts(ctx, organizationID, taxRegime, crt, homeUF, 300)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	allowed := map[string]bool{}
+	for _, id := range productIDs {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			allowed[id] = true
+		}
+	}
+
+	accepted := 0
+	failures := []string{}
+	for _, review := range reviews {
+		if !acceptAll && !allowed[review.ProductID] {
+			continue
+		}
+		if review.ConfidenceScore < minConfidence || !review.CanAccept {
+			continue
+		}
+
+		if err := s.acceptProductReview(ctx, organizationID, review, taxRegime, crt, homeUF); err != nil {
+			failures = append(failures, fmt.Sprintf("%s: %v", review.Description, err))
+			continue
+		}
+		accepted++
+	}
+
+	return accepted, failures, nil
+}
+
+func (s *Service) acceptProductReview(ctx context.Context, organizationID string, review ProductReview, taxRegime, crt, homeUF string) error {
+	suggestion := review.Suggestion
+	return s.catalogService.SaveReviewedProduct(ctx, catalog.SaveReviewedProductParams{
+		SaveManualProductParams: catalog.SaveManualProductParams{
+			OrganizationID: organizationID,
+			ProductID:      review.ProductID,
+			ProductCode:    review.ProductCode,
+			GTIN:           review.GTIN,
+			Description:    review.Description,
+
+			NCM:               suggestion.NCM,
+			NCMEx:             suggestion.NCMEx,
+			CEST:              suggestion.CEST,
+			CFOP:              suggestion.CFOP,
+			CClasTrib:         suggestion.CClasTrib,
+			PISCST:            suggestion.PISCST,
+			COFINSCST:         suggestion.COFINSCST,
+			PISRevenueCode:    suggestion.PISRevenueCode,
+			COFINSRevenueCode: suggestion.COFINSRevenueCode,
+			ICMSCST:           suggestion.ICMSCST,
+			CSOSN:             suggestion.CSOSN,
+			CBenef:            suggestion.CBenef,
+
+			ICMSValue:         suggestion.ICMSValue,
+			IPIValue:          suggestion.IPIValue,
+			PISValue:          suggestion.PISValue,
+			COFINSValue:       suggestion.COFINSValue,
+			PISRate:           suggestion.PISRate,
+			COFINSRate:        suggestion.COFINSRate,
+			ICMSRate:          suggestion.ICMSRate,
+			ICMSBaseReduction: suggestion.ICMSBaseReduction,
+			FCPRate:           suggestion.FCPRate,
+			ICMSSTRate:        suggestion.ICMSSTRate,
+			IBSRate:           suggestion.IBSRate,
+			CBSRate:           suggestion.CBSRate,
+			SelectiveTaxCode:  suggestion.SelectiveTaxCode,
+			SelectiveTaxRate:  suggestion.SelectiveTaxRate,
+
+			OperationCode:   "sale_consumer_final",
+			EmitterUF:       strings.ToUpper(strings.TrimSpace(firstNonEmpty(review.CurrentProfile.EmitterUF, homeUF))),
+			RecipientUF:     strings.ToUpper(strings.TrimSpace(firstNonEmpty(review.CurrentProfile.RecipientUF, homeUF))),
+			OperationNature: "Venda interna para consumidor final",
+			TargetTaxRegime: strings.TrimSpace(taxRegime),
+			TargetCRT:       strings.TrimSpace(crt),
+		},
+		ConfidenceScore: review.ConfidenceScore,
+		SourceType:      "auto_review_accepted",
+	})
+}
+
+func buildProductReviewSuggestRequest(organizationID string, product catalog.CatalogProductView, taxRegime, crt, homeUF string) tax.SuggestRequest {
+	profile := product.Profile
+	uf := strings.ToUpper(strings.TrimSpace(firstNonEmpty(profile.EmitterUF, profile.RecipientUF, homeUF)))
+	return tax.SuggestRequest{
+		OrganizationID:   organizationID,
+		GTIN:             strings.TrimSpace(product.GTIN),
+		Description:      strings.TrimSpace(product.Description),
+		NCMCode:          strings.TrimSpace(profile.NCM),
+		OperationCode:    "sale_consumer_final",
+		EmitterUF:        uf,
+		RecipientUF:      uf,
+		TaxRegime:        strings.TrimSpace(firstNonEmpty(profile.TargetTaxRegime, taxRegime)),
+		TargetCRT:        strings.TrimSpace(firstNonEmpty(profile.TargetCRT, crt)),
+		SourceICMSCST:    strings.TrimSpace(profile.ICMSCST),
+		SourceICMSCSOSN:  strings.TrimSpace(profile.CSOSN),
+		SourceICMSRate:   strings.TrimSpace(profile.ICMSRate),
+		SourcePISCST:     strings.TrimSpace(profile.PISCST),
+		SourcePISRate:    strings.TrimSpace(profile.PISRate),
+		SourceCOFINSCST:  strings.TrimSpace(profile.COFINSCST),
+		SourceCOFINSRate: strings.TrimSpace(profile.COFINSRate),
+		SourceCFOP:       strings.TrimSpace(profile.CFOP),
+	}
+}
+
+func isEmptySuggestion(s tax.Suggestion) bool {
+	return strings.TrimSpace(s.NCM) == "" &&
+		strings.TrimSpace(s.CEST) == "" &&
+		strings.TrimSpace(s.CFOP) == "" &&
+		strings.TrimSpace(s.ICMSCST) == "" &&
+		strings.TrimSpace(s.CSOSN) == "" &&
+		strings.TrimSpace(s.PISCST) == "" &&
+		strings.TrimSpace(s.COFINSCST) == ""
 }
 
 func (s *Service) integrateIntoLegalRules(ctx context.Context, item *Candidate, targetTaxRegime string, operationCode string) error {
@@ -298,4 +497,13 @@ func marshalValueContent(payload map[string]string) (string, error) {
 	}
 
 	return string(raw), nil
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }

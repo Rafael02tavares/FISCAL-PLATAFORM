@@ -107,6 +107,12 @@ type SaveManualProductParams struct {
 	ObservedCRT       string
 }
 
+type SaveReviewedProductParams struct {
+	SaveManualProductParams
+	ConfidenceScore float64
+	SourceType      string
+}
+
 func (s *Service) RegisterObservedItem(ctx context.Context, p RegisterObservedItemParams) error {
 	productID, err := s.resolveProductID(ctx, p.ProductID, p.ProductCode, p.GTIN, p.Description)
 	if err != nil {
@@ -226,6 +232,68 @@ func (s *Service) SaveManualProduct(ctx context.Context, p SaveManualProductPara
 	return productID, nil
 }
 
+func (s *Service) SaveReviewedProduct(ctx context.Context, p SaveReviewedProductParams) error {
+	normalized := normalizeManualProductParams(p.SaveManualProductParams)
+	productID, err := s.resolveProductID(ctx, normalized.ProductID, normalized.ProductCode, normalized.GTIN, normalized.Description)
+	if err != nil {
+		return err
+	}
+
+	confidence := p.ConfidenceScore
+	if confidence <= 0 {
+		confidence = 0.80
+	}
+	sourceType := strings.TrimSpace(p.SourceType)
+	if sourceType == "" {
+		sourceType = "auto_review_accepted"
+	}
+
+	return s.repo.CreateTaxProfile(ctx, CreateTaxProfileParams{
+		ProductID:       productID,
+		OrganizationID:  normalized.OrganizationID,
+		SourceInvoiceID: "",
+
+		NCM:               normalized.NCM,
+		NCMEx:             normalized.NCMEx,
+		CEST:              normalized.CEST,
+		CFOP:              normalized.CFOP,
+		CClasTrib:         normalized.CClasTrib,
+		PISCST:            normalized.PISCST,
+		COFINSCST:         normalized.COFINSCST,
+		PISRevenueCode:    normalized.PISRevenueCode,
+		COFINSRevenueCode: normalized.COFINSRevenueCode,
+		ICMSCST:           normalized.ICMSCST,
+		CSOSN:             normalized.CSOSN,
+		CBenef:            normalized.CBenef,
+
+		ICMSValue:         normalized.ICMSValue,
+		IPIValue:          normalized.IPIValue,
+		PISValue:          normalized.PISValue,
+		COFINSValue:       normalized.COFINSValue,
+		PISRate:           normalized.PISRate,
+		COFINSRate:        normalized.COFINSRate,
+		ICMSRate:          normalized.ICMSRate,
+		ICMSBaseReduction: normalized.ICMSBaseReduction,
+		FCPRate:           normalized.FCPRate,
+		ICMSSTRate:        normalized.ICMSSTRate,
+		IBSRate:           normalized.IBSRate,
+		CBSRate:           normalized.CBSRate,
+		SelectiveTaxCode:  normalized.SelectiveTaxCode,
+		SelectiveTaxRate:  normalized.SelectiveTaxRate,
+
+		OperationCode:     normalized.OperationCode,
+		EmitterUF:         normalized.EmitterUF,
+		RecipientUF:       normalized.RecipientUF,
+		OperationNature:   normalized.OperationNature,
+		TargetTaxRegime:   normalized.TargetTaxRegime,
+		ObservedTaxRegime: normalized.ObservedTaxRegime,
+		TargetCRT:         normalized.TargetCRT,
+		ObservedCRT:       normalized.ObservedCRT,
+		ConfidenceScore:   confidence,
+		SourceType:        sourceType,
+	})
+}
+
 func normalizeManualProductParams(p SaveManualProductParams) SaveManualProductParams {
 	if strings.TrimSpace(p.OperationCode) == "" {
 		p.OperationCode = "sale_consumer_final"
@@ -259,8 +327,40 @@ func normalizeDecimalInput(value string) string {
 	return value
 }
 
-func (s *Service) ListCatalogProducts(ctx context.Context, organizationID, query string) ([]CatalogProductView, error) {
-	return s.repo.ListCatalogProducts(ctx, organizationID, query)
+type CatalogProductPage struct {
+	Items   []CatalogProductView `json:"items"`
+	Limit   int                  `json:"limit"`
+	Offset  int                  `json:"offset"`
+	HasMore bool                 `json:"has_more"`
+}
+
+func (s *Service) ListCatalogProducts(ctx context.Context, organizationID, query string, limit, offset int) (CatalogProductPage, error) {
+	if limit <= 0 {
+		limit = 24
+	}
+	if limit > 80 {
+		limit = 80
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	items, err := s.repo.ListCatalogProducts(ctx, organizationID, query, limit+1, offset)
+	if err != nil {
+		return CatalogProductPage{}, err
+	}
+
+	hasMore := len(items) > limit
+	if hasMore {
+		items = items[:limit]
+	}
+
+	return CatalogProductPage{
+		Items:   items,
+		Limit:   limit,
+		Offset:  offset,
+		HasMore: hasMore,
+	}, nil
 }
 
 func (s *Service) resolveProductID(ctx context.Context, productID, productCode, gtin, description string) (string, error) {

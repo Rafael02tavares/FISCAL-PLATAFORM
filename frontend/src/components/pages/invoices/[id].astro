@@ -414,6 +414,94 @@ const { id } = Astro.params;
       border-color: rgba(56, 189, 248, 0.28);
     }
 
+    :global(.fiscal-tax-table) {
+      width: 100%;
+      margin-top: 18px;
+      border-collapse: collapse;
+      table-layout: fixed;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      font-size: 12px;
+    }
+
+    :global(.fiscal-tax-table th),
+    :global(.fiscal-tax-table td) {
+      padding: 0;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+    }
+
+    :global(.fiscal-tax-table th) {
+      width: 170px;
+      padding: 10px 12px;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 900;
+      text-align: left;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background: #f8fafc;
+    }
+
+    :global(.fiscal-tax-row--neutral th) {
+      border-left: 5px solid #64748b;
+      background: #f8fafc;
+    }
+
+    :global(.fiscal-tax-row--teal th) {
+      border-left: 5px solid #0f766e;
+      background: #f0fdfa;
+    }
+
+    :global(.fiscal-tax-row--sky th) {
+      border-left: 5px solid #0284c7;
+      background: #eff6ff;
+    }
+
+    :global(.fiscal-tax-row--rose th) {
+      border-left: 5px solid #e11d48;
+      background: #fff1f2;
+    }
+
+    :global(.fiscal-tax-row--amber th) {
+      border-left: 5px solid #f59e0b;
+      background: #fffbeb;
+    }
+
+    :global(.fiscal-tax-table td) {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      background: #ffffff;
+    }
+
+    :global(.fiscal-cell) {
+      display: grid;
+      gap: 2px;
+      min-height: 48px;
+      padding: 8px 10px;
+      border-right: 1px solid #e2e8f0;
+    }
+
+    :global(.fiscal-cell:last-child) {
+      border-right: 0;
+    }
+
+    :global(.fiscal-cell small) {
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    :global(.fiscal-cell strong) {
+      color: #0f172a;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
     .loading-box {
       background: linear-gradient(135deg, #eff6ff, #dbeafe);
       color: #1d4ed8;
@@ -507,6 +595,10 @@ const { id } = Astro.params;
         display: grid;
       }
 
+      :global(.fiscal-tax-table td) {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+      }
+
       .compare-row strong {
         text-align: left;
       }
@@ -514,6 +606,24 @@ const { id } = Astro.params;
 
     @media (max-width: 640px) {
       .invoice-meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      :global(.fiscal-tax-table),
+      :global(.fiscal-tax-table tbody),
+      :global(.fiscal-tax-table tr),
+      :global(.fiscal-tax-table th),
+      :global(.fiscal-tax-table td) {
+        display: block;
+        width: 100%;
+      }
+
+      :global(.fiscal-tax-table th) {
+        width: auto;
+      }
+
+      :global(.fiscal-tax-table td) {
+        display: grid;
         grid-template-columns: 1fr;
       }
     }

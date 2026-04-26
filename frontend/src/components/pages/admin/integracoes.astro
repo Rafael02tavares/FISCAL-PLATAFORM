@@ -1,0 +1,736 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import integrationsScript from "../../../scripts/admin-integrations.ts?url";
+---
+
+<DashboardLayout
+  title="Integracoes"
+  subtitle="Conecte servicos externos para enriquecer produtos, classificacao e consulta fiscal"
+>
+  <section class="integrations-hero">
+    <div>
+      <span class="integrations-eyebrow">Hub de terceiros</span>
+      <h2>Integre dados externos sem misturar com o motor fiscal</h2>
+      <p>
+        Cada conector fica isolado, com credencial propria e teste operacional. A plataforma usa
+        essas fontes para enriquecer produto, GTIN, descricao e classificacao sem perder controle.
+      </p>
+    </div>
+
+    <div class="integration-meter" aria-label="Resumo das integracoes">
+      <span>Integrações iniciais</span>
+      <strong>2</strong>
+      <p>Cosmos para GTIN e OpenAI para classificacao assistida de produtos.</p>
+    </div>
+  </section>
+
+  <section class="integrations-grid">
+    <div class="integration-main-stack">
+    <article class="integration-card integration-card--cosmos">
+      <header class="integration-card__header">
+        <div class="integration-card__brand">
+          <span class="integration-logo">C</span>
+          <div>
+            <span class="integrations-eyebrow">Produtos e GTIN</span>
+            <h3>Cosmos BlueSoft</h3>
+          </div>
+        </div>
+        <span id="cosmos-status" class="integration-status">Carregando</span>
+      </header>
+
+      <p>
+        A API Cosmos consulta produtos por codigo de barras e pode retornar descricao, NCM,
+        marca, categoria e dados comerciais. Essa integracao sera usada para enriquecer a base de produtos.
+      </p>
+
+      <div class="integration-flow">
+        <span>GTIN</span>
+        <span>Cosmos</span>
+        <span>Produto fiscal</span>
+        <span>Motor tributario</span>
+      </div>
+
+      <form id="cosmos-form" class="integration-form">
+        <label class="integration-switch">
+          <input id="cosmos-enabled" type="checkbox" />
+          <span>Ativar integracao Cosmos para esta organizacao</span>
+        </label>
+
+        <label>
+          Base URL
+          <input id="cosmos-base-url" type="url" value="https://api.cosmos.bluesoft.com.br" />
+        </label>
+
+        <label>
+          Token da API
+          <input id="cosmos-token" type="password" autocomplete="off" placeholder="Cole o token Cosmos" />
+        </label>
+
+        <label class="full-width">
+          Observacoes internas
+          <textarea id="cosmos-notes" rows="4" placeholder="Ex.: token da conta principal, uso para enriquecimento de produto por GTIN"></textarea>
+        </label>
+
+        <div class="integration-actions full-width">
+          <button class="primary-button" type="submit">Salvar integracao</button>
+          <a class="secondary-link" href="https://cosmos.bluesoft.com.br/api" target="_blank" rel="noreferrer">
+            Abrir documentacao
+          </a>
+        </div>
+      </form>
+
+      <div id="cosmos-feedback" class="integration-feedback">Carregando configuracao...</div>
+
+      <section class="cosmos-lab">
+        <div>
+          <span class="integrations-eyebrow">Busca por descricao</span>
+          <h4>Encontrar candidatos de produto</h4>
+          <p>
+            A Cosmos retorna varios candidatos. A plataforma captura descricao, GTIN, NCM e CEST,
+            e usa o NCM/CEST para validar as sugestoes no motor fiscal interno.
+          </p>
+        </div>
+
+        <div class="cosmos-search-bar">
+          <input id="cosmos-search-query" type="text" placeholder="Ex.: coca cola lata, cerveja skol, shampoo 350ml" />
+          <button id="cosmos-search-button" class="primary-button primary-button--amber" type="button">Buscar produtos</button>
+        </div>
+
+        <div id="cosmos-search-feedback" class="integration-feedback">Aguardando busca por descricao.</div>
+        <div id="cosmos-search-result"></div>
+      </section>
+    </article>
+
+    <article class="integration-card integration-card--openai">
+      <header class="integration-card__header">
+        <div class="integration-card__brand">
+          <span class="integration-logo integration-logo--openai">AI</span>
+          <div>
+            <span class="integrations-eyebrow">Classificacao assistida</span>
+            <h3>OpenAI</h3>
+          </div>
+        </div>
+        <span id="openai-status" class="integration-status">Carregando</span>
+      </header>
+
+      <p>
+        Use a OpenAI como camada assistiva para normalizar descricoes, sugerir categorias fiscais,
+        explicar divergencias e acelerar a triagem humana sem substituir regra oficial.
+      </p>
+
+      <div class="integration-flow integration-flow--three">
+        <span>Descricao</span>
+        <span>IA assistiva</span>
+        <span>Triagem fiscal</span>
+      </div>
+
+      <form id="openai-form" class="integration-form">
+        <label class="integration-switch">
+          <input id="openai-enabled" type="checkbox" />
+          <span>Ativar classificacao assistida por OpenAI</span>
+        </label>
+
+        <label>
+          Base URL
+          <input id="openai-base-url" type="url" value="https://api.openai.com/v1" />
+        </label>
+
+        <label>
+          Modelo
+          <input id="openai-model" type="text" value="gpt-5.4-mini" />
+        </label>
+
+        <label>
+          API key
+          <input id="openai-token" type="password" autocomplete="off" placeholder="Cole a OPENAI_API_KEY" />
+        </label>
+
+        <label class="full-width">
+          Observacoes internas
+          <textarea id="openai-notes" rows="4" placeholder="Ex.: usar apenas para sugestao textual, nunca para aplicar regra fiscal automaticamente"></textarea>
+        </label>
+
+        <div class="integration-actions full-width">
+          <button class="primary-button" type="submit">Salvar OpenAI</button>
+          <a class="secondary-link" href="https://platform.openai.com/docs/api-reference/responses" target="_blank" rel="noreferrer">
+            Docs Responses API
+          </a>
+        </div>
+      </form>
+
+      <div id="openai-feedback" class="integration-feedback">Carregando configuracao...</div>
+
+      <section class="ai-lab">
+        <div>
+          <span class="integrations-eyebrow">Laboratorio fiscal</span>
+          <h4>Teste de classificacao assistida</h4>
+          <p>Informe um item real e veja como a IA organiza sinais para revisao humana.</p>
+        </div>
+
+        <div class="integration-form">
+          <label class="full-width">
+            Descricao do produto
+            <input id="openai-test-description" type="text" value="HEINEKEN LN ZERO 6X330ML RV" />
+          </label>
+
+          <label>
+            GTIN
+            <input id="openai-test-gtin" type="text" inputmode="numeric" value="7896045506057" />
+          </label>
+
+          <label>
+            NCM
+            <input id="openai-test-ncm" type="text" inputmode="numeric" value="22029100" />
+          </label>
+
+          <label>
+            CEST
+            <input id="openai-test-cest" type="text" inputmode="numeric" value="0302201" />
+          </label>
+
+          <label>
+            UF
+            <input id="openai-test-uf" type="text" maxlength="2" value="GO" />
+          </label>
+
+          <label>
+            Regime
+            <select id="openai-test-regime">
+              <option value="simples_nacional">Simples Nacional</option>
+              <option value="lucro_presumido">Lucro Presumido</option>
+              <option value="lucro_real">Lucro Real</option>
+            </select>
+          </label>
+
+          <label>
+            Operacao
+            <input id="openai-test-operation" type="text" value="venda interna para consumidor final" />
+          </label>
+        </div>
+
+        <div class="integration-actions">
+          <button id="openai-test-button" class="primary-button primary-button--amber" type="button">Classificar item</button>
+        </div>
+
+        <div id="openai-test-feedback" class="integration-feedback">Aguardando classificacao.</div>
+        <div id="openai-test-result"></div>
+      </section>
+    </article>
+    </div>
+
+    <aside class="integration-side">
+      <article class="integration-test-card">
+        <span class="integrations-eyebrow">Teste rapido</span>
+        <h3>Consultar GTIN</h3>
+        <p>Use um codigo de barras real para validar token, conectividade e resposta da Cosmos.</p>
+
+        <form id="cosmos-test-form" class="integration-form">
+          <label>
+            Codigo de barras
+            <input id="cosmos-test-gtin" type="text" inputmode="numeric" placeholder="Ex.: 7896045506057" />
+          </label>
+
+          <button class="primary-button primary-button--amber" type="submit">Testar consulta</button>
+        </form>
+
+        <div id="cosmos-test-feedback" class="integration-feedback">Aguardando teste.</div>
+        <div id="cosmos-test-result"></div>
+      </article>
+
+      <article class="integration-roadmap">
+        <span class="integrations-eyebrow">Proximas conexoes</span>
+        <h3>Fila de integracoes</h3>
+        <div class="roadmap-list">
+          <span>Receita / CNPJ</span>
+          <span>OpenAI / classificacao assistida</span>
+          <span>SEFAZ / fontes estaduais</span>
+          <span>CONFAZ / tabelas oficiais</span>
+        </div>
+      </article>
+    </aside>
+  </section>
+
+  <script type="module" src={integrationsScript}></script>
+
+  <style>
+    .integrations-hero,
+    .integrations-grid,
+    .integration-card,
+    .integration-main-stack,
+    .integration-side,
+    .integration-test-card,
+    .integration-roadmap,
+    .integration-form {
+      display: grid;
+      gap: 18px;
+    }
+
+    .integration-main-stack {
+      align-content: start;
+    }
+
+    .integrations-hero {
+      grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+      padding: 28px;
+      border-radius: 30px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.18), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.14), transparent 26%),
+        linear-gradient(180deg, #ffffff, #f8fbff);
+      box-shadow: 0 18px 44px rgba(15, 23, 42, 0.07);
+    }
+
+    .integrations-eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.16);
+      color: #92400e;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .integrations-hero h2,
+    .integration-card h3,
+    .integration-test-card h3,
+    .integration-roadmap h3 {
+      margin: 0;
+      color: #0f172a;
+    }
+
+    .integrations-hero p,
+    .integration-card p,
+    .integration-test-card p,
+    .integration-roadmap p {
+      margin: 0;
+      color: #52657c;
+      line-height: 1.7;
+    }
+
+    .integration-meter {
+      display: grid;
+      gap: 8px;
+      padding: 20px;
+      border-radius: 24px;
+      border: 1px solid rgba(14, 165, 233, 0.2);
+      background: linear-gradient(180deg, rgba(236, 254, 255, 0.92), rgba(255, 251, 235, 0.82));
+    }
+
+    .integration-meter span {
+      color: #0f766e;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .integration-meter strong {
+      color: #0f172a;
+      font-family: var(--font-display);
+      font-size: 38px;
+    }
+
+    .integrations-grid {
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+      margin-top: 22px;
+    }
+
+    .integration-card,
+    .integration-test-card,
+    .integration-roadmap {
+      padding: 24px;
+      border-radius: 26px;
+      border: 1px solid rgba(203, 213, 225, 0.88);
+      background: linear-gradient(180deg, #ffffff, #f8fbff);
+      box-shadow: 0 16px 38px rgba(15, 23, 42, 0.06);
+    }
+
+    .integration-card--cosmos {
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 32%),
+        linear-gradient(180deg, #ffffff, #f8fbff);
+    }
+
+    .integration-card--openai {
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.1), transparent 28%),
+        linear-gradient(180deg, #ffffff, #f8fbff);
+    }
+
+    .integration-card__header,
+    .integration-card__brand,
+    .integration-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .integration-card__brand {
+      justify-content: flex-start;
+    }
+
+    .integration-logo {
+      display: inline-grid;
+      width: 56px;
+      height: 56px;
+      place-items: center;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+      color: white;
+      font-family: var(--font-display);
+      font-size: 30px;
+      box-shadow: 0 14px 24px rgba(14, 165, 233, 0.22);
+    }
+
+    .integration-logo--openai {
+      background: linear-gradient(135deg, #111827, #0f766e);
+      font-size: 22px;
+    }
+
+    .integration-status {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .integration-status--ok {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .integration-flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .integration-flow--three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .integration-flow span {
+      padding: 13px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(186, 200, 214, 0.72);
+      background: rgba(255, 255, 255, 0.8);
+      color: #334155;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .integration-form {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .integration-form label {
+      display: grid;
+      gap: 8px;
+      color: #334155;
+      font-weight: 800;
+    }
+
+    .integration-form input,
+    .integration-form select,
+    .integration-form textarea {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 14px;
+      padding: 13px 14px;
+      background: white;
+      color: #0f172a;
+      font: inherit;
+    }
+
+    .ai-lab {
+      display: grid;
+      gap: 16px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(245, 158, 11, 0.24);
+      background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.12), transparent 30%),
+        linear-gradient(180deg, rgba(255, 251, 235, 0.78), rgba(255, 255, 255, 0.92));
+    }
+
+    .ai-lab h4 {
+      margin: 0;
+      color: #0f172a;
+      font-size: 22px;
+    }
+
+    .integration-switch {
+      grid-column: 1 / -1;
+      display: flex !important;
+      grid-template-columns: none;
+      align-items: center;
+      padding: 14px;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid #dbe4ee;
+    }
+
+    .integration-switch input {
+      width: 18px;
+      height: 18px;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .primary-button,
+    .secondary-link {
+      border: none;
+      border-radius: 14px;
+      padding: 13px 16px;
+      color: white;
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+      font: inherit;
+      font-weight: 900;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .primary-button--amber {
+      background: linear-gradient(135deg, #92400e, #f59e0b);
+    }
+
+    .secondary-link {
+      color: #0f172a;
+      background: white;
+      border: 1px solid #cbd5e1;
+    }
+
+    .integration-feedback {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: #f8fafc;
+      color: #52657c;
+      line-height: 1.5;
+    }
+
+    .integration-feedback--success {
+      background: #ecfdf5;
+      color: #166534;
+    }
+
+    .integration-feedback--error {
+      background: #fff1f2;
+      color: #b91c1c;
+    }
+
+    .cosmos-result-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .cosmos-result-grid span {
+      display: grid;
+      gap: 4px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid #dbe4ee;
+      background: white;
+      color: #334155;
+    }
+
+    .cosmos-result-grid strong {
+      color: #0f766e;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .cosmos-lab {
+      display: grid;
+      gap: 16px;
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px solid #cfe0ee;
+      border-radius: 22px;
+      background:
+        linear-gradient(135deg, rgba(14, 165, 233, 0.09), transparent 45%),
+        #ffffff;
+    }
+
+    .cosmos-lab h4 {
+      margin: 4px 0;
+      color: #132f43;
+      font-size: 22px;
+    }
+
+    .cosmos-lab p {
+      margin: 0;
+      color: #5f7187;
+      line-height: 1.5;
+    }
+
+    .cosmos-search-bar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+
+    .cosmos-search-bar input {
+      min-width: 0;
+      border: 1px solid #cfe0ee;
+      border-radius: 16px;
+      padding: 14px 16px;
+      color: #132f43;
+      font-size: 15px;
+      background: #f8fbff;
+    }
+
+    .cosmos-search-table {
+      overflow: hidden;
+      border: 1px solid #d7e2ef;
+      border-radius: 18px;
+      background: white;
+    }
+
+    .cosmos-search-table__head,
+    .cosmos-search-table__row {
+      display: grid;
+      grid-template-columns: minmax(240px, 1.6fr) 140px 110px 110px 120px;
+      align-items: stretch;
+    }
+
+    .cosmos-search-table__head {
+      background: #edf5fb;
+      color: #52677d;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .cosmos-search-table__head span,
+    .cosmos-search-table__row span {
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      min-width: 0;
+      padding: 13px 14px;
+      border-right: 1px solid #d7e2ef;
+    }
+
+    .cosmos-search-table__head span:last-child,
+    .cosmos-search-table__row span:last-child {
+      border-right: 0;
+    }
+
+    .cosmos-search-table__row {
+      border-top: 1px solid #d7e2ef;
+      color: #274057;
+      font-size: 14px;
+    }
+
+    .cosmos-search-table__row:nth-child(even) {
+      background: #fbfdff;
+    }
+
+    .cosmos-search-table__row strong {
+      overflow: hidden;
+      color: #132f43;
+      font-size: 14px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cosmos-search-table__row small {
+      overflow: hidden;
+      color: #6b7e93;
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ai-classification {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid #dbe4ee;
+      background: white;
+    }
+
+    .ai-classification__head {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .ai-risk {
+      display: inline-flex;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      font-weight: 900;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .ai-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .ai-fields span {
+      display: grid;
+      gap: 4px;
+      padding: 12px;
+      border-radius: 14px;
+      background: #f8fafc;
+      color: #334155;
+    }
+
+    .ai-fields strong {
+      color: #0f766e;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .roadmap-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .roadmap-list span {
+      padding: 13px 14px;
+      border-radius: 15px;
+      background: #fff7ed;
+      color: #7c2d12;
+      font-weight: 900;
+      border: 1px solid #fed7aa;
+    }
+
+    @media (max-width: 1080px) {
+      .integrations-hero,
+      .integrations-grid,
+      .integration-form,
+      .integration-flow,
+      .integration-flow--three,
+      .ai-fields {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</DashboardLayout>

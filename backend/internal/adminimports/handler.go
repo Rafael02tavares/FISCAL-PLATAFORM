@@ -286,6 +286,59 @@ func (h *Handler) UploadCBenef(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) UploadStateICMSST(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(64 << 20); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"error": map[string]string{
+				"code":    "INVALID_MULTIPART_FORM",
+				"message": "formulario de upload invalido",
+			},
+		})
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"error": map[string]string{
+				"code":    "MISSING_FILE",
+				"message": "arquivo XLSX obrigatorio",
+			},
+		})
+		return
+	}
+	defer file.Close()
+
+	sourceName := strings.TrimSpace(r.FormValue("source_name"))
+	if sourceName == "" {
+		sourceName = "CONFAZ ST Estadual"
+	}
+
+	if err := h.service.ImportStateICMSSTXLSX(r.Context(), ImportStateICMSSTParams{
+		File:         file,
+		FileName:     header.Filename,
+		SourceName:   sourceName,
+		VersionLabel: r.FormValue("version_label"),
+		UF:           r.FormValue("uf"),
+		SourceURL:    r.FormValue("source_url"),
+	}); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"error": map[string]string{
+				"code":    "STATE_ICMS_ST_IMPORT_FAILED",
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	items, _ := h.service.ListImportBatches(r.Context(), sourceName, 10)
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"message": "importacao de ST estadual concluida com sucesso",
+		"items":   items,
+	})
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

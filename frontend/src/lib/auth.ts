@@ -19,6 +19,7 @@ const ORGANIZATION_ID_KEY = "organization_id";
 const ORGANIZATION_ROLE_KEY = "organization_role";
 const ORGANIZATION_TAX_REGIME_KEY = "organization_tax_regime";
 const ORGANIZATION_CRT_KEY = "organization_crt";
+const ORGANIZATION_HOME_UF_KEY = "organization_home_uf";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -152,6 +153,18 @@ export function removeOrganizationCRT(): void {
   safeRemoveItem(ORGANIZATION_CRT_KEY);
 }
 
+export function saveOrganizationHomeUF(homeUF: string): void {
+  safeSetItem(ORGANIZATION_HOME_UF_KEY, homeUF);
+}
+
+export function getOrganizationHomeUF(): string | null {
+  return safeGetItem(ORGANIZATION_HOME_UF_KEY);
+}
+
+export function removeOrganizationHomeUF(): void {
+  safeRemoveItem(ORGANIZATION_HOME_UF_KEY);
+}
+
 export function hasAdminAreaAccess(): boolean {
   const role = String(getOrganizationRole() || "").trim().toLowerCase();
   return role === "owner" || role === "admin" || role === "analyst";
@@ -168,6 +181,7 @@ export function clearSession(): void {
   removeOrganizationRole();
   removeOrganizationTaxRegime();
   removeOrganizationCRT();
+  removeOrganizationHomeUF();
 }
 
 export function logout(): void {

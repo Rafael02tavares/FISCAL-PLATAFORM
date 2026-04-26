@@ -181,6 +181,56 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
             Use XLSX/CSV ou cole a tabela de beneficios fiscais da UF para popular a tabela cbenef_catalog.
           </div>
         </article>
+
+        <article class="catalog-panel catalog-panel--st">
+          <div class="catalog-panel__header">
+            <div>
+              <h3 class="section-title">Importar ST estadual CONFAZ</h3>
+              <p>Carregue planilhas estaduais do Portal Nacional da ST e grave regras por UF e CEST no motor.</p>
+            </div>
+            <span class="catalog-tag catalog-tag--amber">state_icms_rules</span>
+          </div>
+
+          <form id="state-st-import-form" class="form-grid">
+            <label>
+              Nome da fonte
+              <input id="state-st-source-name" type="text" value="CONFAZ ST GO" />
+            </label>
+
+            <label>
+              Versao
+              <input id="state-st-version-label" type="text" value="Versao 001 - vigencia 10/07/2023" />
+            </label>
+
+            <label>
+              UF
+              <input id="state-st-uf" type="text" value="GO" maxlength="2" placeholder="GO" />
+            </label>
+
+            <label>
+              Arquivo XLSX
+              <input id="state-st-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+            </label>
+
+            <label class="full-width">
+              URL da fonte oficial
+              <input
+                id="state-st-source-url"
+                type="url"
+                value="https://www.confaz.fazenda.gov.br/legislacao/portal-nacional-da-substituicao-tributaria/goias/planilha_eletronica_st_versao_0001_go_vigencia_a_partir_de_10-07-23.xlsx"
+              />
+            </label>
+
+            <div class="full-width import-actions">
+              <button id="submit-state-st-import" class="primary-button primary-button--amber" type="submit">Importar ST estadual</button>
+              <a class="secondary-link" href="/admin/legal-rules">Ver regras por estado</a>
+            </div>
+          </form>
+
+          <div id="state-st-import-feedback" class="dashboard-note">
+            Use o XLSX original do CONFAZ. Ele sera lido por abas e salvo como regra estadual de ICMS-ST.
+          </div>
+        </article>
       </div>
     </section>
 
@@ -234,6 +284,11 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
       background: linear-gradient(180deg, #ffffff, #ecfeff);
     }
 
+    .catalog-panel--st {
+      border-color: #fcd34d;
+      background: linear-gradient(180deg, #fffdf7, #fffbeb);
+    }
+
     .catalog-panel__header {
       display: flex;
       justify-content: space-between;
@@ -271,6 +326,11 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
     .catalog-tag--teal {
       background: #ccfbf1;
       color: #0f766e;
+    }
+
+    .catalog-tag--amber {
+      background: #fef3c7;
+      color: #92400e;
     }
 
     .form-grid label {
@@ -328,6 +388,10 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
 
     .primary-button--teal {
       background: linear-gradient(135deg, #0f766e, #0891b2);
+    }
+
+    .primary-button--amber {
+      background: linear-gradient(135deg, #92400e, #f59e0b);
     }
 
     .secondary-link {

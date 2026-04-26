@@ -5,63 +5,29 @@ import produtosScript from "../../scripts/produtos.ts?url";
 
 <DashboardLayout
   title="Catalogo consultavel de produtos"
-  subtitle="Consulte e mantenha a memoria tributaria dos produtos sem depender da nota de origem"
+  subtitle="Consulte a identidade fiscal do item e gere sugestoes por UF e regime tributario"
 >
-  <div class="page-header">
-    <h2>Consulta fiscal de produtos</h2>
-    <p>
-      Esta tela agora prioriza consulta. O usuario localiza rapidamente a tributacao do item e a
-      equipe administrativa expande o cadastro apenas quando precisar enriquecer a memoria fiscal.
-    </p>
-  </div>
-
   <section class="catalog-hero">
     <div class="catalog-hero__copy">
-      <span class="catalog-badge">Catalogo consultavel</span>
-      <h3>Consulte o perfil tributario por descricao, GTIN, NCM ou codigo interno</h3>
+      <span class="catalog-badge">Consulta de produtos</span>
+      <h3>Busque o item, confira a identidade fiscal e gere a sugestao</h3>
       <p>
-        O produto passa a ser tratado como ativo da plataforma. A memoria fiscal fica pronta para
-        consulta operacional, comparacao e reaproveitamento na sugestao tributaria.
+        Descricao, GTIN, NCM e CST formam a base fixa do item. A saida e sugerida pela UF e regime
+        da organizacao.
       </p>
       <div class="catalog-hero__legend">
-        <span><i class="legend-dot legend-dot--teal"></i>Classificacao</span>
-        <span><i class="legend-dot legend-dot--amber"></i>Apuracao</span>
-        <span><i class="legend-dot legend-dot--sky"></i>Operacao</span>
+        <span><i class="legend-dot legend-dot--teal"></i>Identidade do item</span>
+        <span><i class="legend-dot legend-dot--amber"></i>Qualidade da base</span>
+        <span><i class="legend-dot legend-dot--sky"></i>Sugestao por contexto</span>
       </div>
     </div>
 
     <div class="catalog-hero__visual">
       <div class="insight-card">
-        <span class="insight-card__label">Matriz de cobertura</span>
+        <span class="insight-card__label">Resumo da pagina</span>
         <div id="catalog-stats" class="insight-card__grid">
           <div class="dashboard-note">Carregando indicadores do catalogo...</div>
         </div>
-      </div>
-
-      <div class="catalog-illustration" aria-hidden="true">
-        <svg viewBox="0 0 360 220" role="img">
-          <defs>
-            <linearGradient id="catalogLineA" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#0f766e"></stop>
-              <stop offset="100%" stop-color="#0ea5e9"></stop>
-            </linearGradient>
-            <linearGradient id="catalogLineB" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#f59e0b"></stop>
-              <stop offset="100%" stop-color="#fb7185"></stop>
-            </linearGradient>
-          </defs>
-          <rect x="18" y="18" width="324" height="184" rx="24" fill="#ffffff" stroke="#dbe4ee"></rect>
-          <rect x="42" y="42" width="98" height="18" rx="9" fill="#ccfbf1"></rect>
-          <rect x="42" y="74" width="152" height="11" rx="5.5" fill="#e2e8f0"></rect>
-          <rect x="42" y="96" width="124" height="11" rx="5.5" fill="#e2e8f0"></rect>
-          <rect x="42" y="148" width="94" height="26" rx="13" fill="#fef3c7"></rect>
-          <rect x="154" y="148" width="94" height="26" rx="13" fill="#e0f2fe"></rect>
-          <path d="M230 148 C252 118, 280 110, 310 84" fill="none" stroke="url(#catalogLineB)" stroke-width="10" stroke-linecap="round"></path>
-          <circle cx="232" cy="148" r="10" fill="#f59e0b"></circle>
-          <circle cx="310" cy="84" r="10" fill="#0ea5e9"></circle>
-          <circle cx="260" cy="84" r="42" fill="none" stroke="#e2e8f0" stroke-width="18"></circle>
-          <circle cx="260" cy="84" r="42" fill="none" stroke="url(#catalogLineA)" stroke-width="18" stroke-linecap="round" stroke-dasharray="184 80" transform="rotate(-90 260 84)"></circle>
-        </svg>
       </div>
     </div>
   </section>
@@ -70,10 +36,10 @@ import produtosScript from "../../scripts/produtos.ts?url";
     <section class="card card--padded">
       <div class="section-heading">
         <div>
-          <span class="section-heading__eyebrow">Consulta principal</span>
-          <h3>Encontre a tributacao consolidada do produto</h3>
+          <span class="section-heading__eyebrow">Lista operacional</span>
+          <h3>Produtos cadastrados</h3>
         </div>
-        <p>Pesquise de forma simples e veja o perfil fiscal consolidado sem depender da nota de origem.</p>
+        <p>Use a busca para localizar item por descricao, GTIN, NCM, CEST ou CST.</p>
       </div>
 
       <div class="consultation-shell">
@@ -91,7 +57,7 @@ import produtosScript from "../../scripts/produtos.ts?url";
             <button class="primary-button primary-button--ghost" type="submit">Consultar</button>
           </div>
           <span class="catalog-search-panel__hint">
-            Se nao preencher nada, a plataforma mostra toda a memoria tributaria da organizacao.
+            Dica: para grandes bases, digite parte da descricao ou o GTIN e pressione Enter.
           </span>
         </form>
 
@@ -99,8 +65,8 @@ import produtosScript from "../../scripts/produtos.ts?url";
           <button class="quick-chip quick-chip--active" type="button" data-product-filter="all">Todos</button>
           <button class="quick-chip" type="button" data-product-filter="missing_ncm">Sem NCM</button>
           <button class="quick-chip" type="button" data-product-filter="missing_cest">Sem CEST</button>
-          <button class="quick-chip" type="button" data-product-filter="missing_icms">Pendentes de ICMS</button>
-          <button class="quick-chip" type="button" data-product-filter="missing_contributions">Sem PIS/COFINS</button>
+          <button class="quick-chip" type="button" data-product-filter="missing_gtin">Sem GTIN</button>
+          <button class="quick-chip" type="button" data-product-filter="missing_cst">Sem CST</button>
           <button class="quick-chip" type="button" data-product-filter="missing_reform">Sem IBS/CBS</button>
         </div>
 
@@ -109,6 +75,7 @@ import produtosScript from "../../scripts/produtos.ts?url";
         </div>
 
         <div id="catalog-products-result" class="dashboard-note">Carregando produtos tributarios...</div>
+        <div id="catalog-pagination" class="catalog-pagination" aria-label="Paginacao do catalogo fiscal"></div>
       </div>
     </section>
 
@@ -117,21 +84,21 @@ import produtosScript from "../../scripts/produtos.ts?url";
         <div class="section-heading section-heading--tight">
           <div>
             <span class="section-heading__eyebrow">Consulta guiada</span>
-            <h3>Como interpretar a busca</h3>
+            <h3>Uso recomendado</h3>
           </div>
         </div>
         <div class="governance-grid">
           <article class="governance-card">
             <h4>Consulta por descricao</h4>
-            <p>Encontre itens semelhantes e compare rapidamente a classificacao e a tributacao consolidada.</p>
+            <p>Use termos curtos: marca, produto, volume ou embalagem.</p>
           </article>
           <article class="governance-card">
             <h4>Consulta por codigo</h4>
-            <p>Pesquise GTIN, NCM, CFOP, CEST ou codigo interno para localizar o produto certo em segundos.</p>
+            <p>GTIN localiza o item exato. NCM e CEST ajudam em revisoes por grupo fiscal.</p>
           </article>
           <article class="governance-card">
-            <h4>Leitura fiscal</h4>
-            <p>O card do produto mostra classificacao, CST, contribuicoes e tributos da reforma no mesmo painel.</p>
+            <h4>Sugestao por contexto</h4>
+            <p>A acao da tabela usa UF e regime da empresa ativa para sugerir a saida.</p>
           </article>
         </div>
       </article>
@@ -162,7 +129,7 @@ import produtosScript from "../../scripts/produtos.ts?url";
             <span class="section-heading__eyebrow">Manutencao especializada</span>
             <h3>Cadastro tributario do produto</h3>
           </div>
-          <p>Abra apenas quando precisar complementar a memoria fiscal manualmente.</p>
+          <p>Abra apenas quando precisar completar os dados fixos do item.</p>
         </summary>
 
         <form id="catalog-product-form" class="catalog-form">
@@ -204,11 +171,6 @@ import produtosScript from "../../scripts/produtos.ts?url";
           </label>
 
           <label>
-            CFOP
-            <input name="cfop" type="text" placeholder="5102" />
-          </label>
-
-          <label>
             CSOSN
             <input name="csosn" type="text" placeholder="102" />
           </label>
@@ -238,125 +200,33 @@ import produtosScript from "../../scripts/produtos.ts?url";
             <input name="cofins_revenue_code" type="text" placeholder="2172" />
           </label>
 
-          <label>
-            cBenef
-            <input name="cbenef" type="text" placeholder="SP000001" />
-          </label>
-
-          <label>
-            Valor ICMS
-            <input name="icms_value" type="text" placeholder="18.00" />
-          </label>
-
-          <label>
-            Valor IPI
-            <input name="ipi_value" type="text" placeholder="0.00" />
-          </label>
-
-          <label>
-            Valor PIS
-            <input name="pis_value" type="text" placeholder="1.65" />
-          </label>
-
-          <label>
-            Valor COFINS
-            <input name="cofins_value" type="text" placeholder="7.60" />
-          </label>
-
-          <label>
-            Aliquota PIS
-            <input name="pis_rate" type="text" placeholder="1.65" />
-          </label>
-
-          <label>
-            Aliquota COFINS
-            <input name="cofins_rate" type="text" placeholder="7.60" />
-          </label>
-
-          <label>
-            Aliquota ICMS
-            <input name="icms_rate" type="text" placeholder="18.00" />
-          </label>
-
-          <label>
-            Red. base ICMS
-            <input name="icms_base_reduction" type="text" placeholder="0.00" />
-          </label>
-
-          <label>
-            FCP
-            <input name="fcp_rate" type="text" placeholder="2.00" />
-          </label>
-
-          <label>
-            ICMS ST
-            <input name="icms_st_rate" type="text" placeholder="0.00" />
-          </label>
-
-          <label>
-            IBS
-            <input name="ibs_rate" type="text" placeholder="0.00" />
-          </label>
-
-          <label>
-            CBS
-            <input name="cbs_rate" type="text" placeholder="0.00" />
-          </label>
-
-          <label>
-            Imposto seletivo
-            <input name="selective_tax_code" type="text" placeholder="IS-01" />
-          </label>
-
-          <label>
-            Aliq. seletivo
-            <input name="selective_tax_rate" type="text" placeholder="0.00" />
-          </label>
-
-          <label>
-            Operacao
-            <input name="operation_code" type="text" placeholder="sale_consumer_final" />
-          </label>
-
-          <label>
-            UF emitente
-            <input name="emitter_uf" type="text" maxlength="2" placeholder="SP" />
-          </label>
-
-          <label>
-            UF destinatario
-            <input name="recipient_uf" type="text" maxlength="2" placeholder="RJ" />
-          </label>
-
-          <label class="full-width">
-            Natureza da operacao
-            <input name="operation_nature" type="text" placeholder="Venda para contribuinte" />
-          </label>
-
-          <label>
-            Regime alvo
-            <select name="target_tax_regime">
-              <option value="">Usar regime da organizacao</option>
-              <option value="lucro_real">Lucro Real</option>
-              <option value="lucro_presumido">Lucro Presumido</option>
-              <option value="simples_nacional">Simples Nacional</option>
-            </select>
-          </label>
-
-          <label>
-            CRT alvo
-            <select name="target_crt">
-              <option value="">Automatico</option>
-              <option value="1">1 - Simples Nacional</option>
-              <option value="2">2 - Simples excesso sublimite</option>
-              <option value="3">3 - Regime Normal</option>
-            </select>
-          </label>
+          <input name="cfop" type="hidden" />
+          <input name="cbenef" type="hidden" />
+          <input name="icms_value" type="hidden" />
+          <input name="ipi_value" type="hidden" />
+          <input name="pis_value" type="hidden" />
+          <input name="cofins_value" type="hidden" />
+          <input name="pis_rate" type="hidden" />
+          <input name="cofins_rate" type="hidden" />
+          <input name="icms_rate" type="hidden" />
+          <input name="icms_base_reduction" type="hidden" />
+          <input name="fcp_rate" type="hidden" />
+          <input name="icms_st_rate" type="hidden" />
+          <input name="ibs_rate" type="hidden" />
+          <input name="cbs_rate" type="hidden" />
+          <input name="selective_tax_code" type="hidden" />
+          <input name="selective_tax_rate" type="hidden" />
+          <input name="operation_code" type="hidden" value="sale_consumer_final" />
+          <input name="emitter_uf" type="hidden" />
+          <input name="recipient_uf" type="hidden" />
+          <input name="operation_nature" type="hidden" />
+          <input name="target_tax_regime" type="hidden" />
+          <input name="target_crt" type="hidden" />
 
           <div class="form-actions full-width">
-            <button class="primary-button" type="submit">Salvar produto tributario</button>
+            <button class="primary-button" type="submit">Salvar item fiscal</button>
             <button id="new-product-button" class="secondary-button" type="button">Novo produto</button>
-            <p class="form-hint">O cadastro fica disponivel para sugestao fiscal e simulacao sem depender da nota original.</p>
+            <p class="form-hint">O item fica disponivel para busca, sugestao fiscal e simulacao por UF/regime.</p>
           </div>
         </form>
 
@@ -368,6 +238,10 @@ import produtosScript from "../../scripts/produtos.ts?url";
   <script type="module" src={produtosScript}></script>
 
   <style>
+    :global(.page-filter) {
+      display: none;
+    }
+
     .catalog-hero,
     .catalog-grid {
       display: grid;
@@ -376,19 +250,22 @@ import produtosScript from "../../scripts/produtos.ts?url";
     }
 
     .catalog-hero {
-      grid-template-columns: 1.1fr 0.9fr;
-      padding: 24px;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 0.7fr);
+      padding: 18px;
       border: 1px solid #dbe4ee;
-      border-radius: 24px;
+      border-radius: 18px;
       background:
-        radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 30%),
-        radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.14), transparent 30%),
-        linear-gradient(135deg, #fffef8, #f8fbff);
+        linear-gradient(90deg, rgba(240, 253, 250, 0.9), rgba(248, 251, 255, 0.96));
     }
 
     .catalog-grid {
-      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+      grid-template-columns: minmax(0, 1fr);
       align-items: start;
+    }
+
+    .catalog-grid > .card,
+    .catalog-grid > .side-column {
+      min-width: 0;
     }
 
     .catalog-badge,
@@ -405,8 +282,9 @@ import produtosScript from "../../scripts/produtos.ts?url";
     }
 
     .catalog-hero__copy h3 {
-      margin: 10px 0;
-      font-size: clamp(26px, 3vw, 38px);
+      margin: 8px 0;
+      font-size: clamp(22px, 2.2vw, 30px);
+      line-height: 1.1;
     }
 
     .catalog-hero__copy p,
@@ -420,9 +298,9 @@ import produtosScript from "../../scripts/produtos.ts?url";
     .catalog-hero__legend {
       display: flex;
       flex-wrap: wrap;
-      gap: 14px;
-      margin-top: 18px;
-      font-size: 13px;
+      gap: 10px;
+      margin-top: 12px;
+      font-size: 12px;
       font-weight: 600;
       color: #475569;
     }
@@ -451,19 +329,23 @@ import produtosScript from "../../scripts/produtos.ts?url";
       align-content: start;
     }
 
+    .side-column {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .insight-card,
     .catalog-illustration {
       border: 1px solid #dbe4ee;
-      border-radius: 20px;
+      border-radius: 16px;
       background: rgba(255, 255, 255, 0.92);
-      padding: 18px;
+      padding: 12px;
     }
 
     .insight-card__label {
       display: inline-flex;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       color: #0f172a;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -492,7 +374,7 @@ import produtosScript from "../../scripts/produtos.ts?url";
       justify-content: space-between;
       gap: 12px;
       align-items: end;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       flex-wrap: wrap;
     }
 
@@ -535,13 +417,12 @@ import produtosScript from "../../scripts/produtos.ts?url";
 
     .catalog-search-panel {
       display: grid;
-      gap: 10px;
-      padding: 20px;
+      gap: 8px;
+      padding: 14px;
       border: 1px solid #dbe4ee;
-      border-radius: 22px;
+      border-radius: 14px;
       background:
-        radial-gradient(circle at top right, rgba(14, 165, 233, 0.1), transparent 25%),
-        linear-gradient(135deg, #f8fbff, #fffef8);
+        linear-gradient(135deg, #ffffff, #f8fbff);
     }
 
     .catalog-search-panel__label {
@@ -560,9 +441,9 @@ import produtosScript from "../../scripts/produtos.ts?url";
     }
 
     .catalog-search--hero {
-      padding: 16px 18px;
-      font-size: 16px;
-      border-radius: 18px;
+      padding: 12px 14px;
+      font-size: 15px;
+      border-radius: 10px;
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
     }
 
@@ -574,18 +455,18 @@ import produtosScript from "../../scripts/produtos.ts?url";
     .consultation-quick-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
     }
 
     .quick-chip {
       display: inline-flex;
       appearance: none;
-      padding: 8px 12px;
-      border-radius: 999px;
+      padding: 6px 10px;
+      border-radius: 8px;
       background: #f8fafc;
       border: 1px solid #dbe4ee;
       color: #334155;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
       cursor: pointer;
       transition:
@@ -607,8 +488,8 @@ import produtosScript from "../../scripts/produtos.ts?url";
     }
 
     .consultation-summary {
-      padding: 18px;
-      border-radius: 20px;
+      padding: 12px 14px;
+      border-radius: 12px;
       border: 1px solid #dbe4ee;
       background: linear-gradient(180deg, #ffffff, #f8fafc);
       color: #0f172a;
@@ -616,8 +497,49 @@ import produtosScript from "../../scripts/produtos.ts?url";
 
     .consultation-summary strong {
       display: block;
-      margin-bottom: 6px;
-      font-size: 16px;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .catalog-pagination {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      padding: 16px;
+      border: 1px solid #dbe4ee;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(14, 165, 233, 0.08));
+    }
+
+    .catalog-pagination:empty {
+      display: none;
+    }
+
+    .catalog-pagination__info {
+      display: grid;
+      gap: 4px;
+      color: #475569;
+      font-size: 13px;
+    }
+
+    .catalog-pagination__info strong {
+      color: #0f172a;
+      font-size: 15px;
+    }
+
+    .catalog-pagination__actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .catalog-pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
 
     .full-width {
@@ -681,15 +603,44 @@ import produtosScript from "../../scripts/produtos.ts?url";
     }
 
     .metric-card {
-      padding: 14px;
+      padding: 10px;
       display: grid;
-      gap: 6px;
+      gap: 4px;
+    }
+
+    .metric-card div:first-child {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: end;
     }
 
     .metric-card strong {
-      font-size: 24px;
+      font-size: 20px;
       color: #0f172a;
       line-height: 1;
+    }
+
+    .metric-card span {
+      color: #475569;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .metric-card__bar {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.24);
+      overflow: hidden;
+    }
+
+    .metric-card__bar i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
     }
 
     .metric-card--teal { background: #f0fdfa; }
@@ -700,6 +651,170 @@ import produtosScript from "../../scripts/produtos.ts?url";
     .coverage-card,
     .governance-card {
       padding: 16px;
+    }
+
+    .product-table-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid #94a3b8;
+      border-radius: 6px;
+      background: #ffffff;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .product-table {
+      width: 100%;
+      min-width: 1180px;
+      border-collapse: collapse;
+      table-layout: fixed;
+      color: #0f172a;
+      font-size: 12px;
+    }
+
+    .product-table__col-index { width: 44px; }
+    .product-table__col-product { width: 280px; }
+    .product-table__col-gtin { width: 142px; }
+    .product-table__col-ncm { width: 190px; }
+    .product-table__col-cest { width: 150px; }
+    .product-table__col-icms { width: 105px; }
+    .product-table__col-piscofins { width: 118px; }
+    .product-table__col-reform { width: 104px; }
+    .product-table__col-status { width: 115px; }
+    .product-table__col-actions { width: 132px; }
+
+    .product-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      padding: 7px 8px;
+      background: #d9ead3;
+      border: 1px solid #93c47d;
+      color: #274e13;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-align: left;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .product-table td {
+      height: 44px;
+      padding: 6px 8px;
+      border: 1px solid #cbd5e1;
+      vertical-align: middle;
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .product-table__row--even td {
+      background: #ffffff;
+    }
+
+    .product-table__row--odd td {
+      background: #f3f6fb;
+    }
+
+    .product-table tbody tr:hover td {
+      background: #fff2cc;
+    }
+
+    .product-table td strong {
+      display: block;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .product-table td span {
+      display: block;
+      max-width: 100%;
+      margin-top: 2px;
+      color: #64748b;
+      font-size: 11px;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .product-table__product {
+      min-width: 0;
+    }
+
+    .product-table__product strong {
+      font-size: 12px;
+    }
+
+    :global(.product-table__ncm-code) {
+      cursor: help;
+      text-decoration: underline dotted #64748b 1px;
+      text-underline-offset: 3px;
+    }
+
+    .product-table__index {
+      background: #eef2f7 !important;
+      color: #475569;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .product-table__actions {
+      white-space: normal;
+    }
+
+    .product-table__actions button {
+      width: 100%;
+      margin: 0 0 4px;
+      justify-content: center;
+    }
+
+    .product-table__row--saved td {
+      background: #e2f0d9 !important;
+      outline: 2px solid #6aa84f;
+      outline-offset: -2px;
+    }
+
+    .product-table__details td {
+      padding: 8px;
+      background: #f8fafc;
+      border: 1px solid #94a3b8;
+    }
+
+    .product-table__details .product-suggestion {
+      margin-top: 4px;
+    }
+
+    .product-status-badge {
+      display: inline-flex;
+      width: 100%;
+      justify-content: center;
+      padding: 4px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .product-status-badge--teal {
+      background: #ccfbf1;
+      color: #115e59;
+    }
+
+    .product-status-badge--amber {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .product-status-badge--rose {
+      background: #ffe4e6;
+      color: #9f1239;
     }
 
     .coverage-card__bar {
@@ -802,26 +917,360 @@ import produtosScript from "../../scripts/produtos.ts?url";
       align-items: start;
     }
 
-    .product-edit-button {
-      border: 1px solid #0ea5e9;
-      border-radius: 999px;
-      background: #eff6ff;
-      color: #075985;
-      cursor: pointer;
-      font: inherit;
-      font-size: 13px;
-      font-weight: 800;
-      padding: 8px 12px;
+    .product-card__actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
-    .product-edit-button:hover {
-      background: #dbeafe;
+    .product-edit-button,
+    .product-suggest-button {
+      display: inline-flex;
+      border: 1px solid #9ca3af;
+      border-radius: 3px;
+      background: #f8fafc;
+      color: #1f2937;
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 5px 7px;
+    }
+
+    .product-suggest-button {
+      border-color: #6aa84f;
+      background: #e2f0d9;
+      color: #274e13;
+    }
+
+    .product-edit-button:hover,
+    .product-suggest-button:hover {
+      background: #fff2cc;
+    }
+
+    .product-suggest-button:hover {
+      background: #d9ead3;
     }
 
     .product-card__top h4 {
       margin: 6px 0;
       color: #0f172a;
       font-size: 20px;
+    }
+
+    .product-card__scoreboard {
+      display: grid;
+      grid-template-columns: auto minmax(220px, 1fr) minmax(220px, 0.9fr);
+      gap: 16px;
+      align-items: center;
+      padding: 16px;
+      border: 1px solid #dbe4ee;
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.1), transparent 34%),
+        linear-gradient(135deg, #ffffff, #f8fafc);
+    }
+
+    .product-radial {
+      --score: 0;
+      width: 112px;
+      height: 112px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      background:
+        radial-gradient(circle, #ffffff 0 56%, transparent 57%),
+        conic-gradient(#0f766e calc(var(--score) * 1%), #e2e8f0 0);
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+    }
+
+    .product-radial--amber {
+      background:
+        radial-gradient(circle, #ffffff 0 56%, transparent 57%),
+        conic-gradient(#f59e0b calc(var(--score) * 1%), #e2e8f0 0);
+    }
+
+    .product-radial--rose {
+      background:
+        radial-gradient(circle, #ffffff 0 56%, transparent 57%),
+        conic-gradient(#e11d48 calc(var(--score) * 1%), #e2e8f0 0);
+    }
+
+    .product-radial strong {
+      margin-top: 10px;
+      color: #0f172a;
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .product-radial span {
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .product-status {
+      display: grid;
+      gap: 4px;
+    }
+
+    .product-status span {
+      width: fit-content;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .product-status strong {
+      color: #0f172a;
+      font-size: 18px;
+    }
+
+    .product-status p {
+      margin: 0;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .product-status--teal span {
+      background: #ccfbf1;
+      color: #115e59;
+    }
+
+    .product-status--amber span {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .product-status--rose span {
+      background: #ffe4e6;
+      color: #9f1239;
+    }
+
+    .product-bars {
+      display: grid;
+      gap: 8px;
+    }
+
+    .product-bars span {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 4px;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .product-bars span::after {
+      content: "";
+      display: block;
+      height: 8px;
+      border-radius: 999px;
+      background: #e2e8f0;
+    }
+
+    .product-bars i {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      z-index: 1;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+    }
+
+    .product-tax-map {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .product-tax-map--simple {
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    }
+
+    .product-main-facts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .fiscal-info-card {
+      position: relative;
+      display: grid;
+      gap: 7px;
+      min-height: 142px;
+      padding: 16px;
+      border: 1px solid #dbe4ee;
+      border-radius: 22px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    .fiscal-info-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 5px;
+      background: #0f766e;
+    }
+
+    .fiscal-info-card span {
+      color: #475569;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .fiscal-info-card strong {
+      color: #0f172a;
+      font-size: 18px;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
+    }
+
+    .fiscal-info-card p {
+      margin: 0;
+      color: #475569;
+      font-size: 13px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .fiscal-info-card--teal {
+      background: linear-gradient(180deg, #f0fdfa, #ffffff);
+    }
+
+    .fiscal-info-card--teal::before {
+      background: #0f766e;
+    }
+
+    .fiscal-info-card--amber {
+      background: linear-gradient(180deg, #fffbeb, #ffffff);
+    }
+
+    .fiscal-info-card--amber::before {
+      background: #f59e0b;
+    }
+
+    .fiscal-info-card--sky {
+      background: linear-gradient(180deg, #eff6ff, #ffffff);
+    }
+
+    .fiscal-info-card--sky::before {
+      background: #0ea5e9;
+    }
+
+    .fiscal-info-card--rose {
+      background: linear-gradient(180deg, #fff1f2, #ffffff);
+    }
+
+    .fiscal-info-card--rose::before {
+      background: #e11d48;
+    }
+
+    .tax-section {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid #dbe4ee;
+      border-radius: 22px;
+      background: #ffffff;
+      box-shadow: inset 4px 0 0 #0f766e;
+    }
+
+    .tax-section--sky {
+      box-shadow: inset 4px 0 0 #0ea5e9;
+      background: linear-gradient(180deg, #eff6ff, #ffffff);
+    }
+
+    .tax-section--teal {
+      box-shadow: inset 4px 0 0 #0f766e;
+      background: linear-gradient(180deg, #f0fdfa, #ffffff);
+    }
+
+    .tax-section--amber {
+      box-shadow: inset 4px 0 0 #f59e0b;
+      background: linear-gradient(180deg, #fffbeb, #ffffff);
+    }
+
+    .tax-section--rose {
+      box-shadow: inset 4px 0 0 #e11d48;
+      background: linear-gradient(180deg, #fff1f2, #ffffff);
+    }
+
+    .tax-section__title span {
+      color: #0f172a;
+      font-weight: 900;
+    }
+
+    .tax-section__title p {
+      margin: 4px 0 0;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .tax-section__grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field-item {
+      display: grid;
+      gap: 4px;
+      padding: 11px 12px;
+      border-radius: 16px;
+      border: 1px solid #dbe4ee;
+      background: rgba(255, 255, 255, 0.86);
+    }
+
+    .field-item small {
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .field-item strong {
+      color: #0f172a;
+      font-size: 15px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .field-item--teal {
+      border-color: #99f6e4;
+      background: #f0fdfa;
+    }
+
+    .field-item--amber {
+      border-color: #fde68a;
+      background: #fffbeb;
+    }
+
+    .field-item--sky {
+      border-color: #bae6fd;
+      background: #eff6ff;
+    }
+
+    .field-item--rose {
+      border-color: #fecdd3;
+      background: #fff1f2;
     }
 
     .product-chip {
@@ -868,6 +1317,382 @@ import produtosScript from "../../scripts/produtos.ts?url";
     .tax-pill--amber { background: #fffbeb; }
     .tax-pill--sky { background: #eff6ff; }
     .tax-pill--rose { background: #fff1f2; }
+
+    .product-suggestion {
+      display: grid;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid #94a3b8;
+      border-left: 5px solid #0f766e;
+      border-radius: 12px;
+      background:
+        radial-gradient(circle at top right, rgba(20, 184, 166, 0.12), transparent 28%),
+        linear-gradient(135deg, #f8fbff, #ffffff);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .product-suggestion--empty,
+    .product-suggestion--loading {
+      border-style: dashed;
+      border-color: #cbd5e1;
+      background: #f8fafc;
+    }
+
+    .product-suggestion--error {
+      border-color: #fecdd3;
+      background: #fff1f2;
+      color: #991b1b;
+    }
+
+    .product-suggestion p,
+    .product-suggestion strong {
+      margin: 0;
+    }
+
+    .product-suggestion__header {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: start;
+      flex-wrap: wrap;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .product-suggestion__header span {
+      color: #0f766e;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .product-suggestion__header strong {
+      display: block;
+      margin: 4px 0;
+      color: #0f172a;
+      font-size: 18px;
+    }
+
+    .product-suggestion__header p {
+      color: #475569;
+      line-height: 1.35;
+    }
+
+    .product-suggestion__groups {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .suggestion-group {
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+      border-top: 4px solid #0f766e;
+      border-radius: 10px;
+      background: #ffffff;
+    }
+
+    .suggestion-group h5 {
+      margin: 0;
+      padding: 8px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #0f172a;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .suggestion-group > div {
+      display: grid;
+      gap: 6px;
+      padding: 8px;
+    }
+
+    .suggestion-group--teal { border-top-color: #0f766e; }
+    .suggestion-group--amber { border-top-color: #f59e0b; }
+    .suggestion-group--sky { border-top-color: #0284c7; }
+    .suggestion-group--rose { border-top-color: #e11d48; }
+
+    .suggestion-pill {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      min-height: 38px;
+      padding: 6px 8px;
+      border: 1px solid #dbe4ee;
+      border-left: 4px solid #0f766e;
+      border-radius: 7px;
+      background: #ffffff;
+    }
+
+    .suggestion-pill small {
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .suggestion-pill strong {
+      color: #0f172a;
+      font-size: 13px;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .suggestion-pill--teal {
+      border-left-color: #0f766e;
+      background: #f0fdfa;
+    }
+
+    .suggestion-pill--amber {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+
+    .suggestion-pill--sky {
+      border-left-color: #0284c7;
+      background: #eff6ff;
+    }
+
+    .suggestion-pill--rose {
+      border-left-color: #e11d48;
+      background: #fff1f2;
+    }
+
+    .product-suggestion__warnings {
+      display: grid;
+      gap: 0;
+      overflow: hidden;
+      border: 1px solid #f59e0b;
+      border-left: 5px solid #f59e0b;
+      border-radius: 10px;
+      background: #fffbeb;
+    }
+
+    .product-suggestion__warnings strong {
+      padding: 8px 12px;
+      color: #92400e;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .product-suggestion__warnings p {
+      padding: 9px 12px;
+      border-top: 1px solid #fde68a;
+      color: #92400e;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    :global(.product-table__details .product-suggestion) {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid #94a3b8;
+      border-left: 5px solid #0f766e;
+      border-radius: 8px;
+      background: #ffffff;
+    }
+
+    :global(.product-table__details .product-suggestion__header) {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #dbe4ee;
+    }
+
+    :global(.product-table__details .product-suggestion__header span:first-child) {
+      color: #0f766e;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    :global(.product-table__details .product-suggestion__header strong) {
+      display: block;
+      margin: 2px 0 4px;
+      color: #0f172a;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    :global(.product-table__details .product-suggestion__header p) {
+      margin: 0;
+      color: #475569;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    :global(.suggestion-tax-table) {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      font-size: 12px;
+    }
+
+    :global(.suggestion-tax-table th),
+    :global(.suggestion-tax-table td) {
+      padding: 0;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+    }
+
+    :global(.suggestion-tax-table th) {
+      width: 165px;
+      padding: 10px 12px;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 900;
+      text-align: left;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background: #f8fafc;
+    }
+
+    :global(.suggestion-tax-row--teal th) {
+      border-left: 5px solid #0f766e;
+      background: #f0fdfa;
+    }
+
+    :global(.suggestion-tax-row--sky th) {
+      border-left: 5px solid #0284c7;
+      background: #eff6ff;
+    }
+
+    :global(.suggestion-tax-row--rose th) {
+      border-left: 5px solid #e11d48;
+      background: #fff1f2;
+    }
+
+    :global(.suggestion-tax-row--amber th) {
+      border-left: 5px solid #f59e0b;
+      background: #fffbeb;
+    }
+
+    :global(.suggestion-tax-table td) {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 0;
+      background: #ffffff;
+    }
+
+    :global(.suggestion-cell) {
+      display: grid;
+      gap: 2px;
+      min-height: 48px;
+      padding: 8px 10px;
+      border-right: 1px solid #e2e8f0;
+    }
+
+    :global(.suggestion-cell:last-child) {
+      border-right: 0;
+    }
+
+    :global(.suggestion-cell small) {
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    :global(.suggestion-cell strong) {
+      color: #0f172a;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    :global(.product-table__details .product-suggestion__warnings) {
+      display: grid;
+      gap: 0;
+      overflow: hidden;
+      border: 1px solid #f59e0b;
+      border-left: 5px solid #f59e0b;
+      border-radius: 6px;
+      background: #fffbeb;
+    }
+
+    :global(.product-table__details .product-suggestion__warnings strong) {
+      padding: 7px 10px;
+      color: #92400e;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    :global(.product-table__details .product-suggestion__warnings p) {
+      margin: 0;
+      padding: 8px 10px;
+      border-top: 1px solid #fde68a;
+      color: #92400e;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    :global(.product-ai-assist) {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #99f6e4;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 30%),
+        linear-gradient(180deg, #f0fdfa, #ffffff);
+    }
+
+    :global(.product-ai-assist span) {
+      color: #0f766e;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    :global(.product-ai-assist strong),
+    :global(.product-ai-assist p) {
+      margin: 0;
+    }
+
+    :global(.product-ai-assist__meta) {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    :global(.product-ai-assist__meta span) {
+      display: grid;
+      gap: 4px;
+      padding: 8px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px solid #ccfbf1;
+      color: #64748b;
+      letter-spacing: normal;
+      text-transform: none;
+    }
+
+    :global(.product-ai-assist__meta strong) {
+      color: #0f172a;
+      font-size: 13px;
+    }
+
+    :global(.product-ai-assist__signals) {
+      color: #475569;
+      line-height: 1.45;
+    }
 
     .product-diagnostic {
       display: grid;
@@ -994,10 +1819,29 @@ import produtosScript from "../../scripts/produtos.ts?url";
     }
 
     @media (max-width: 1200px) {
+      .side-column {
+        grid-template-columns: 1fr;
+      }
+
       .catalog-form,
       .catalog-field-grid,
-      .product-diagnostic__grid {
+      .product-tax-map,
+      .product-main-facts,
+      .product-diagnostic__grid,
+      .product-suggestion__groups {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .product-card__scoreboard {
+        grid-template-columns: auto 1fr;
+      }
+
+      .product-bars {
+        grid-column: 1 / -1;
+      }
+
+      :global(.suggestion-tax-table td) {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
       }
     }
 
@@ -1011,9 +1855,21 @@ import produtosScript from "../../scripts/produtos.ts?url";
     @media (max-width: 720px) {
       .catalog-form,
       .catalog-field-grid,
+      .product-tax-map,
+      .product-main-facts,
+      .tax-section__grid,
       .product-diagnostic__grid,
+      .product-suggestion__groups,
       .insight-card__grid {
         grid-template-columns: 1fr;
+      }
+
+      .product-card__scoreboard {
+        grid-template-columns: 1fr;
+      }
+
+      .product-radial {
+        margin: 0 auto;
       }
 
       .catalog-search-row {
@@ -1022,6 +1878,24 @@ import produtosScript from "../../scripts/produtos.ts?url";
 
       .catalog-admin-panel__summary {
         display: grid;
+      }
+
+      :global(.suggestion-tax-table),
+      :global(.suggestion-tax-table tbody),
+      :global(.suggestion-tax-table tr),
+      :global(.suggestion-tax-table th),
+      :global(.suggestion-tax-table td) {
+        display: block;
+        width: 100%;
+      }
+
+      :global(.suggestion-tax-table th) {
+        width: auto;
+      }
+
+      :global(.suggestion-tax-table td) {
+        display: grid;
+        grid-template-columns: 1fr;
       }
     }
   </style>

@@ -11,6 +11,7 @@ type SuggestRequest struct {
 	TaxRegime        string `json:"tax_regime"`
 	TargetCRT        string `json:"target_crt"`
 	SourceICMSCST    string `json:"source_icms_cst"`
+	SourceICMSCSOSN  string `json:"source_icms_csosn"`
 	SourceICMSRate   string `json:"source_icms_rate"`
 	SourcePISCST     string `json:"source_pis_cst"`
 	SourcePISRate    string `json:"source_pis_rate"`
@@ -109,12 +110,26 @@ type DecisionSummary struct {
 	NextActions          []string `json:"next_actions"`
 }
 
+type AIAssistance struct {
+	Provider          string   `json:"provider"`
+	Model             string   `json:"model"`
+	Status            string   `json:"status"`
+	Category          string   `json:"category"`
+	Risk              string   `json:"risk"`
+	Confidence        string   `json:"confidence"`
+	RecommendedAction string   `json:"recommended_action"`
+	Observation       string   `json:"observation"`
+	Signals           []string `json:"signals"`
+	Output            string   `json:"output,omitempty"`
+}
+
 type SuggestResponse struct {
 	SelectedOperation SelectedOperation `json:"selected_operation"`
 	MatchType         string            `json:"match_type"`
 	ConfidenceScore   float64           `json:"confidence_score"`
 	Suggestion        Suggestion        `json:"suggestion"`
 	CESTReference     *CESTReference    `json:"cest_reference,omitempty"`
+	AIAssistance      *AIAssistance     `json:"ai_assistance,omitempty"`
 	LegalBasis        []LegalBasisItem  `json:"legal_basis"`
 	Warnings          []string          `json:"warnings"`
 	Diagnostics       TaxDiagnostics    `json:"diagnostics"`

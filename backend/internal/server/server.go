@@ -20,6 +20,7 @@ import (
 	"github.com/rafa/fiscal-platform/backend/internal/fiscaloperations"
 	"github.com/rafa/fiscal-platform/backend/internal/fiscalwatcher"
 	"github.com/rafa/fiscal-platform/backend/internal/icmsrates"
+	"github.com/rafa/fiscal-platform/backend/internal/integrations"
 	"github.com/rafa/fiscal-platform/backend/internal/invoices"
 	"github.com/rafa/fiscal-platform/backend/internal/legalbasis"
 	"github.com/rafa/fiscal-platform/backend/internal/ncm"
@@ -115,6 +116,7 @@ func (s *Server) registerRoutes() {
 	protectedMux.HandleFunc("POST /admin/imports/cfop", adminImportsHandler.UploadCFOP)
 	protectedMux.HandleFunc("POST /admin/imports/cest", adminImportsHandler.UploadCEST)
 	protectedMux.HandleFunc("POST /admin/imports/cbenef", adminImportsHandler.UploadCBenef)
+	protectedMux.HandleFunc("POST /admin/imports/state-icms-st", adminImportsHandler.UploadStateICMSST)
 
 	// organizations
 	orgRepo := organizations.NewRepository(s.db)
@@ -133,9 +135,13 @@ func (s *Server) registerRoutes() {
 	adminPartilhaRepo := adminpartilha.NewRepository(s.db)
 	adminPartilhaService := adminpartilha.NewService(adminPartilhaRepo)
 	adminPartilhaHandler := adminpartilha.NewHandler(adminPartilhaService, orgService)
+	integrationsRepo := integrations.NewRepository(s.db)
+	integrationsService := integrations.NewService(integrationsRepo)
+	integrationsHandler := integrations.NewHandler(integrationsService, orgService)
 
 	protectedMux.HandleFunc("POST /organizations", orgHandler.Create)
 	protectedMux.HandleFunc("GET /organizations", orgHandler.List)
+	protectedMux.HandleFunc("PUT /organizations/{id}", orgHandler.Update)
 	protectedMux.HandleFunc("GET /admin/users", adminUsersHandler.List)
 	protectedMux.HandleFunc("POST /admin/users", adminUsersHandler.Create)
 	protectedMux.HandleFunc("PATCH /admin/users/role", adminUsersHandler.UpdateRole)
@@ -148,13 +154,24 @@ func (s *Server) registerRoutes() {
 	protectedMux.HandleFunc("GET /admin/icms-rates", icmsRatesHandler.ListStateRates)
 	protectedMux.HandleFunc("PUT /admin/icms-rates", icmsRatesHandler.UpsertStateRate)
 	protectedMux.HandleFunc("GET /admin/icms-rates/reference", icmsRatesHandler.ResolveReference)
+	protectedMux.HandleFunc("GET /admin/icms-state-rules", icmsRatesHandler.ListStateICMSRules)
+	protectedMux.HandleFunc("GET /admin/integrations/cosmos", integrationsHandler.GetCosmos)
+	protectedMux.HandleFunc("PUT /admin/integrations/cosmos", integrationsHandler.SaveCosmos)
+	protectedMux.HandleFunc("POST /admin/integrations/cosmos/test", integrationsHandler.TestCosmos)
+	protectedMux.HandleFunc("POST /admin/integrations/cosmos/search", integrationsHandler.SearchCosmos)
+	protectedMux.HandleFunc("GET /admin/integrations/openai", integrationsHandler.GetOpenAI)
+	protectedMux.HandleFunc("PUT /admin/integrations/openai", integrationsHandler.SaveOpenAI)
+	protectedMux.HandleFunc("POST /admin/integrations/openai/test", integrationsHandler.TestOpenAI)
 
 	// catálogo / invoices
 	catalogRepo := catalog.NewRepository(s.db)
 	catalogService := catalog.NewService(catalogRepo)
 	catalogHandler := catalog.NewHandler(catalogService, orgService)
+	taxRepo := tax.NewRepository(s.db)
 	adminCaptureRepo := admincapture.NewRepository(s.db)
-	adminCaptureService := admincapture.NewService(adminCaptureRepo, catalogService, legalService)
+	taxService := tax.NewService(taxRepo, fiscalOpService, legalService, icmsRatesService, integrationsService)
+	taxHandler := tax.NewHandler(taxService, orgService)
+	adminCaptureService := admincapture.NewService(adminCaptureRepo, catalogService, legalService, taxService)
 	adminCaptureHandler := admincapture.NewHandler(adminCaptureService, orgService)
 
 	invoiceRepo := invoices.NewRepository(s.db)
@@ -163,16 +180,13 @@ func (s *Server) registerRoutes() {
 
 	protectedMux.HandleFunc("GET /admin/capture-rules", adminCaptureHandler.List)
 	protectedMux.HandleFunc("POST /admin/capture-rules/accept", adminCaptureHandler.Accept)
+	protectedMux.HandleFunc("GET /admin/capture-rules/product-reviews", adminCaptureHandler.ProductReviews)
+	protectedMux.HandleFunc("POST /admin/capture-rules/product-reviews/accept", adminCaptureHandler.AcceptProductReviews)
 	protectedMux.HandleFunc("GET /catalog/products", catalogHandler.ListProducts)
 	protectedMux.HandleFunc("POST /catalog/products", catalogHandler.SaveProduct)
 	protectedMux.HandleFunc("POST /invoices/upload", invoiceHandler.Upload)
 	protectedMux.HandleFunc("GET /invoices", invoiceHandler.List)
 	protectedMux.HandleFunc("GET /invoices/", invoiceHandler.GetByID)
-
-	// tax engine
-	taxRepo := tax.NewRepository(s.db)
-	taxService := tax.NewService(taxRepo, fiscalOpService, legalService, icmsRatesService)
-	taxHandler := tax.NewHandler(taxService, orgService)
 
 	protectedMux.HandleFunc("POST /tax/suggest", taxHandler.Suggest)
 
@@ -184,6 +198,7 @@ func (s *Server) registerRoutes() {
 	s.mux.Handle("/admin/imports/cfop", protected)
 	s.mux.Handle("/admin/imports/cest", protected)
 	s.mux.Handle("/admin/imports/cbenef", protected)
+	s.mux.Handle("/admin/imports/state-icms-st", protected)
 	s.mux.Handle("/admin/users", protected)
 	s.mux.Handle("/admin/users/role", protected)
 	s.mux.Handle("/admin/fiscal-watcher/sources", protected)
@@ -191,10 +206,19 @@ func (s *Server) registerRoutes() {
 	s.mux.Handle("/admin/fiscal-watcher/check", protected)
 	s.mux.Handle("/admin/capture-rules", protected)
 	s.mux.Handle("/admin/capture-rules/accept", protected)
+	s.mux.Handle("/admin/capture-rules/product-reviews", protected)
+	s.mux.Handle("/admin/capture-rules/product-reviews/accept", protected)
 	s.mux.Handle("/admin/icms-partilha", protected)
 	s.mux.Handle("/admin/icms-rates", protected)
 	s.mux.Handle("/admin/icms-rates/reference", protected)
+	s.mux.Handle("/admin/icms-state-rules", protected)
+	s.mux.Handle("/admin/integrations/cosmos", protected)
+	s.mux.Handle("/admin/integrations/cosmos/test", protected)
+	s.mux.Handle("/admin/integrations/cosmos/search", protected)
+	s.mux.Handle("/admin/integrations/openai", protected)
+	s.mux.Handle("/admin/integrations/openai/test", protected)
 	s.mux.Handle("/organizations", protected)
+	s.mux.Handle("/organizations/", protected)
 	s.mux.Handle("/catalog/products", protected)
 	s.mux.Handle("/invoices", protected)
 	s.mux.Handle("/invoices/", protected)

@@ -19,7 +19,11 @@ func (s *Service) ListActive(ctx context.Context) ([]FiscalOperation, error) {
 
 func (s *Service) ResolveOperation(ctx context.Context, code string) (*FiscalOperation, error) {
 	if code == "" {
-		return s.repo.FindDefault(ctx)
+		operation, err := s.repo.FindDefault(ctx)
+		if err == nil {
+			return operation, nil
+		}
+		return fallbackOperation("sale_consumer_final"), nil
 	}
 
 	operation, err := s.repo.FindByCode(ctx, code)
@@ -36,6 +40,15 @@ func (s *Service) ResolveOperation(ctx context.Context, code string) (*FiscalOpe
 
 func fallbackOperation(code string) *FiscalOperation {
 	switch strings.TrimSpace(code) {
+	case "", "sale_consumer_final":
+		return &FiscalOperation{
+			Code:        "sale_consumer_final",
+			Name:        "Venda a consumidor final",
+			Direction:   "outbound",
+			DefaultCFOP: "5102",
+			IsDefault:   true,
+			Active:      true,
+		}
 	case "sale_st_internal":
 		return &FiscalOperation{
 			Code:        "sale_st_internal",

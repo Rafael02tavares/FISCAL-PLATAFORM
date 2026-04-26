@@ -3,6 +3,7 @@ package catalog
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/rafa/fiscal-platform/backend/internal/auth"
@@ -73,15 +74,15 @@ func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
-	items, err := h.service.ListCatalogProducts(r.Context(), organizationID, query)
+	limit := parsePositiveInt(r.URL.Query().Get("limit"), 24)
+	offset := parsePositiveInt(r.URL.Query().Get("offset"), 0)
+	page, err := h.service.ListCatalogProducts(r.Context(), organizationID, query, limit, offset)
 	if err != nil {
 		writeCatalogError(w, http.StatusInternalServerError, "LIST_PRODUCTS_FAILED", "nao foi possivel listar os produtos do catalogo")
 		return
 	}
 
-	writeCatalogJSON(w, http.StatusOK, map[string]any{
-		"items": items,
-	})
+	writeCatalogJSON(w, http.StatusOK, page)
 }
 
 func (h *Handler) SaveProduct(w http.ResponseWriter, r *http.Request) {
@@ -148,12 +149,23 @@ func (h *Handler) SaveProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items, _ := h.service.ListCatalogProducts(r.Context(), organizationID, "")
+	page, _ := h.service.ListCatalogProducts(r.Context(), organizationID, "", 24, 0)
 	writeCatalogJSON(w, http.StatusCreated, map[string]any{
 		"message":    "produto fiscal salvo com sucesso",
 		"product_id": productID,
-		"items":      items,
+		"items":      page.Items,
+		"limit":      page.Limit,
+		"offset":     page.Offset,
+		"has_more":   page.HasMore,
 	})
+}
+
+func parsePositiveInt(value string, fallback int) int {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || parsed < 0 {
+		return fallback
+	}
+	return parsed
 }
 
 func (h *Handler) authorizeRequest(w http.ResponseWriter, r *http.Request) (string, bool) {

@@ -4,6 +4,7 @@ const currentPath = Astro.url.pathname;
 type NavItem = {
   href: string;
   label: string;
+  icon: string;
   adminOnly?: boolean;
 };
 
@@ -22,54 +23,84 @@ const sections: NavSection[] = [
   {
     title: "Consulta",
     items: [
-      { href: "/", label: "Dashboard" },
-      { href: "/simulacao", label: "Simulacao tributaria" },
-      { href: "/produtos", label: "Produtos" },
-      { href: "/invoices", label: "Notas fiscais" },
-      { href: "/importacoes", label: "Importacoes" },
+      { href: "/", label: "Dashboard", icon: "home" },
+      { href: "/simulacao", label: "Simulacao tributaria", icon: "calculator" },
+      { href: "/produtos", label: "Produtos", icon: "box" },
+      { href: "/invoices", label: "Notas fiscais", icon: "file" },
+      { href: "/importacoes", label: "Importacoes", icon: "upload" },
     ],
   },
   {
     title: "Base fiscal",
     items: [
-      { href: "/ncm", label: "NCM" },
-      { href: "/cest", label: "CEST" },
-      { href: "/cfop", label: "CFOP" },
-      { href: "/organizations", label: "Empresa ativa" },
+      { href: "/ncm", label: "NCM", icon: "list" },
+      { href: "/cest", label: "CEST", icon: "tag" },
+      { href: "/cfop", label: "CFOP", icon: "route" },
+      { href: "/organizations", label: "Empresa ativa", icon: "building" },
     ],
   },
   {
     title: "Tributos",
     adminOnly: true,
     items: [
-      { href: "/admin", label: "Matriz fiscal", adminOnly: true },
-      { href: "/admin/icms", label: "ICMS", adminOnly: true },
-      { href: "/admin/pis-cofins", label: "PIS e COFINS", adminOnly: true },
-      { href: "/admin/reforma", label: "IBS, CBS e cClasTrib", adminOnly: true },
+      { href: "/admin", label: "Matriz fiscal", icon: "grid", adminOnly: true },
+      { href: "/admin/icms", label: "ICMS", icon: "percent", adminOnly: true },
+      { href: "/admin/pis-cofins", label: "PIS e COFINS", icon: "coins", adminOnly: true },
+      { href: "/admin/reforma", label: "IBS, CBS e cClasTrib", icon: "scale", adminOnly: true },
     ],
   },
   {
     title: "Motor",
     adminOnly: true,
     items: [
-      { href: "/admin/legal-rules", label: "Regras fiscais", adminOnly: true },
-      { href: "/admin/capture-rules", label: "Triagem", adminOnly: true },
-      { href: "/admin/cst", label: "CST e enquadramentos", adminOnly: true },
-      { href: "/admin/icms-partilha", label: "Partilha de ICMS", adminOnly: true },
-      { href: "/admin/cbenef", label: "cBenef", adminOnly: true },
+      { href: "/admin/legal-rules", label: "Regras fiscais", icon: "book", adminOnly: true },
+      { href: "/admin/capture-rules", label: "Triagem", icon: "check", adminOnly: true },
+      { href: "/admin/cst", label: "CST e enquadramentos", icon: "layers", adminOnly: true },
+      { href: "/admin/icms-partilha", label: "Partilha de ICMS", icon: "split", adminOnly: true },
+      { href: "/admin/cbenef", label: "cBenef", icon: "badge", adminOnly: true },
     ],
   },
   {
     title: "Plataforma",
     adminOnly: true,
     items: [
-      { href: "/admin/fiscal-watcher", label: "Fiscal Watcher", adminOnly: true },
-      { href: "/admin/imports", label: "Importacoes oficiais", adminOnly: true },
-      { href: "/admin/users", label: "Usuarios e acessos", adminOnly: true },
-      { href: "/configuracoes", label: "Configuracoes", adminOnly: true },
+      { href: "/admin/fiscal-watcher", label: "Fiscal Watcher", icon: "radar", adminOnly: true },
+      { href: "/admin/imports", label: "Importacoes oficiais", icon: "database", adminOnly: true },
+      { href: "/admin/integracoes", label: "Integracoes", icon: "plug", adminOnly: true },
+      { href: "/admin/users", label: "Usuarios e acessos", icon: "users", adminOnly: true },
+      { href: "/configuracoes", label: "Configuracoes", icon: "gear", adminOnly: true },
     ],
   },
 ];
+
+function iconPaths(icon: string) {
+  const icons: Record<string, string> = {
+    home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
+    calculator: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M16 15h0"/>',
+    box: '<path d="m3 7 9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>',
+    file: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/>',
+    upload: '<path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
+    tag: '<path d="M20 12 12 20 4 12V4h8z"/><path d="M8 8h.01"/>',
+    route: '<path d="M4 6h6a4 4 0 0 1 0 8H8a4 4 0 0 0 0 8h12"/><path d="M4 6l3-3M4 6l3 3"/>',
+    building: '<path d="M4 21V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v16"/><path d="M9 21v-5h3v5M8 7h1M12 7h1M8 11h1M12 11h1"/>',
+    grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+    percent: '<path d="m19 5-14 14"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/>',
+    coins: '<ellipse cx="8" cy="7" rx="5" ry="3"/><path d="M3 7v5c0 1.7 2.2 3 5 3s5-1.3 5-3V7"/><path d="M13 10c2.8 0 5 1.3 5 3s-2.2 3-5 3M18 13v4c0 1.5-1.7 2.7-4 3"/>',
+    scale: '<path d="M12 3v18M6 6h12"/><path d="M6 6 3 13h6L6 6ZM18 6l-3 7h6l-3-7Z"/>',
+    book: '<path d="M4 5a3 3 0 0 1 3-3h13v17H7a3 3 0 0 0-3 3z"/><path d="M4 5v17"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/>',
+    split: '<path d="M4 7h6a4 4 0 0 1 4 4v6"/><path d="M14 11a4 4 0 0 1 4-4h2"/><path d="m18 4 3 3-3 3M11 17l3 3 3-3"/>',
+    badge: '<path d="M12 3 4 7v6c0 5 8 8 8 8s8-3 8-8V7z"/><path d="M9 12l2 2 4-4"/>',
+    radar: '<path d="M12 20a8 8 0 1 0-8-8"/><path d="M12 16a4 4 0 1 0-4-4"/><path d="M12 12 20 4"/><path d="M4 20h16"/>',
+    database: '<ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v14c0 1.7 3.1 3 7 3s7-1.3 7-3V5"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
+    plug: '<path d="M9 7V3M15 7V3"/><path d="M7 7h10v5a5 5 0 0 1-10 0z"/><path d="M12 17v4"/><path d="M8 21h8"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
+    gear: '<path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .3 2l.1.1-2 3.4-.2-.1a1.8 1.8 0 0 0-2 .3l-.4.3-3.8-2.2-.1-.5a1.8 1.8 0 0 0-1.7-1.2H9l-2-3.4.4-.4a1.8 1.8 0 0 0 .3-2L7.5 11l2-3.4.5.1a1.8 1.8 0 0 0 1.8-1.1l.2-.6h4l.2.6a1.8 1.8 0 0 0 1.8 1.1l.5-.1 2 3.4-.2.3a1.8 1.8 0 0 0-.3 2z"/>',
+  };
+  return icons[icon] || icons.grid;
+}
 
 function isActive(href: string) {
   if (href === "/") return currentPath === "/";
@@ -83,6 +114,10 @@ function isWorkspaceActive(href: string) {
 ---
 
 <aside class="sidebar">
+  <button class="sidebar__toggle" type="button" data-sidebar-toggle aria-label="Recolher menu" aria-expanded="true">
+    <span aria-hidden="true">‹</span>
+  </button>
+
   <a class="sidebar__brand" href="/" aria-label="Fiscal Platform">
     <img class="sidebar__brand-mark" src="/brand-mark.svg" alt="" width="54" height="54" loading="eager" />
     <span class="sidebar__brand-copy">
@@ -120,8 +155,11 @@ function isWorkspaceActive(href: string) {
               href={item.href}
               class={`sidebar__link ${isActive(item.href) ? "sidebar__link--active" : ""}`}
               data-link-role={item.adminOnly ? "admin" : "all"}
+              title={item.label}
+              aria-label={item.label}
             >
-              {item.label}
+              <svg class="sidebar__link-icon" aria-hidden="true" viewBox="0 0 24 24" set:html={iconPaths(item.icon)}></svg>
+              <span class="sidebar__link-label">{item.label}</span>
             </a>
           ))}
         </nav>
@@ -158,4 +196,34 @@ function isWorkspaceActive(href: string) {
   }
 
   updateSidebarSections();
+
+  const toggleButton = document.querySelector("[data-sidebar-toggle]");
+
+  function setSidebarCollapsed(collapsed) {
+    document.body.classList.toggle("sidebar-collapsed", collapsed);
+
+    if (toggleButton instanceof HTMLButtonElement) {
+      toggleButton.setAttribute("aria-expanded", String(!collapsed));
+      toggleButton.setAttribute("aria-label", collapsed ? "Expandir menu" : "Recolher menu");
+      toggleButton.querySelector("span")?.replaceChildren(document.createTextNode(collapsed ? "›" : "‹"));
+    }
+
+    try {
+      localStorage.setItem("sidebar_collapsed", collapsed ? "1" : "0");
+    } catch {
+      // ignora indisponibilidade de storage local
+    }
+  }
+
+  let initialCollapsed = false;
+  try {
+    initialCollapsed = localStorage.getItem("sidebar_collapsed") === "1";
+  } catch {
+    initialCollapsed = false;
+  }
+
+  setSidebarCollapsed(initialCollapsed);
+  toggleButton?.addEventListener("click", () => {
+    setSidebarCollapsed(!document.body.classList.contains("sidebar-collapsed"));
+  });
 </script>

@@ -41,6 +41,10 @@ func (s *Service) ListStateRates(ctx context.Context) ([]StateRate, error) {
 	return s.repo.ListStateRates(ctx)
 }
 
+func (s *Service) ListStateICMSRules(ctx context.Context, uf string, limit int) ([]StateICMSRule, error) {
+	return s.repo.ListStateICMSRules(ctx, normalizeUFOrEmpty(uf), limit)
+}
+
 func (s *Service) UpsertStateRate(ctx context.Context, p UpsertStateRateParams) (string, error) {
 	p.UF = normalizeUF(p.UF)
 	p.InternalRate = normalizeDecimalInput(p.InternalRate)
@@ -147,6 +151,14 @@ func normalizeUF(value string) string {
 		return ""
 	}
 	return value
+}
+
+func normalizeUFOrEmpty(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	return normalizeUF(value)
 }
 
 func normalizeDecimalInput(value string) string {

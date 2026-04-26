@@ -111,6 +111,7 @@ func (r *SuggestRequest) normalize() {
 	r.EmitterUF = strings.ToUpper(strings.TrimSpace(r.EmitterUF))
 	r.RecipientUF = strings.ToUpper(strings.TrimSpace(r.RecipientUF))
 	r.SourceICMSCST = strings.TrimSpace(r.SourceICMSCST)
+	r.SourceICMSCSOSN = strings.TrimSpace(r.SourceICMSCSOSN)
 	r.SourceICMSRate = strings.TrimSpace(r.SourceICMSRate)
 	r.SourcePISCST = strings.TrimSpace(r.SourcePISCST)
 	r.SourcePISRate = strings.TrimSpace(r.SourcePISRate)

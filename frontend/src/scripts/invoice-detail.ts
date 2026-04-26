@@ -52,6 +52,69 @@ function displayValue(value: unknown) {
   return normalized || "-";
 }
 
+function fiscalCell(label: string, value: unknown) {
+  return `
+    <span class="fiscal-cell">
+      <small>${label}</small>
+      <strong>${displayValue(value)}</strong>
+    </span>
+  `;
+}
+
+function fiscalRow(title: string, tone: string, cells: string[]) {
+  return `
+    <tr class="fiscal-tax-row fiscal-tax-row--${tone}">
+      <th scope="row">${title}</th>
+      <td>${cells.join("")}</td>
+    </tr>
+  `;
+}
+
+function renderFiscalTaxTable(suggestion: any, item: any) {
+  return `
+    <table class="fiscal-tax-table">
+      <tbody>
+        ${fiscalRow("Nota importada", "neutral", [
+          fiscalCell("Descricao", item.description),
+          fiscalCell("GTIN", item.gtin),
+          fiscalCell("NCM", item.ncm),
+          fiscalCell("CFOP", item.cfop),
+        ])}
+        ${fiscalRow("Identidade fiscal", "teal", [
+          fiscalCell("NCM", suggestion.ncm || item.ncm),
+          fiscalCell("CEST", suggestion.cest || item.cest),
+          fiscalCell("cClasTrib", suggestion.cclas_trib),
+          fiscalCell("CNPJ/Origem", item.icms_origin || item.origin || "-"),
+        ])}
+        ${fiscalRow("Operacao e ICMS", "sky", [
+          fiscalCell("CFOP", suggestion.cfop || item.cfop),
+          fiscalCell("ICMS CST", suggestion.icms_cst || item.icms_cst || item.cst),
+          fiscalCell("CSOSN", suggestion.csosn || item.csosn),
+          fiscalCell("Aliq. ICMS", suggestion.icms_rate || item.icms_rate),
+        ])}
+        ${fiscalRow("PIS e COFINS", "rose", [
+          fiscalCell("PIS CST", suggestion.pis_cst || item.pis_cst),
+          fiscalCell("COFINS CST", suggestion.cofins_cst || item.cofins_cst),
+          fiscalCell("Aliq. PIS", suggestion.pis_rate || item.pis_rate),
+          fiscalCell("Aliq. COFINS", suggestion.cofins_rate || item.cofins_rate),
+        ])}
+        ${fiscalRow("IPI", "amber", [
+          fiscalCell("IPI CST", suggestion.ipi_cst),
+          fiscalCell("CEnq", suggestion.ipi_cenq),
+          fiscalCell("Aliq. IPI", suggestion.ipi_rate),
+          fiscalCell("Valor IPI", formatMoney(suggestion.ipi_value)),
+        ])}
+        ${fiscalRow("Reforma", "teal", [
+          fiscalCell("IBS", suggestion.ibs_rate),
+          fiscalCell("CBS", suggestion.cbs_rate),
+          fiscalCell("Imp. seletivo", suggestion.selective_tax_code),
+          fiscalCell("Aliq. seletivo", suggestion.selective_tax_rate),
+        ])}
+      </tbody>
+    </table>
+  `;
+}
+
 function saveCatalogPrefill(payload: Record<string, string>) {
   try {
     localStorage.setItem(PRODUCT_PREFILL_KEY, JSON.stringify(payload));
@@ -404,153 +467,7 @@ function renderSuggestion(result: any, item: any) {
 
       ${renderFiscalAnalysis(result, item)}
 
-      <div class="suggestion-grid">
-        <div class="compare-box compare-box--source">
-          <h4>O que veio na nota</h4>
-          <div class="compare-list">
-            <div class="compare-row">
-              <span>Descricao</span>
-              <strong>${displayValue(item.description)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>GTIN</span>
-              <strong>${displayValue(item.gtin)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>NCM</span>
-              <strong>${displayValue(item.ncm)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>CEST</span>
-              <strong>${displayValue(item.cest)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>cClasTrib</span>
-              <strong>${displayValue(item.cclas_trib)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>CFOP</span>
-              <strong>${displayValue(item.cfop)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>ICMS CST</span>
-              <strong>${displayValue(item.icms_cst || item.cst)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>Aliq. ICMS</span>
-              <strong>${displayValue(item.icms_rate)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>PIS CST</span>
-              <strong>${displayValue(item.pis_cst)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>COFINS CST</span>
-              <strong>${displayValue(item.cofins_cst)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>CSOSN</span>
-              <strong>${displayValue(item.csosn)}</strong>
-            </div>
-          </div>
-        </div>
-
-        <div class="compare-box compare-box--result">
-          <h4>O que a plataforma recomenda</h4>
-          <div class="compare-list">
-            <div class="compare-row">
-              <span>NCM sugerido</span>
-              <strong>${displayValue(suggestion.ncm || item.ncm)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>CEST sugerido</span>
-              <strong>${displayValue(suggestion.cest)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>cClasTrib</span>
-              <strong>${displayValue(suggestion.cclas_trib)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>CFOP sugerido</span>
-              <strong>${displayValue(suggestion.cfop || item.cfop)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>ICMS CST</span>
-              <strong>${displayValue(suggestion.icms_cst)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>CSOSN</span>
-              <strong>${displayValue(suggestion.csosn)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>PIS CST</span>
-              <strong>${displayValue(suggestion.pis_cst)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>COFINS CST</span>
-              <strong>${displayValue(suggestion.cofins_cst)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>IPI CST</span>
-              <strong>${displayValue(suggestion.ipi_cst)}</strong>
-            </div>
-            <div class="compare-row">
-              <span>CEnq IPI</span>
-              <strong>${displayValue(suggestion.ipi_cenq)}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="tax-breakdown">
-        <div class="tax-breakdown__header">
-          <h4>Resumo tributario sugerido</h4>
-          <span>Valores e aliquotas destacados para leitura rapida</span>
-        </div>
-
-        <div class="tax-pill-grid">
-          <div class="tax-pill">
-            <span>ICMS</span>
-            <strong>${formatMoney(suggestion.icms_value)}</strong>
-          </div>
-          <div class="tax-pill">
-            <span>IPI</span>
-            <strong>${formatMoney(suggestion.ipi_value)}</strong>
-          </div>
-          <div class="tax-pill">
-            <span>PIS</span>
-            <strong>${formatMoney(suggestion.pis_value)}</strong>
-          </div>
-          <div class="tax-pill">
-            <span>COFINS</span>
-            <strong>${formatMoney(suggestion.cofins_value)}</strong>
-          </div>
-          <div class="tax-pill tax-pill--soft">
-            <span>IBS</span>
-            <strong>${displayValue(suggestion.ibs_rate)}</strong>
-          </div>
-          <div class="tax-pill tax-pill--soft">
-            <span>CBS</span>
-            <strong>${displayValue(suggestion.cbs_rate)}</strong>
-          </div>
-          <div class="tax-pill tax-pill--soft">
-            <span>Aliq. ICMS</span>
-            <strong>${displayValue(suggestion.icms_rate)}</strong>
-          </div>
-          <div class="tax-pill tax-pill--soft">
-            <span>Aliq. PIS</span>
-            <strong>${displayValue(suggestion.pis_rate)}</strong>
-          </div>
-          <div class="tax-pill tax-pill--soft">
-            <span>Aliq. COFINS</span>
-            <strong>${displayValue(suggestion.cofins_rate)}</strong>
-          </div>
-          <div class="tax-pill tax-pill--soft">
-            <span>Aliq. IPI</span>
-            <strong>${displayValue(suggestion.ipi_rate)}</strong>
-          </div>
-        </div>
-      </div>
+      ${renderFiscalTaxTable(suggestion, item)}
 
       <div class="legal-section">
         ${renderLegalBasis(result.legal_basis || [])}
@@ -690,6 +607,7 @@ async function loadInvoice() {
             tax_regime: getOrganizationTaxRegime() || "",
             target_crt: getOrganizationCRT() || "",
             source_icms_cst: item.icms_cst || item.cst || "",
+            source_icms_csosn: item.csosn || "",
             source_icms_rate: item.icms_rate || "",
             source_pis_cst: item.pis_cst || "",
             source_pis_rate: item.pis_rate || "",

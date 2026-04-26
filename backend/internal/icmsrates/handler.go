@@ -3,6 +3,7 @@ package icmsrates
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/rafa/fiscal-platform/backend/internal/auth"
@@ -27,6 +28,33 @@ type upsertStateRateRequest struct {
 
 func NewHandler(service *Service, orgService *organizations.Service) *Handler {
 	return &Handler{service: service, orgService: orgService}
+}
+
+func (h *Handler) ListStateICMSRules(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.authorizeRequest(w, r); !ok {
+		return
+	}
+
+	limit := 300
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			limit = parsed
+		}
+	}
+	uf := strings.TrimSpace(r.URL.Query().Get("uf"))
+
+	items, err := h.service.ListStateICMSRules(r.Context(), uf, limit)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": map[string]string{
+				"code":    "LIST_STATE_ICMS_RULES_FAILED",
+				"message": "nao foi possivel listar as regras estaduais de ICMS",
+			},
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }
 
 func (h *Handler) ListStateRates(w http.ResponseWriter, r *http.Request) {

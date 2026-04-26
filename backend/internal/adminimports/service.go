@@ -20,6 +20,7 @@ type Service struct {
 	cfopImporter   *importers.CFOPImporter
 	cestImporter   *importers.CESTImporter
 	cbenefImporter *importers.CBenefImporter
+	stImporter     *importers.StateICMSSTImporter
 }
 
 func NewService(repo *Repository, db *pgxpool.Pool) *Service {
@@ -29,6 +30,7 @@ func NewService(repo *Repository, db *pgxpool.Pool) *Service {
 		cfopImporter:   importers.NewCFOPImporter(db),
 		cestImporter:   importers.NewCESTImporter(db),
 		cbenefImporter: importers.NewCBenefImporter(db),
+		stImporter:     importers.NewStateICMSSTImporter(db),
 	}
 }
 
@@ -140,6 +142,15 @@ type ImportCBenefTextParams struct {
 	SourceName   string
 	VersionLabel string
 	UF           string
+}
+
+type ImportStateICMSSTParams struct {
+	File         multipart.File
+	FileName     string
+	SourceName   string
+	VersionLabel string
+	UF           string
+	SourceURL    string
 }
 
 func (s *Service) ImportCESTCSV(ctx context.Context, params ImportCESTParams) error {
@@ -262,6 +273,43 @@ func (s *Service) ImportCBenefText(ctx context.Context, params ImportCBenefTextP
 	}
 
 	return s.cbenefImporter.ImportCSV(ctx, tmpPath, sourceName, strings.TrimSpace(params.VersionLabel), strings.TrimSpace(params.UF))
+}
+
+func (s *Service) ImportStateICMSSTXLSX(ctx context.Context, params ImportStateICMSSTParams) error {
+	if params.File == nil {
+		return fmt.Errorf("arquivo XLSX obrigatorio")
+	}
+
+	sourceName := strings.TrimSpace(params.SourceName)
+	if sourceName == "" {
+		sourceName = "CONFAZ ST Estadual"
+	}
+
+	tmpFile, err := os.CreateTemp("", importersPattern("state-icms-st", params.FileName))
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+
+	if _, err := io.Copy(tmpFile, params.File); err != nil {
+		tmpFile.Close()
+		return fmt.Errorf("copy uploaded file: %w", err)
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("close temp file: %w", err)
+	}
+
+	return s.stImporter.ImportCONFAZXLSX(
+		ctx,
+		tmpPath,
+		sourceName,
+		strings.TrimSpace(params.VersionLabel),
+		strings.TrimSpace(params.UF),
+		strings.TrimSpace(params.SourceURL),
+	)
 }
 
 func importersPattern(prefix string, fileName string) string {

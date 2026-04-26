@@ -4,18 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/rafa/fiscal-platform/backend/internal/fiscaloperations"
 	"github.com/rafa/fiscal-platform/backend/internal/icmsrates"
+	"github.com/rafa/fiscal-platform/backend/internal/integrations"
 	"github.com/rafa/fiscal-platform/backend/internal/legalbasis"
 )
 
 type Service struct {
-	repo              *Repository
-	fiscalOpService   *fiscaloperations.Service
-	legalBasisService *legalbasis.Service
-	icmsRateService   *icmsrates.Service
+	repo               *Repository
+	fiscalOpService    *fiscaloperations.Service
+	legalBasisService  *legalbasis.Service
+	icmsRateService    *icmsrates.Service
+	integrationService *integrations.Service
 }
 
 type legalRulePayload struct {
@@ -50,17 +53,44 @@ type legalRulePayload struct {
 	IPIValue          string `json:"ipi_value"`
 }
 
+type monophaseNCMRule struct {
+	Prefix      string
+	Category    string
+	Description string
+}
+
+var retailMonophaseNCMRules = []monophaseNCMRule{
+	{Prefix: "2202", Category: "bebidas", Description: "refrigerantes e bebidas nao alcoolicas"},
+	{Prefix: "2203", Category: "bebidas", Description: "cervejas"},
+	{Prefix: "2204", Category: "bebidas", Description: "vinhos"},
+	{Prefix: "2205", Category: "bebidas", Description: "vermutes"},
+	{Prefix: "2206", Category: "bebidas", Description: "outras bebidas fermentadas"},
+	{Prefix: "2208", Category: "bebidas", Description: "bebidas alcoolicas destiladas"},
+	{Prefix: "2710", Category: "combustiveis", Description: "gasolina, diesel e outros oleos de petroleo"},
+	{Prefix: "2711", Category: "combustiveis", Description: "gas e GLP"},
+	{Prefix: "3003", Category: "farmaceuticos", Description: "medicamentos a granel"},
+	{Prefix: "3004", Category: "farmaceuticos", Description: "medicamentos embalados"},
+	{Prefix: "2402", Category: "cigarros", Description: "cigarros e produtos similares"},
+}
+
 func NewService(
 	repo *Repository,
 	fiscalOpService *fiscaloperations.Service,
 	legalBasisService *legalbasis.Service,
 	icmsRateService *icmsrates.Service,
+	integrationService ...*integrations.Service,
 ) *Service {
+	var integrationSvc *integrations.Service
+	if len(integrationService) > 0 {
+		integrationSvc = integrationService[0]
+	}
+
 	return &Service{
-		repo:              repo,
-		fiscalOpService:   fiscalOpService,
-		legalBasisService: legalBasisService,
-		icmsRateService:   icmsRateService,
+		repo:               repo,
+		fiscalOpService:    fiscalOpService,
+		legalBasisService:  legalBasisService,
+		icmsRateService:    icmsRateService,
+		integrationService: integrationSvc,
 	}
 }
 
@@ -83,17 +113,24 @@ func (s *Service) Suggest(ctx context.Context, req SuggestRequest) (*SuggestResp
 		req.RecipientUF,
 	)
 	if err != nil {
-		item = buildFallbackTaxMatch(req)
+		item = s.findCosmosTaxMatch(ctx, req)
+		if item == nil {
+			item = buildFallbackTaxMatch(req)
+		}
 	}
 
 	resp := s.buildBaseResponse(op, item)
+	appendExternalProductIdentity(resp, item)
 	applyTaxRegimeRules(req, item, resp)
 	applyEntryProfileRules(req, op, item, resp)
 	s.enrichCFOPSuggestion(ctx, req, op, resp)
 	s.enrichCESTSuggestion(ctx, resp)
 	applySubstitutionTaxEvidence(req, op, resp)
 	applyRetailDefaultRules(req, op, resp)
+	s.applyNCMTaxProfiles(ctx, req, op, resp)
+	s.applyStateICMSRule(ctx, req, op, resp)
 
+	preLegalBasis := append([]LegalBasisItem{}, resp.LegalBasis...)
 	rules, err := s.legalBasisService.FindApplicableRules(ctx, legalbasis.FindApplicableRulesParams{
 		OperationCode: op.Code,
 		TaxRegime:     req.TaxRegime,
@@ -105,13 +142,18 @@ func (s *Service) Suggest(ctx context.Context, req SuggestRequest) (*SuggestResp
 		RecipientUF:   req.RecipientUF,
 	})
 	if err == nil {
-		resp.LegalBasis = buildLegalBasisItems(rules)
+		resp.LegalBasis = append(preLegalBasis, buildLegalBasisItems(rules)...)
 		applyLegalRules(resp, rules)
 	}
 
 	applyReferenceProductFiscalRules(req, op, resp)
+	applyRetailSpecialOutputRules(req, resp)
 	applyFederalContributionBenefitReduction2026(req, resp)
 	s.enrichInterstateReference(ctx, req, resp)
+	applyTaxRegimeRules(req, item, resp)
+	normalizeRegimeSpecificDefaults(req, resp)
+	normalizeCFOPByOperationContext(req, op, resp)
+	s.enrichWithAIAssistance(ctx, req, resp)
 	resp.Warnings = collectSuggestWarnings(req, item, resp)
 	resp.Diagnostics = buildTaxDiagnostics(req, resp)
 	resp.DecisionSummary = buildDecisionSummary(req, resp)
@@ -146,12 +188,123 @@ func (s *Service) enrichCESTSuggestion(ctx context.Context, resp *SuggestRespons
 	}
 
 	resp.LegalBasis = append(resp.LegalBasis, LegalBasisItem{
-		TaxType:       "ICMS_ST",
+		TaxType:       "CEST",
 		Title:         "Catalogo CEST",
 		ReferenceCode: match.Code,
 		Jurisdiction:  "NATIONAL",
-		AppliedReason: firstNonEmpty(match.Description, "CEST identificado a partir do NCM para apoiar verificacao de ICMS ST."),
+		AppliedReason: firstNonEmpty(match.Description, "CEST identificado a partir do NCM. O codigo apoia a analise de ST, mas nao confirma substituicao tributaria sem regra estadual aplicavel."),
 		Weight:        "0.68",
+	})
+}
+
+func (s *Service) findCosmosTaxMatch(ctx context.Context, req SuggestRequest) *TaxMatch {
+	if s.integrationService == nil {
+		return nil
+	}
+
+	searchQuery := strings.TrimSpace(req.Description)
+	if searchQuery == "" {
+		searchQuery = strings.TrimSpace(req.GTIN)
+	}
+	if searchQuery == "" || strings.TrimSpace(req.OrganizationID) == "" {
+		return nil
+	}
+
+	result, err := s.integrationService.SearchCosmosProducts(ctx, req.OrganizationID, searchQuery, "", 5)
+	if err != nil || !result.OK || len(result.Items) == 0 {
+		return nil
+	}
+
+	candidate := chooseCosmosCandidate(req, result.Items)
+	if candidate == nil || strings.TrimSpace(candidate.NCM) == "" {
+		return nil
+	}
+
+	confidence := 0.68
+	if strings.TrimSpace(candidate.GTIN) != "" {
+		confidence += 0.08
+	}
+	if strings.TrimSpace(candidate.CEST) != "" {
+		confidence += 0.06
+	}
+	if strings.TrimSpace(req.Description) != "" && strings.Contains(
+		strings.ToLower(strings.TrimSpace(candidate.Description)),
+		strings.ToLower(strings.TrimSpace(req.Description)),
+	) {
+		confidence += 0.04
+	}
+	if confidence > 0.84 {
+		confidence = 0.84
+	}
+
+	return &TaxMatch{
+		OrganizationID:  strings.TrimSpace(req.OrganizationID),
+		MatchType:       "cosmos_search",
+		ConfidenceScore: confidence,
+		SourceType:      "external_identity",
+		SourceLabel:     "Cosmos BlueSoft",
+		SourceReference: "cosmos_search",
+		Description:     candidate.Description,
+		GTIN:            candidate.GTIN,
+		NCM:             normalizeNCMCode(candidate.NCM),
+		CEST:            normalizeCESTCode(candidate.CEST),
+	}
+}
+
+func chooseCosmosCandidate(req SuggestRequest, items []integrations.CosmosProductCandidate) *integrations.CosmosProductCandidate {
+	var best *integrations.CosmosProductCandidate
+	bestScore := -1
+	requestGTIN := normalizeDigits(req.GTIN)
+	requestNCM := normalizeNCMCode(req.NCMCode)
+	requestDescription := strings.ToLower(strings.TrimSpace(req.Description))
+
+	for i := range items {
+		item := &items[i]
+		score := 0
+		if normalizeNCMCode(item.NCM) != "" {
+			score += 20
+		}
+		if normalizeCESTCode(item.CEST) != "" {
+			score += 12
+		}
+		if requestGTIN != "" && normalizeDigits(item.GTIN) == requestGTIN {
+			score += 40
+		} else if normalizeDigits(item.GTIN) != "" {
+			score += 8
+		}
+		if requestNCM != "" && normalizeNCMCode(item.NCM) == requestNCM {
+			score += 20
+		}
+		if requestDescription != "" && strings.Contains(strings.ToLower(item.Description), requestDescription) {
+			score += 10
+		}
+		if score > bestScore {
+			bestScore = score
+			best = item
+		}
+	}
+
+	return best
+}
+
+func appendExternalProductIdentity(resp *SuggestResponse, item *TaxMatch) {
+	if resp == nil || item == nil || item.MatchType != "cosmos_search" {
+		return
+	}
+
+	reference := firstNonEmpty(item.GTIN, item.NCM, item.SourceReference)
+	reason := "Produto localizado por descricao na Cosmos BlueSoft; NCM/CEST usados como identidade fiscal para acionar regras internas da plataforma."
+	if item.Description != "" {
+		reason = "Produto localizado na Cosmos BlueSoft: " + item.Description + ". NCM/CEST usados como identidade fiscal para acionar regras internas da plataforma."
+	}
+
+	resp.LegalBasis = append(resp.LegalBasis, LegalBasisItem{
+		TaxType:       "PRODUCT_IDENTITY",
+		Title:         firstNonEmpty(item.SourceLabel, "Cosmos BlueSoft"),
+		ReferenceCode: reference,
+		Jurisdiction:  "EXTERNAL",
+		AppliedReason: reason,
+		Weight:        "external_product_identity",
 	})
 }
 
@@ -335,6 +488,125 @@ func buildLegalBasisItems(rules []legalbasis.ApplicableLegalRule) []LegalBasisIt
 	return items
 }
 
+func (s *Service) enrichWithAIAssistance(ctx context.Context, req SuggestRequest, resp *SuggestResponse) {
+	if s.integrationService == nil || resp == nil {
+		return
+	}
+	if !shouldRequestAIAssistance(req, resp) {
+		return
+	}
+
+	result, attempted, err := s.integrationService.ClassifyWithOpenAI(ctx, req.OrganizationID, integrations.OpenAIClassificationInput{
+		Description: firstNonEmpty(req.Description, resp.Suggestion.NCM),
+		GTIN:        req.GTIN,
+		NCM:         firstNonEmpty(resp.Suggestion.NCM, req.NCMCode),
+		CEST:        resp.Suggestion.CEST,
+		UF:          firstNonEmpty(req.RecipientUF, req.EmitterUF),
+		TaxRegime:   req.TaxRegime,
+		Operation:   req.OperationCode,
+	})
+	if !attempted {
+		return
+	}
+	if err != nil {
+		resp.Warnings = append(resp.Warnings, "Classificacao assistida OpenAI indisponivel nesta consulta; o motor seguiu somente com regras internas.")
+		return
+	}
+
+	resp.AIAssistance = buildAIAssistance(result)
+	if resp.AIAssistance == nil {
+		return
+	}
+
+	if resp.AIAssistance.Observation != "" || resp.AIAssistance.RecommendedAction != "" {
+		resp.LegalBasis = append(resp.LegalBasis, LegalBasisItem{
+			TaxType:       "AI_ASSIST",
+			Title:         "Classificacao assistida OpenAI",
+			ReferenceCode: result.Model,
+			Jurisdiction:  "INTERNAL",
+			AppliedReason: firstNonEmpty(resp.AIAssistance.RecommendedAction, resp.AIAssistance.Observation, "IA usada apenas como apoio de triagem, sem aplicar regra fiscal automaticamente."),
+			Weight:        "ai_assist",
+		})
+	}
+
+	resp.Warnings = append(resp.Warnings, "IA usada como apoio de triagem. Nao substitui regra fiscal, fonte legal ou aprovacao humana.")
+}
+
+func shouldRequestAIAssistance(req SuggestRequest, resp *SuggestResponse) bool {
+	if resp == nil {
+		return false
+	}
+	if strings.TrimSpace(req.OrganizationID) == "" {
+		return false
+	}
+	if resp.ConfidenceScore < 0.82 {
+		return true
+	}
+	if strings.TrimSpace(resp.Suggestion.NCM) == "" || strings.TrimSpace(resp.Suggestion.CFOP) == "" {
+		return true
+	}
+	if len(resp.LegalBasis) == 0 {
+		return true
+	}
+	return false
+}
+
+func buildAIAssistance(result integrations.OpenAITestResult) *AIAssistance {
+	if !result.OK {
+		return &AIAssistance{
+			Provider: "openai",
+			Model:    result.Model,
+			Status:   "error",
+			Output:   result.Message,
+		}
+	}
+
+	classification := result.Classification
+	return &AIAssistance{
+		Provider:          "openai",
+		Model:             result.Model,
+		Status:            "available",
+		Category:          stringFromAIValue(classification["categoria_fiscal_provavel"]),
+		Risk:              stringFromAIValue(classification["risco"]),
+		Confidence:        stringFromAIValue(classification["confianca"]),
+		RecommendedAction: stringFromAIValue(classification["acao_recomendada"]),
+		Observation:       stringFromAIValue(classification["observacao"]),
+		Signals:           stringSliceFromAIValue(classification["sinais"]),
+		Output:            result.Output,
+	}
+}
+
+func stringFromAIValue(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return strings.TrimSpace(typed)
+	case float64:
+		return strings.TrimRight(strings.TrimRight(strconv.FormatFloat(typed, 'f', 2, 64), "0"), ".")
+	case int:
+		return strconv.Itoa(typed)
+	default:
+		return ""
+	}
+}
+
+func stringSliceFromAIValue(value any) []string {
+	items, ok := value.([]any)
+	if !ok {
+		if single := stringFromAIValue(value); single != "" {
+			return []string{single}
+		}
+		return []string{}
+	}
+
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		if text := stringFromAIValue(item); text != "" {
+			out = append(out, text)
+		}
+	}
+	return out
+}
+
 func applyLegalRules(resp *SuggestResponse, rules []legalbasis.ApplicableLegalRule) {
 	if resp == nil {
 		return
@@ -493,7 +765,7 @@ func applySubstitutionTaxEvidence(
 	}
 
 	sourceCFOP := onlyDigits(req.SourceCFOP)
-	if isSubstitutionTaxCFOP(sourceCFOP) {
+	if isOutputSubstitutionTaxCFOP(sourceCFOP) {
 		resp.Suggestion.CFOP = sourceCFOP
 		resp.SelectedOperation.CFOP = sourceCFOP
 	}
@@ -523,10 +795,8 @@ func applyRetailDefaultRules(
 		return
 	}
 
-	isST := strings.TrimSpace(resp.Suggestion.CEST) != "" ||
-		strings.TrimSpace(req.SourceICMSCST) == "60" ||
-		isSubstitutionTaxCFOP(req.SourceCFOP) ||
-		isSubstitutionTaxCFOP(resp.Suggestion.CFOP)
+	isST := hasStrongSubstitutionTaxEvidence(req, resp)
+	sourceICMSCST := onlyDigits(req.SourceICMSCST)
 
 	if isSimpleRetailRegime(req) {
 		resp.Suggestion.ICMSCST = ""
@@ -540,15 +810,20 @@ func applyRetailDefaultRules(
 	} else {
 		resp.Suggestion.CSOSN = ""
 		if strings.TrimSpace(resp.Suggestion.ICMSCST) == "" {
-			if isST {
+			switch {
+			case isST:
 				resp.Suggestion.ICMSCST = "60"
-			} else {
+			case sourceICMSCST == "20":
+				resp.Suggestion.ICMSCST = "20"
+			case sourceICMSCST == "40" || sourceICMSCST == "41":
+				resp.Suggestion.ICMSCST = sourceICMSCST
+			default:
 				resp.Suggestion.ICMSCST = "00"
 			}
 		}
 	}
 
-	if strings.TrimSpace(resp.Suggestion.CFOP) == "" || (isST && isGenericSaleCFOP(resp.Suggestion.CFOP)) {
+	if strings.TrimSpace(resp.Suggestion.CFOP) == "" || (isST && !isOutputSubstitutionTaxCFOP(resp.Suggestion.CFOP)) {
 		if isST {
 			resp.Suggestion.CFOP = suggestedSubstitutionTaxCFOP(req)
 		} else if strings.TrimSpace(resp.Suggestion.CFOP) == "" {
@@ -558,6 +833,8 @@ func applyRetailDefaultRules(
 	}
 
 	applyRetailContributionDefaults(req, resp, isST)
+	applyRetailContributionRates(req, resp)
+	adjustRetailDefaultConfidence(req, resp, isST)
 	appendRetailDefaultLegalBasis(resp, req, isST)
 }
 
@@ -578,10 +855,46 @@ func defaultRetailContributionCST(req SuggestRequest, isST bool) string {
 	if isSimpleRetailRegime(req) {
 		return "99"
 	}
-	if isST {
-		return "04"
-	}
 	return "01"
+}
+
+func applyRetailContributionRates(req SuggestRequest, resp *SuggestResponse) {
+	if resp == nil || isSimpleRetailRegime(req) {
+		return
+	}
+
+	pisRate, cofinsRate := standardContributionRates(req)
+	if strings.TrimSpace(resp.Suggestion.PISCST) == "01" && isEmptyOrZero(resp.Suggestion.PISRate) {
+		resp.Suggestion.PISRate = pisRate
+	}
+	if strings.TrimSpace(resp.Suggestion.COFINSCST) == "01" && isEmptyOrZero(resp.Suggestion.COFINSRate) {
+		resp.Suggestion.COFINSRate = cofinsRate
+	}
+}
+
+func adjustRetailDefaultConfidence(req SuggestRequest, resp *SuggestResponse, isST bool) {
+	if resp == nil {
+		return
+	}
+
+	target := 0.70
+	sourceICMSCST := onlyDigits(req.SourceICMSCST)
+	switch {
+	case isST && strings.TrimSpace(resp.Suggestion.CEST) != "":
+		target = 0.85
+	case isST:
+		target = 0.78
+	case sourceICMSCST == "00" || onlyDigits(req.SourceCFOP) == "1102" || onlyDigits(req.SourceCFOP) == "2102":
+		target = 0.75
+	case sourceICMSCST == "20":
+		target = 0.65
+	case sourceICMSCST == "40" || sourceICMSCST == "41":
+		target = 0.55
+	}
+
+	if resp.ConfidenceScore < target {
+		resp.ConfidenceScore = target
+	}
 }
 
 func applyFederalContributionBenefitReduction2026(req SuggestRequest, resp *SuggestResponse) {
@@ -655,6 +968,84 @@ func defaultRetailSaleCFOP(req SuggestRequest) string {
 	return "5102"
 }
 
+func normalizeCFOPByOperationContext(
+	req SuggestRequest,
+	op *fiscaloperations.FiscalOperation,
+	resp *SuggestResponse,
+) {
+	if resp == nil || op == nil {
+		return
+	}
+
+	cfop := onlyDigits(resp.Suggestion.CFOP)
+	if len(cfop) != 4 {
+		return
+	}
+
+	direction := normalizeFiscalOperationDirection(op.Direction)
+	expectedPrefix := expectedCFOPPrefix(direction, req.EmitterUF, req.RecipientUF)
+	if expectedPrefix == 0 || cfop[0] == expectedPrefix {
+		return
+	}
+
+	if isOutboundDirection(op.Direction) {
+		if hasStrongSubstitutionTaxEvidence(req, resp) || isOutputSubstitutionTaxCFOP(cfop) {
+			resp.Suggestion.CFOP = suggestedSubstitutionTaxCFOP(req)
+		} else {
+			resp.Suggestion.CFOP = defaultRetailSaleCFOP(req)
+		}
+		resp.SelectedOperation.CFOP = resp.Suggestion.CFOP
+		return
+	}
+
+	if direction == "entrada" {
+		resp.Suggestion.CFOP = defaultEntryCFOP(req)
+		resp.SelectedOperation.CFOP = resp.Suggestion.CFOP
+	}
+}
+
+func normalizeFiscalOperationDirection(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch {
+	case strings.Contains(value, "entr"), strings.Contains(value, "inbound"):
+		return "entrada"
+	case strings.Contains(value, "saida"), strings.Contains(value, "saída"), strings.Contains(value, "outbound"), strings.Contains(value, "exit"):
+		return "saida"
+	default:
+		return ""
+	}
+}
+
+func expectedCFOPPrefix(direction string, emitterUF string, recipientUF string) byte {
+	emitterUF = strings.ToUpper(strings.TrimSpace(emitterUF))
+	recipientUF = strings.ToUpper(strings.TrimSpace(recipientUF))
+	sameUF := emitterUF == "" || recipientUF == "" || emitterUF == recipientUF
+
+	switch direction {
+	case "entrada":
+		if sameUF {
+			return '1'
+		}
+		return '2'
+	case "saida":
+		if sameUF {
+			return '5'
+		}
+		return '6'
+	default:
+		return 0
+	}
+}
+
+func defaultEntryCFOP(req SuggestRequest) string {
+	emitterUF := strings.ToUpper(strings.TrimSpace(req.EmitterUF))
+	recipientUF := strings.ToUpper(strings.TrimSpace(req.RecipientUF))
+	if emitterUF != "" && recipientUF != "" && emitterUF != recipientUF {
+		return "2102"
+	}
+	return "1102"
+}
+
 func isSimpleRetailRegime(req SuggestRequest) bool {
 	regime := strings.ToLower(strings.TrimSpace(req.TaxRegime))
 	crt := onlyDigits(req.TargetCRT)
@@ -680,6 +1071,406 @@ func appendRetailDefaultLegalBasis(resp *SuggestResponse, req SuggestRequest, is
 		AppliedReason: reason,
 		Weight:        "fallback",
 	})
+}
+
+func (s *Service) applyNCMTaxProfiles(
+	ctx context.Context,
+	req SuggestRequest,
+	op *fiscaloperations.FiscalOperation,
+	resp *SuggestResponse,
+) {
+	if s == nil || s.repo == nil || resp == nil || op == nil {
+		return
+	}
+
+	ncm := onlyDigits(firstNonEmpty(resp.Suggestion.NCM, req.NCMCode))
+	if ncm == "" {
+		return
+	}
+
+	profiles, err := s.repo.FindNCMTaxProfiles(
+		ctx,
+		ncm,
+		firstNonEmpty(req.RecipientUF, req.EmitterUF),
+		op.Code,
+		req.TaxRegime,
+		req.TargetCRT,
+	)
+	if err != nil || len(profiles) == 0 {
+		return
+	}
+
+	for _, profile := range profiles {
+		applyNCMTaxProfile(req, resp, profile)
+		appendNCMTaxProfileLegalBasis(resp, profile)
+		if resp.ConfidenceScore < profile.ConfidenceScore {
+			resp.ConfidenceScore = profile.ConfidenceScore
+		}
+	}
+}
+
+func applyNCMTaxProfile(req SuggestRequest, resp *SuggestResponse, profile NCMTaxProfile) {
+	if resp == nil {
+		return
+	}
+
+	if strings.TrimSpace(profile.CEST) != "" {
+		resp.Suggestion.CEST = profile.CEST
+	}
+	if strings.TrimSpace(profile.CFOP) != "" {
+		resp.Suggestion.CFOP = profile.CFOP
+		resp.SelectedOperation.CFOP = profile.CFOP
+	}
+	if strings.TrimSpace(profile.CClasTrib) != "" {
+		resp.Suggestion.CClasTrib = profile.CClasTrib
+	}
+
+	switch strings.TrimSpace(profile.TaxType) {
+	case "ICMS", "ICMS_ST":
+		applyNCMTaxProfileICMS(req, resp, profile)
+	case "PIS_COFINS":
+		applyNCMTaxProfileContributions(resp, profile)
+	case "IPI":
+		applyNCMTaxProfileIPI(resp, profile)
+	case "IBS_CBS":
+		applyNCMTaxProfileReform(resp, profile)
+	case "SELECTIVE_TAX":
+		applyNCMTaxProfileSelectiveTax(resp, profile)
+	}
+}
+
+func applyNCMTaxProfileICMS(req SuggestRequest, resp *SuggestResponse, profile NCMTaxProfile) {
+	if isSimpleRetailRegime(req) {
+		resp.Suggestion.ICMSCST = ""
+		if strings.TrimSpace(profile.CSOSN) != "" {
+			resp.Suggestion.CSOSN = profile.CSOSN
+		}
+	} else {
+		resp.Suggestion.CSOSN = ""
+		if strings.TrimSpace(profile.ICMSCST) != "" {
+			resp.Suggestion.ICMSCST = profile.ICMSCST
+		}
+	}
+
+	if strings.TrimSpace(profile.ICMSRate) != "" {
+		resp.Suggestion.ICMSRate = profile.ICMSRate
+	}
+	if strings.TrimSpace(profile.FCPRate) != "" {
+		resp.Suggestion.FCPRate = profile.FCPRate
+	}
+	if strings.TrimSpace(profile.ICMSSTRate) != "" {
+		resp.Suggestion.ICMSSTRate = profile.ICMSSTRate
+	}
+}
+
+func applyNCMTaxProfileContributions(resp *SuggestResponse, profile NCMTaxProfile) {
+	if strings.TrimSpace(profile.PISCST) != "" {
+		resp.Suggestion.PISCST = profile.PISCST
+	}
+	if strings.TrimSpace(profile.COFINSCST) != "" {
+		resp.Suggestion.COFINSCST = profile.COFINSCST
+	}
+	if strings.TrimSpace(profile.PISRate) != "" {
+		resp.Suggestion.PISRate = profile.PISRate
+	}
+	if strings.TrimSpace(profile.COFINSRate) != "" {
+		resp.Suggestion.COFINSRate = profile.COFINSRate
+	}
+	if strings.TrimSpace(profile.PISRevenueCode) != "" {
+		resp.Suggestion.PISRevenueCode = profile.PISRevenueCode
+	}
+	if strings.TrimSpace(profile.COFINSRevenueCode) != "" {
+		resp.Suggestion.COFINSRevenueCode = profile.COFINSRevenueCode
+	}
+}
+
+func applyNCMTaxProfileIPI(resp *SuggestResponse, profile NCMTaxProfile) {
+	if strings.TrimSpace(profile.IPICST) != "" {
+		resp.Suggestion.IPICST = profile.IPICST
+	}
+	if strings.TrimSpace(profile.IPIRate) != "" {
+		resp.Suggestion.IPIRate = profile.IPIRate
+	}
+	if strings.TrimSpace(profile.IPICEnq) != "" {
+		resp.Suggestion.IPICEnq = profile.IPICEnq
+	}
+}
+
+func applyNCMTaxProfileReform(resp *SuggestResponse, profile NCMTaxProfile) {
+	if strings.TrimSpace(profile.CClasTrib) != "" {
+		resp.Suggestion.CClasTrib = profile.CClasTrib
+	}
+	if strings.TrimSpace(profile.IBSRate) != "" {
+		resp.Suggestion.IBSRate = profile.IBSRate
+	}
+	if strings.TrimSpace(profile.CBSRate) != "" {
+		resp.Suggestion.CBSRate = profile.CBSRate
+	}
+}
+
+func applyNCMTaxProfileSelectiveTax(resp *SuggestResponse, profile NCMTaxProfile) {
+	if strings.TrimSpace(profile.SelectiveTaxCode) != "" {
+		resp.Suggestion.SelectiveTaxCode = profile.SelectiveTaxCode
+	}
+	if strings.TrimSpace(profile.SelectiveTaxRate) != "" {
+		resp.Suggestion.SelectiveTaxRate = profile.SelectiveTaxRate
+	}
+}
+
+func appendNCMTaxProfileLegalBasis(resp *SuggestResponse, profile NCMTaxProfile) {
+	if resp == nil {
+		return
+	}
+
+	title := "Perfil tributario por NCM"
+	if strings.TrimSpace(profile.TaxGroup) != "" {
+		title = "Perfil NCM " + strings.TrimSpace(profile.TaxGroup)
+	}
+
+	taxType := profile.TaxType
+	if strings.TrimSpace(profile.TaxType) == "PIS_COFINS" && strings.Contains(strings.ToLower(profile.TaxGroup), "monofas") {
+		taxType = "PIS_COFINS_MONOPHASIC"
+	}
+
+	resp.LegalBasis = append(resp.LegalBasis, LegalBasisItem{
+		TaxType:       taxType,
+		Title:         title,
+		ReferenceCode: firstNonEmpty(profile.SourceReference, "NCM_TAX_PROFILE_"+profile.NCMPattern),
+		Jurisdiction:  jurisdictionFromNCMTaxProfile(profile),
+		UF:            strings.ToUpper(strings.TrimSpace(profile.UF)),
+		AppliedReason: firstNonEmpty(profile.Notes, "Regra aplicada a partir da matriz NCM x tributo cadastrada na plataforma."),
+		Weight:        "ncm_profile",
+	})
+}
+
+func jurisdictionFromNCMTaxProfile(profile NCMTaxProfile) string {
+	if strings.TrimSpace(profile.UF) != "" {
+		return "STATE"
+	}
+	switch strings.TrimSpace(profile.TaxType) {
+	case "ICMS", "ICMS_ST":
+		return "STATE"
+	default:
+		return "FEDERAL"
+	}
+}
+
+func (s *Service) applyStateICMSRule(
+	ctx context.Context,
+	req SuggestRequest,
+	op *fiscaloperations.FiscalOperation,
+	resp *SuggestResponse,
+) {
+	if s == nil || s.repo == nil || resp == nil || op == nil || !isOutboundDirection(op.Direction) {
+		return
+	}
+
+	ncm := onlyDigits(firstNonEmpty(resp.Suggestion.NCM, req.NCMCode))
+	uf := strings.ToUpper(strings.TrimSpace(firstNonEmpty(req.RecipientUF, req.EmitterUF)))
+	if ncm == "" || uf == "" {
+		return
+	}
+
+	rule, err := s.repo.FindStateICMSRule(
+		ctx,
+		ncm,
+		resp.Suggestion.CEST,
+		uf,
+		op.Code,
+		req.TaxRegime,
+		req.TargetCRT,
+	)
+	if err != nil || rule == nil {
+		return
+	}
+
+	if hasStrongSubstitutionTaxEvidence(req, resp) && !isStateICMSRuleST(*rule) && isGenericStateICMSRule(*rule) {
+		return
+	}
+
+	applyStateICMSRuleSuggestion(req, resp, *rule)
+	appendStateICMSRuleLegalBasis(resp, *rule)
+	if resp.ConfidenceScore < rule.ConfidenceScore {
+		resp.ConfidenceScore = rule.ConfidenceScore
+	}
+}
+
+func applyStateICMSRuleSuggestion(req SuggestRequest, resp *SuggestResponse, rule StateICMSRule) {
+	if resp == nil {
+		return
+	}
+
+	if strings.TrimSpace(rule.CEST) != "" && strings.TrimSpace(resp.Suggestion.CEST) == "" {
+		resp.Suggestion.CEST = rule.CEST
+	}
+
+	cfop := strings.TrimSpace(rule.CFOP)
+	if cfop == "" {
+		if isStateICMSRuleST(rule) {
+			cfop = suggestedSubstitutionTaxCFOP(req)
+		} else if strings.TrimSpace(resp.Suggestion.CFOP) == "" || isGenericSaleCFOP(resp.Suggestion.CFOP) {
+			cfop = defaultRetailSaleCFOP(req)
+		}
+	}
+	if cfop != "" {
+		resp.Suggestion.CFOP = cfop
+		resp.SelectedOperation.CFOP = cfop
+	}
+
+	if isSimpleRetailRegime(req) {
+		resp.Suggestion.ICMSCST = ""
+		switch {
+		case strings.TrimSpace(rule.CSOSN) != "":
+			resp.Suggestion.CSOSN = rule.CSOSN
+		case isStateICMSRuleST(rule):
+			resp.Suggestion.CSOSN = "500"
+		case strings.TrimSpace(resp.Suggestion.CSOSN) == "":
+			resp.Suggestion.CSOSN = "102"
+		}
+	} else {
+		resp.Suggestion.CSOSN = ""
+		switch {
+		case strings.TrimSpace(rule.ICMSCST) != "":
+			resp.Suggestion.ICMSCST = rule.ICMSCST
+		case isStateICMSRuleST(rule):
+			resp.Suggestion.ICMSCST = "60"
+		case strings.TrimSpace(resp.Suggestion.ICMSCST) == "":
+			resp.Suggestion.ICMSCST = "00"
+		}
+	}
+
+	if strings.TrimSpace(rule.ICMSRate) != "" {
+		resp.Suggestion.ICMSRate = rule.ICMSRate
+	}
+	if strings.TrimSpace(rule.FCPRate) != "" {
+		resp.Suggestion.FCPRate = rule.FCPRate
+	}
+	if strings.TrimSpace(rule.ICMSSTRate) != "" {
+		resp.Suggestion.ICMSSTRate = rule.ICMSSTRate
+	}
+	if strings.TrimSpace(rule.ICMSBaseReduction) != "" {
+		resp.Suggestion.ICMSBaseReduction = rule.ICMSBaseReduction
+	}
+	if strings.TrimSpace(rule.CBenef) != "" {
+		resp.Suggestion.CBenef = rule.CBenef
+	}
+}
+
+func appendStateICMSRuleLegalBasis(resp *SuggestResponse, rule StateICMSRule) {
+	if resp == nil {
+		return
+	}
+
+	taxType := "ICMS_STATE"
+	title := "Regra estadual de ICMS"
+	if isStateICMSRuleST(rule) {
+		taxType = "ICMS_ST"
+		title = "Regra estadual de ICMS-ST"
+	}
+
+	resp.LegalBasis = append(resp.LegalBasis, LegalBasisItem{
+		TaxType:       taxType,
+		Title:         title,
+		ReferenceCode: firstNonEmpty(rule.SourceReference, "STATE_ICMS_"+rule.UF+"_"+rule.NCMPattern),
+		Jurisdiction:  "STATE",
+		UF:            strings.ToUpper(strings.TrimSpace(rule.UF)),
+		AppliedReason: firstNonEmpty(rule.Notes, "Regra estadual aplicada conforme UF da organizacao e identidade fiscal do item."),
+		Weight:        stateICMSRuleWeight(rule),
+	})
+}
+
+func isStateICMSRuleST(rule StateICMSRule) bool {
+	return strings.EqualFold(strings.TrimSpace(rule.RuleKind), "ST")
+}
+
+func stateICMSRuleWeight(rule StateICMSRule) string {
+	if strings.TrimSpace(rule.NCMPattern) == "" {
+		return "state_icms_rule_generic"
+	}
+	if strings.EqualFold(strings.TrimSpace(rule.MatchType), "exact") {
+		return "state_icms_rule_exact"
+	}
+	return "state_icms_rule_prefix"
+}
+
+func isGenericStateICMSRule(rule StateICMSRule) bool {
+	return strings.TrimSpace(rule.NCMPattern) == "" && !isStateICMSRuleST(rule)
+}
+
+func applyRetailSpecialOutputRules(req SuggestRequest, resp *SuggestResponse) {
+	if resp == nil {
+		return
+	}
+
+	if applyRetailMonophasicRule(req, resp) {
+		return
+	}
+}
+
+func applyRetailMonophasicRule(req SuggestRequest, resp *SuggestResponse) bool {
+	if resp == nil {
+		return false
+	}
+
+	ncm := onlyDigits(firstNonEmpty(resp.Suggestion.NCM, req.NCMCode))
+	rule, ok := findRetailMonophaseNCMRule(ncm)
+	if !ok {
+		return false
+	}
+
+	if onlyDigits(req.SourcePISCST) != "02" && onlyDigits(req.SourceCOFINSCST) != "02" &&
+		onlyDigits(resp.Suggestion.PISCST) != "02" && onlyDigits(resp.Suggestion.COFINSCST) != "02" {
+		return false
+	}
+
+	resp.Suggestion.PISCST = "04"
+	resp.Suggestion.COFINSCST = "04"
+	resp.Suggestion.PISRate = "0.0000"
+	resp.Suggestion.COFINSRate = "0.0000"
+	resp.Suggestion.PISValue = ""
+	resp.Suggestion.COFINSValue = ""
+
+	if hasStrongSubstitutionTaxEvidence(req, resp) {
+		resp.Suggestion.CFOP = suggestedSubstitutionTaxCFOP(req)
+		resp.SelectedOperation.CFOP = resp.Suggestion.CFOP
+		resp.Suggestion.ICMSRate = firstNonEmpty(resp.Suggestion.ICMSRate, "0.0000")
+		if isSimpleRetailRegime(req) {
+			resp.Suggestion.ICMSCST = ""
+			resp.Suggestion.CSOSN = "500"
+		} else {
+			resp.Suggestion.CSOSN = ""
+			resp.Suggestion.ICMSCST = "60"
+		}
+	}
+
+	resp.LegalBasis = append(resp.LegalBasis, LegalBasisItem{
+		TaxType:       "PIS_COFINS_MONOPHASIC",
+		Title:         "Produto em regime monofasico no varejo",
+		ReferenceCode: "RETAIL_MONOPHASIC_" + strings.ToUpper(rule.Category),
+		Jurisdiction:  "FEDERAL",
+		AppliedReason: "NCM de " + rule.Description + " com CST base 02 indica tributacao concentrada na cadeia anterior. Para venda varejista, a plataforma sugere PIS/COFINS CST 04 com aliquota zero.",
+		Weight:        "0.92",
+	})
+
+	targetConfidence := 0.82
+	if hasStrongSubstitutionTaxEvidence(req, resp) && strings.TrimSpace(resp.Suggestion.CEST) != "" {
+		targetConfidence = 0.92
+	}
+	if resp.ConfidenceScore < targetConfidence {
+		resp.ConfidenceScore = targetConfidence
+	}
+
+	return true
+}
+
+func findRetailMonophaseNCMRule(ncm string) (monophaseNCMRule, bool) {
+	ncm = onlyDigits(ncm)
+	for _, rule := range retailMonophaseNCMRules {
+		if strings.HasPrefix(ncm, rule.Prefix) {
+			return rule, true
+		}
+	}
+	return monophaseNCMRule{}, false
 }
 
 func applyReferenceProductFiscalRules(
@@ -769,13 +1560,47 @@ func applyReferenceProductFiscalRules(
 }
 
 func hasSubstitutionTaxEvidence(req SuggestRequest, resp *SuggestResponse) bool {
-	if strings.TrimSpace(req.SourceICMSCST) == "60" {
+	return hasStrongSubstitutionTaxEvidence(req, resp)
+}
+
+func hasStrongSubstitutionTaxEvidence(req SuggestRequest, resp *SuggestResponse) bool {
+	if isSubstitutionTaxCST(req.SourceICMSCST) {
+		return true
+	}
+	if isSubstitutionTaxCSOSN(req.SourceICMSCSOSN) {
+		return true
+	}
+	if resp != nil && isSubstitutionTaxCST(resp.Suggestion.ICMSCST) {
+		return true
+	}
+	if resp != nil && isSubstitutionTaxCSOSN(resp.Suggestion.CSOSN) {
 		return true
 	}
 	if isSubstitutionTaxCFOP(req.SourceCFOP) {
 		return true
 	}
-	return strings.TrimSpace(resp.Suggestion.CEST) != ""
+	if isEntrySubstitutionTaxCFOP(req.SourceCFOP) {
+		return true
+	}
+	return resp != nil && isSubstitutionTaxCFOP(resp.Suggestion.CFOP)
+}
+
+func isSubstitutionTaxCST(value string) bool {
+	switch onlyDigits(value) {
+	case "10", "30", "60", "70":
+		return true
+	default:
+		return false
+	}
+}
+
+func isSubstitutionTaxCSOSN(value string) bool {
+	switch onlyDigits(value) {
+	case "201", "202", "203", "500":
+		return true
+	default:
+		return false
+	}
 }
 
 func suggestedSubstitutionTaxCFOP(req SuggestRequest) string {
@@ -799,8 +1624,21 @@ func isGenericSaleCFOP(value string) bool {
 }
 
 func isSubstitutionTaxCFOP(value string) bool {
+	return isOutputSubstitutionTaxCFOP(value) || isEntrySubstitutionTaxCFOP(value)
+}
+
+func isOutputSubstitutionTaxCFOP(value string) bool {
 	switch onlyDigits(value) {
 	case "5403", "5405", "6403", "6404":
+		return true
+	default:
+		return false
+	}
+}
+
+func isEntrySubstitutionTaxCFOP(value string) bool {
+	switch onlyDigits(value) {
+	case "1401", "1403", "1406", "1407", "2401", "2403", "2406", "2407":
 		return true
 	default:
 		return false
@@ -950,6 +1788,16 @@ func buildFallbackTaxMatch(req SuggestRequest) *TaxMatch {
 	}
 }
 
+func normalizeDigits(value string) string {
+	var builder strings.Builder
+	for _, char := range strings.TrimSpace(value) {
+		if char >= '0' && char <= '9' {
+			builder.WriteRune(char)
+		}
+	}
+	return builder.String()
+}
+
 func applyTaxRegimeRules(req SuggestRequest, item *TaxMatch, resp *SuggestResponse) {
 	if resp == nil || item == nil {
 		return
@@ -988,6 +1836,33 @@ func applyTaxRegimeRules(req SuggestRequest, item *TaxMatch, resp *SuggestRespon
 	}
 }
 
+func normalizeRegimeSpecificDefaults(req SuggestRequest, resp *SuggestResponse) {
+	if resp == nil {
+		return
+	}
+
+	if isSimpleRetailRegime(req) {
+		resp.Suggestion.ICMSCST = ""
+		if strings.TrimSpace(resp.Suggestion.CSOSN) == "" {
+			if isSubstitutionTaxCFOP(resp.Suggestion.CFOP) {
+				resp.Suggestion.CSOSN = "500"
+			} else {
+				resp.Suggestion.CSOSN = "102"
+			}
+		}
+		return
+	}
+
+	resp.Suggestion.CSOSN = ""
+	if strings.TrimSpace(resp.Suggestion.ICMSCST) == "" {
+		if isSubstitutionTaxCFOP(resp.Suggestion.CFOP) {
+			resp.Suggestion.ICMSCST = "60"
+		} else {
+			resp.Suggestion.ICMSCST = "00"
+		}
+	}
+}
+
 func collectSuggestWarnings(req SuggestRequest, item *TaxMatch, resp *SuggestResponse) []string {
 	warnings := make([]string, 0, 4)
 
@@ -1003,7 +1878,9 @@ func collectSuggestWarnings(req SuggestRequest, item *TaxMatch, resp *SuggestRes
 	case "ncm_profile":
 		warnings = append(warnings, "A sugestao reaproveitou um produto cadastrado com o mesmo NCM na memoria fiscal da organizacao.")
 	case "entry_memory":
-		warnings = append(warnings, "A memoria encontrada veio de nota de entrada. A classificacao pode apoiar a saida, mas a tributacao de venda precisa de validacao.")
+		warnings = append(warnings, "A sugestao reaproveitou a identidade fiscal cadastrada do item. A saida foi calculada pelo contexto da organizacao.")
+	case "cosmos_search":
+		warnings = append(warnings, "Identidade fiscal obtida na Cosmos BlueSoft. A plataforma usa NCM/CEST para acionar regras internas, mas a tributacao deve continuar validada por UF, regime e fonte legal.")
 	}
 
 	if strings.TrimSpace(req.TaxRegime) == "" {
@@ -1024,8 +1901,12 @@ func collectSuggestWarnings(req SuggestRequest, item *TaxMatch, resp *SuggestRes
 		warnings = append(warnings, "ICMS de saida ainda depende de regra especifica por operacao, UF e regime.")
 	}
 
-	if resp.CESTReference != nil && strings.TrimSpace(resp.Suggestion.ICMSSTRate) == "" {
-		warnings = append(warnings, "CEST encontrado para o NCM informado. Verifique ICMS ST, MVA, FCP ST e regras estaduais antes de confirmar a operacao.")
+	if warning := buildCFOPContextWarning(req, resp); warning != "" {
+		warnings = append(warnings, warning)
+	}
+
+	if resp.CESTReference != nil && !hasConfirmedSubstitutionTax(resp) {
+		warnings = append(warnings, "CEST encontrado para o NCM informado, mas isso nao confirma substituicao tributaria. Valide a regra estadual, CST/CSOSN, CFOP, MVA, FCP ST e excecoes da UF antes de concluir.")
 	}
 
 	if hasDistinctContext(item.TargetCRT, req.TargetCRT) {
@@ -1033,11 +1914,11 @@ func collectSuggestWarnings(req SuggestRequest, item *TaxMatch, resp *SuggestRes
 	}
 
 	if strings.TrimSpace(req.SourcePISCST) != "" && strings.TrimSpace(item.PISCST) != "" && !strings.EqualFold(strings.TrimSpace(req.SourcePISCST), strings.TrimSpace(item.PISCST)) {
-		warnings = append(warnings, "O CST de PIS capturado na nota de entrada difere da memoria fiscal encontrada. A sugestao foi conservadora nas contribuicoes.")
+		warnings = append(warnings, "O CST de PIS informado difere da memoria fiscal encontrada. A sugestao foi conservadora nas contribuicoes.")
 	}
 
 	if strings.TrimSpace(req.SourceCOFINSCST) != "" && strings.TrimSpace(item.COFINSCST) != "" && !strings.EqualFold(strings.TrimSpace(req.SourceCOFINSCST), strings.TrimSpace(item.COFINSCST)) {
-		warnings = append(warnings, "O CST de COFINS capturado na nota de entrada difere da memoria fiscal encontrada. Revise a saida antes de confirmar.")
+		warnings = append(warnings, "O CST de COFINS informado difere da memoria fiscal encontrada. Revise a saida antes de confirmar.")
 	}
 
 	if contributionCSTNeedsRevenueNature(resp) && !hasContributionRevenueCode(resp) {
@@ -1052,8 +1933,12 @@ func collectSuggestWarnings(req SuggestRequest, item *TaxMatch, resp *SuggestRes
 		warnings = append(warnings, "CST 04/05 em PIS/COFINS depende de produto monofasico ou substituicao tributaria. A plataforma mantem o CST, mas exige natureza da receita e base legal antes de publicar como regra definitiva.")
 	}
 
-	if hasRetailDefault(resp) {
+	if hasRetailDefault(resp) && !hasStateICMSLegalBasis(resp) {
 		warnings = append(warnings, "Default varejista aplicado: confirme o produto, regime e natureza da receita antes de transformar a sugestao em regra permanente.")
+	}
+
+	if item := stateICMSLegalBasis(resp); item != nil && strings.TrimSpace(item.Weight) == "state_icms_rule_generic" {
+		warnings = append(warnings, "ICMS calculado por regra estadual geral da UF. Para aumentar a confianca, cadastre regra especifica por NCM, CEST, beneficio ou ST.")
 	}
 
 	if strings.TrimSpace(item.OrganizationID) == "" {
@@ -1065,6 +1950,27 @@ func collectSuggestWarnings(req SuggestRequest, item *TaxMatch, resp *SuggestRes
 	}
 
 	return warnings
+}
+
+func buildCFOPContextWarning(req SuggestRequest, resp *SuggestResponse) string {
+	if resp == nil {
+		return ""
+	}
+
+	cfop := onlyDigits(resp.Suggestion.CFOP)
+	if len(cfop) != 4 {
+		return ""
+	}
+
+	emitterUF := strings.ToUpper(strings.TrimSpace(req.EmitterUF))
+	recipientUF := strings.ToUpper(strings.TrimSpace(req.RecipientUF))
+	if emitterUF != "" && recipientUF != "" && emitterUF != recipientUF && cfop[0] == '5' {
+		return "CFOP ajustado para operacao interestadual quando UF de origem e destino sao diferentes; confira se a venda deve usar grupo 6.xxx."
+	}
+	if (emitterUF == "" || recipientUF == "" || emitterUF == recipientUF) && cfop[0] == '6' {
+		return "CFOP ajustado para operacao interna quando UF de origem e destino sao iguais; confira se a venda deve usar grupo 5.xxx."
+	}
+	return ""
 }
 
 func buildTaxDiagnostics(req SuggestRequest, resp *SuggestResponse) TaxDiagnostics {
@@ -1167,11 +2073,29 @@ func hasSpecificLegalBasis(resp *SuggestResponse) bool {
 		return false
 	}
 	for _, item := range resp.LegalBasis {
-		if strings.TrimSpace(item.TaxType) != "RETAIL_DEFAULT" {
+		taxType := strings.TrimSpace(item.TaxType)
+		if taxType != "RETAIL_DEFAULT" && taxType != "CEST" && taxType != "AI_ASSIST" && taxType != "PRODUCT_IDENTITY" {
 			return true
 		}
 	}
 	return false
+}
+
+func hasStateICMSLegalBasis(resp *SuggestResponse) bool {
+	return stateICMSLegalBasis(resp) != nil
+}
+
+func stateICMSLegalBasis(resp *SuggestResponse) *LegalBasisItem {
+	if resp == nil {
+		return nil
+	}
+	for i := range resp.LegalBasis {
+		item := &resp.LegalBasis[i]
+		if strings.HasPrefix(strings.TrimSpace(item.Weight), "state_icms_rule") {
+			return item
+		}
+	}
+	return nil
 }
 
 func hasMissingArea(diagnostics TaxDiagnostics, area string) bool {
@@ -1204,8 +2128,8 @@ func buildClassificationDiagnostic(resp *SuggestResponse) TaxDiagnosticItem {
 			Area:   "classification",
 			Status: "ready",
 			Title:  "Identidade fiscal localizada",
-			Detail: "NCM e CEST estao disponiveis para apoiar ICMS ST, regras por produto e memoria fiscal.",
-			Action: "Use a consulta CEST/NCM para revisar excecoes e manter a classificacao atualizada.",
+			Detail: "NCM e CEST estao disponiveis. CEST identifica o item para analise, mas nao confirma ST sem regra estadual aplicavel.",
+			Action: "Valide UF, CFOP, CST/CSOSN e regra estadual antes de classificar como substituicao tributaria.",
 		}
 	}
 	if strings.TrimSpace(s.NCM) != "" {
@@ -1248,6 +2172,27 @@ func buildOperationDiagnostic(resp *SuggestResponse) TaxDiagnosticItem {
 
 func buildICMSDiagnostic(req SuggestRequest, resp *SuggestResponse) TaxDiagnosticItem {
 	s := resp.Suggestion
+	if stateRule := stateICMSLegalBasis(resp); stateRule != nil {
+		detail := "Regra estadual aplicada para UF " + firstNonEmpty(stateRule.UF, strings.ToUpper(strings.TrimSpace(req.RecipientUF)), strings.ToUpper(strings.TrimSpace(req.EmitterUF))) + "."
+		if strings.TrimSpace(stateRule.ReferenceCode) != "" {
+			detail += " Fonte: " + strings.TrimSpace(stateRule.ReferenceCode) + "."
+		}
+		if strings.TrimSpace(stateRule.Weight) == "state_icms_rule_exact" {
+			detail += " Correspondencia exata por NCM/CEST."
+		} else if strings.TrimSpace(stateRule.Weight) == "state_icms_rule_prefix" {
+			detail += " Correspondencia por prefixo de NCM."
+		} else {
+			detail += " Regra geral da UF usada como fallback."
+		}
+		return TaxDiagnosticItem{
+			Area:   "icms",
+			Status: "ready",
+			Title:  "ICMS estadual aplicado",
+			Detail: detail,
+			Action: "Revise MVA, FCP, beneficio e excecoes da UF antes de publicar como regra definitiva.",
+		}
+	}
+
 	if strings.Contains(strings.ToLower(strings.TrimSpace(req.TaxRegime)), "simples") {
 		if strings.TrimSpace(s.CSOSN) != "" {
 			return TaxDiagnosticItem{
@@ -1342,6 +2287,9 @@ func contributionCSTNeedsRevenueNature(resp *SuggestResponse) bool {
 	if resp == nil {
 		return false
 	}
+	if hasRetailMonophasicOutput(resp) {
+		return false
+	}
 	pis := strings.TrimSpace(resp.Suggestion.PISCST)
 	cofins := strings.TrimSpace(resp.Suggestion.COFINSCST)
 	return pis == "04" || pis == "05" || pis == "06" || cofins == "04" || cofins == "05" || cofins == "06"
@@ -1374,9 +2322,42 @@ func hasMonophasicOrSubstitutionContributionCST(resp *SuggestResponse) bool {
 	if resp == nil {
 		return false
 	}
+	if hasRetailMonophasicOutput(resp) {
+		return false
+	}
 	pis := onlyDigits(resp.Suggestion.PISCST)
 	cofins := onlyDigits(resp.Suggestion.COFINSCST)
 	return pis == "04" || pis == "05" || cofins == "04" || cofins == "05"
+}
+
+func hasRetailMonophasicOutput(resp *SuggestResponse) bool {
+	if resp == nil {
+		return false
+	}
+	for _, item := range resp.LegalBasis {
+		if strings.TrimSpace(item.TaxType) == "PIS_COFINS_MONOPHASIC" {
+			return true
+		}
+	}
+	return false
+}
+
+func hasConfirmedSubstitutionTax(resp *SuggestResponse) bool {
+	if resp == nil {
+		return false
+	}
+	if strings.TrimSpace(resp.Suggestion.ICMSCST) == "60" || strings.TrimSpace(resp.Suggestion.CSOSN) == "500" {
+		return true
+	}
+	if isSubstitutionTaxCFOP(resp.Suggestion.CFOP) {
+		return true
+	}
+	for _, item := range resp.LegalBasis {
+		if strings.TrimSpace(item.TaxType) == "ICMS_ST" && strings.TrimSpace(item.Weight) != "0.68" {
+			return true
+		}
+	}
+	return false
 }
 
 func buildReformDiagnostic(resp *SuggestResponse) TaxDiagnosticItem {

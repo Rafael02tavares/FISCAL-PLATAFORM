@@ -1,0 +1,2 @@
+ALTER TABLE external_integrations
+  ADD COLUMN IF NOT EXISTS model_name VARCHAR(80) NOT NULL DEFAULT '';

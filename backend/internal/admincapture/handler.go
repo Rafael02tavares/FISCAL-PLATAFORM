@@ -23,6 +23,12 @@ type acceptCandidateRequest struct {
 	InvoiceItemID string `json:"invoice_item_id"`
 }
 
+type acceptProductReviewsRequest struct {
+	ProductIDs    []string `json:"product_ids"`
+	AcceptAll     bool     `json:"accept_all"`
+	MinConfidence float64  `json:"min_confidence"`
+}
+
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	organizationID, ok := h.authorizeRequest(w, r)
 	if !ok {
@@ -100,6 +106,110 @@ func (h *Handler) Accept(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"message": "regra capturada integrada ao motor tributario com sucesso",
+	})
+}
+
+func (h *Handler) ProductReviews(w http.ResponseWriter, r *http.Request) {
+	organizationID, ok := h.authorizeRequest(w, r)
+	if !ok {
+		return
+	}
+
+	limit := 150
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			limit = parsed
+		}
+	}
+
+	org, err := h.orgService.GetOrganizationByID(r.Context(), organizationID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": map[string]string{
+				"code":    "ORGANIZATION_LOOKUP_FAILED",
+				"message": "nao foi possivel carregar o regime da organizacao",
+			},
+		})
+		return
+	}
+
+	items, err := h.service.ReviewCatalogProducts(
+		r.Context(),
+		organizationID,
+		strings.TrimSpace(org.TaxRegime),
+		strings.TrimSpace(org.CRT),
+		strings.TrimSpace(org.HomeUF),
+		limit,
+	)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": map[string]string{
+				"code":    "LIST_PRODUCT_REVIEWS_FAILED",
+				"message": "nao foi possivel revisar os produtos cadastrados",
+			},
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"items": items,
+	})
+}
+
+func (h *Handler) AcceptProductReviews(w http.ResponseWriter, r *http.Request) {
+	organizationID, ok := h.authorizeRequest(w, r)
+	if !ok {
+		return
+	}
+
+	var req acceptProductReviewsRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"error": map[string]string{
+				"code":    "INVALID_BODY",
+				"message": "corpo da requisicao invalido",
+			},
+		})
+		return
+	}
+
+	org, err := h.orgService.GetOrganizationByID(r.Context(), organizationID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": map[string]string{
+				"code":    "ORGANIZATION_LOOKUP_FAILED",
+				"message": "nao foi possivel carregar o regime da organizacao",
+			},
+		})
+		return
+	}
+
+	accepted, failures, err := h.service.AcceptProductReviews(
+		r.Context(),
+		organizationID,
+		req.ProductIDs,
+		req.AcceptAll,
+		req.MinConfidence,
+		strings.TrimSpace(org.TaxRegime),
+		strings.TrimSpace(org.CRT),
+		strings.TrimSpace(org.HomeUF),
+	)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"error": map[string]string{
+				"code":    "ACCEPT_PRODUCT_REVIEWS_FAILED",
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"message":  "revisoes de produtos aceitas com sucesso",
+		"accepted": accepted,
+		"failures": failures,
 	})
 }
 

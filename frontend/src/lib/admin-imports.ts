@@ -72,3 +72,32 @@ export async function uploadCBenefCatalog(file: File | null, sourceName: string,
     body: formData,
   });
 }
+
+export async function uploadStateICMSSTCatalog(
+  file: File | null,
+  sourceName: string,
+  versionLabel: string,
+  content = "",
+  uf = "",
+  sourceUrl = ""
+) {
+  if (!file) {
+    throw new Error("arquivo XLSX obrigatorio para importar ST estadual");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("source_name", sourceName);
+  formData.append("version_label", versionLabel);
+  if (uf.trim()) {
+    formData.append("uf", uf.trim().toUpperCase());
+  }
+  if (sourceUrl.trim()) {
+    formData.append("source_url", sourceUrl.trim());
+  }
+
+  return apiFetch("/admin/imports/state-icms-st", {
+    method: "POST",
+    body: formData,
+  });
+}

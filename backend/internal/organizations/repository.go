@@ -173,3 +173,40 @@ func (r *Repository) GetOrganizationByID(ctx context.Context, organizationID str
 
 	return &org, nil
 }
+
+func (r *Repository) UpdateOrganization(ctx context.Context, organizationID, name, cnpj, taxRegime, crt, stateRegistration, homeUF string) (*Organization, error) {
+	query := `
+		UPDATE organizations
+		SET name = $2,
+			cnpj = $3,
+			tax_regime = $4,
+			crt = $5,
+			state_registration = $6,
+			home_uf = $7,
+			updated_at = NOW()
+		WHERE id = $1::uuid
+		RETURNING
+			id,
+			COALESCE(name, ''),
+			COALESCE(cnpj, ''),
+			COALESCE(tax_regime, ''),
+			COALESCE(crt, ''),
+			COALESCE(state_registration, ''),
+			COALESCE(home_uf, '')
+	`
+
+	var org Organization
+	if err := r.db.QueryRow(ctx, query, organizationID, name, cnpj, taxRegime, crt, stateRegistration, homeUF).Scan(
+		&org.ID,
+		&org.Name,
+		&org.CNPJ,
+		&org.TaxRegime,
+		&org.CRT,
+		&org.StateRegistration,
+		&org.HomeUF,
+	); err != nil {
+		return nil, fmt.Errorf("update organization: %w", err)
+	}
+
+	return &org, nil
+}

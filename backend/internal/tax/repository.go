@@ -30,6 +30,10 @@ type TaxMatch struct {
 	OrganizationID  string
 	MatchType       string
 	ConfidenceScore float64
+	SourceLabel     string
+	SourceReference string
+	Description     string
+	GTIN            string
 
 	NCM       string
 	NCMEx     string
@@ -84,6 +88,65 @@ type CESTMatch struct {
 	Description     string
 	LegalSource     string
 	ConfidenceScore float64
+}
+
+type NCMTaxProfile struct {
+	NCMPattern        string
+	MatchType         string
+	TaxType           string
+	TaxGroup          string
+	UF                string
+	OperationCode     string
+	TaxRegime         string
+	TargetCRT         string
+	CEST              string
+	CFOP              string
+	ICMSCST           string
+	CSOSN             string
+	PISCST            string
+	COFINSCST         string
+	PISRevenueCode    string
+	COFINSRevenueCode string
+	CClasTrib         string
+	ICMSRate          string
+	PISRate           string
+	COFINSRate        string
+	IPIRate           string
+	FCPRate           string
+	ICMSSTRate        string
+	IBSRate           string
+	CBSRate           string
+	SelectiveTaxRate  string
+	IPICST            string
+	IPICEnq           string
+	SelectiveTaxCode  string
+	ConfidenceScore   float64
+	SourceReference   string
+	SourceURL         string
+	Notes             string
+}
+
+type StateICMSRule struct {
+	UF                string
+	NCMPattern        string
+	MatchType         string
+	CEST              string
+	OperationCode     string
+	TaxRegime         string
+	TargetCRT         string
+	RuleKind          string
+	CFOP              string
+	ICMSCST           string
+	CSOSN             string
+	ICMSRate          string
+	FCPRate           string
+	ICMSSTRate        string
+	ICMSBaseReduction string
+	CBenef            string
+	ConfidenceScore   float64
+	SourceReference   string
+	SourceURL         string
+	Notes             string
 }
 
 func normalizeOptionalNumeric(value string) string {
@@ -891,6 +954,244 @@ func (r *Repository) findByNCMProfile(
 	return &item, nil
 }
 
+func (r *Repository) FindNCMTaxProfiles(
+	ctx context.Context,
+	ncmCode string,
+	uf string,
+	operationCode string,
+	taxRegime string,
+	targetCRT string,
+) ([]NCMTaxProfile, error) {
+	ncmCode = normalizeNCMCode(ncmCode)
+	uf = strings.ToUpper(strings.TrimSpace(uf))
+	operationCode = strings.TrimSpace(operationCode)
+	taxRegime = strings.TrimSpace(taxRegime)
+	targetCRT = strings.TrimSpace(targetCRT)
+
+	if ncmCode == "" {
+		return nil, fmt.Errorf("ncm code is required")
+	}
+
+	query := `
+		SELECT
+			COALESCE(ncm_pattern, ''),
+			COALESCE(match_type, ''),
+			COALESCE(tax_type, ''),
+			COALESCE(tax_group, ''),
+			COALESCE(uf, ''),
+			COALESCE(operation_code, ''),
+			COALESCE(tax_regime, ''),
+			COALESCE(target_crt, ''),
+			COALESCE(cest, ''),
+			COALESCE(cfop, ''),
+			COALESCE(icms_cst, ''),
+			COALESCE(csosn, ''),
+			COALESCE(pis_cst, ''),
+			COALESCE(cofins_cst, ''),
+			COALESCE(pis_revenue_code, ''),
+			COALESCE(cofins_revenue_code, ''),
+			COALESCE(cclas_trib, ''),
+			COALESCE(icms_rate::text, ''),
+			COALESCE(pis_rate::text, ''),
+			COALESCE(cofins_rate::text, ''),
+			COALESCE(ipi_rate::text, ''),
+			COALESCE(fcp_rate::text, ''),
+			COALESCE(icms_st_rate::text, ''),
+			COALESCE(ibs_rate::text, ''),
+			COALESCE(cbs_rate::text, ''),
+			COALESCE(selective_tax_rate::text, ''),
+			COALESCE(ipi_cst, ''),
+			COALESCE(ipi_cenq, ''),
+			COALESCE(selective_tax_code, ''),
+			COALESCE(confidence_score, 0),
+			COALESCE(source_reference, ''),
+			COALESCE(source_url, ''),
+			COALESCE(notes, '')
+		FROM ncm_tax_profiles
+		WHERE is_active = TRUE
+		  AND (valid_from <= CURRENT_DATE)
+		  AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+		  AND (
+			(match_type = 'exact' AND ncm_pattern = $1)
+			OR (match_type = 'prefix' AND (ncm_pattern = '' OR $1 LIKE (ncm_pattern || '%')))
+		  )
+		  AND (uf IS NULL OR uf = '' OR UPPER(uf) = UPPER($2))
+		  AND (operation_code = '' OR LOWER(operation_code) = LOWER($3))
+		  AND (tax_regime = '' OR LOWER(tax_regime) = LOWER($4))
+		  AND (target_crt = '' OR target_crt = $5)
+		ORDER BY
+			tax_type,
+			CASE WHEN UPPER(COALESCE(uf, '')) = UPPER($2) AND $2 <> '' THEN 0 ELSE 1 END,
+			CASE WHEN LOWER(operation_code) = LOWER($3) AND $3 <> '' THEN 0 ELSE 1 END,
+			CASE WHEN LOWER(tax_regime) = LOWER($4) AND $4 <> '' THEN 0 ELSE 1 END,
+			CASE WHEN target_crt = $5 AND $5 <> '' THEN 0 ELSE 1 END,
+			CASE WHEN match_type = 'exact' THEN 0 ELSE 1 END,
+			LENGTH(ncm_pattern) DESC,
+			confidence_score DESC
+	`
+
+	rows, err := r.db.Query(ctx, query, ncmCode, uf, operationCode, taxRegime, targetCRT)
+	if err != nil {
+		return nil, fmt.Errorf("find ncm tax profiles: %w", err)
+	}
+	defer rows.Close()
+
+	seenTaxTypes := map[string]bool{}
+	profiles := make([]NCMTaxProfile, 0, 4)
+
+	for rows.Next() {
+		var item NCMTaxProfile
+		if err := rows.Scan(
+			&item.NCMPattern,
+			&item.MatchType,
+			&item.TaxType,
+			&item.TaxGroup,
+			&item.UF,
+			&item.OperationCode,
+			&item.TaxRegime,
+			&item.TargetCRT,
+			&item.CEST,
+			&item.CFOP,
+			&item.ICMSCST,
+			&item.CSOSN,
+			&item.PISCST,
+			&item.COFINSCST,
+			&item.PISRevenueCode,
+			&item.COFINSRevenueCode,
+			&item.CClasTrib,
+			&item.ICMSRate,
+			&item.PISRate,
+			&item.COFINSRate,
+			&item.IPIRate,
+			&item.FCPRate,
+			&item.ICMSSTRate,
+			&item.IBSRate,
+			&item.CBSRate,
+			&item.SelectiveTaxRate,
+			&item.IPICST,
+			&item.IPICEnq,
+			&item.SelectiveTaxCode,
+			&item.ConfidenceScore,
+			&item.SourceReference,
+			&item.SourceURL,
+			&item.Notes,
+		); err != nil {
+			return nil, fmt.Errorf("scan ncm tax profile: %w", err)
+		}
+
+		taxType := strings.TrimSpace(item.TaxType)
+		if seenTaxTypes[taxType] {
+			continue
+		}
+		seenTaxTypes[taxType] = true
+		profiles = append(profiles, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ncm tax profiles: %w", err)
+	}
+
+	return profiles, nil
+}
+
+func (r *Repository) FindStateICMSRule(
+	ctx context.Context,
+	ncmCode string,
+	cest string,
+	uf string,
+	operationCode string,
+	taxRegime string,
+	targetCRT string,
+) (*StateICMSRule, error) {
+	ncmCode = normalizeNCMCode(ncmCode)
+	cest = normalizeCESTCode(cest)
+	uf = strings.ToUpper(strings.TrimSpace(uf))
+	operationCode = strings.TrimSpace(operationCode)
+	taxRegime = strings.TrimSpace(taxRegime)
+	targetCRT = strings.TrimSpace(targetCRT)
+
+	if uf == "" {
+		return nil, fmt.Errorf("uf is required")
+	}
+
+	query := `
+		SELECT
+			COALESCE(uf, ''),
+			COALESCE(ncm_pattern, ''),
+			COALESCE(match_type, ''),
+			COALESCE(cest, ''),
+			COALESCE(operation_code, ''),
+			COALESCE(tax_regime, ''),
+			COALESCE(target_crt, ''),
+			COALESCE(rule_kind, ''),
+			COALESCE(cfop, ''),
+			COALESCE(icms_cst, ''),
+			COALESCE(csosn, ''),
+			COALESCE(icms_rate::text, ''),
+			COALESCE(fcp_rate::text, ''),
+			COALESCE(icms_st_rate::text, ''),
+			COALESCE(icms_base_reduction::text, ''),
+			COALESCE(cbenef, ''),
+			COALESCE(confidence_score, 0),
+			COALESCE(source_reference, ''),
+			COALESCE(source_url, ''),
+			COALESCE(notes, '')
+		FROM state_icms_rules
+		WHERE is_active = TRUE
+		  AND UPPER(uf) = UPPER($3)
+		  AND (valid_from <= CURRENT_DATE)
+		  AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+		  AND (
+			ncm_pattern = ''
+			OR (match_type = 'exact' AND ncm_pattern = $1)
+			OR (match_type = 'prefix' AND $1 LIKE (ncm_pattern || '%'))
+		  )
+		  AND (cest = '' OR cest = $2)
+		  AND (operation_code = '' OR LOWER(operation_code) = LOWER($4))
+		  AND (tax_regime = '' OR LOWER(tax_regime) = LOWER($5))
+		  AND (target_crt = '' OR target_crt = $6)
+		ORDER BY
+			CASE WHEN cest = $2 AND $2 <> '' THEN 0 ELSE 1 END,
+			CASE WHEN LOWER(operation_code) = LOWER($4) AND $4 <> '' THEN 0 ELSE 1 END,
+			CASE WHEN LOWER(tax_regime) = LOWER($5) AND $5 <> '' THEN 0 ELSE 1 END,
+			CASE WHEN target_crt = $6 AND $6 <> '' THEN 0 ELSE 1 END,
+			CASE WHEN ncm_pattern = '' THEN 1 ELSE 0 END,
+			CASE WHEN match_type = 'exact' THEN 0 ELSE 1 END,
+			LENGTH(ncm_pattern) DESC,
+			CASE WHEN rule_kind = 'ST' THEN 0 ELSE 1 END,
+			confidence_score DESC
+		LIMIT 1
+	`
+
+	var item StateICMSRule
+	if err := r.db.QueryRow(ctx, query, ncmCode, cest, uf, operationCode, taxRegime, targetCRT).Scan(
+		&item.UF,
+		&item.NCMPattern,
+		&item.MatchType,
+		&item.CEST,
+		&item.OperationCode,
+		&item.TaxRegime,
+		&item.TargetCRT,
+		&item.RuleKind,
+		&item.CFOP,
+		&item.ICMSCST,
+		&item.CSOSN,
+		&item.ICMSRate,
+		&item.FCPRate,
+		&item.ICMSSTRate,
+		&item.ICMSBaseReduction,
+		&item.CBenef,
+		&item.ConfidenceScore,
+		&item.SourceReference,
+		&item.SourceURL,
+		&item.Notes,
+	); err != nil {
+		return nil, fmt.Errorf("find state icms rule: %w", err)
+	}
+
+	return &item, nil
+}
+
 func (r *Repository) findByNCMCatalog(ctx context.Context, normalizedNCMCode string) (*TaxMatch, error) {
 	query := `
 		SELECT
@@ -1035,7 +1336,7 @@ func (r *Repository) FindSuggestedCFOP(
 
 	if defaultCFOP != "" {
 		item, err := r.findCFOPByCode(ctx, defaultCFOP)
-		if err == nil && item != nil {
+		if err == nil && item != nil && isCFOPCompatibleWithContext(item.Code, operationType, emitterUF, recipientUF) {
 			item.ConfidenceScore = 0.98
 			return item, nil
 		}
@@ -1176,16 +1477,39 @@ func preferredCFOPPrefixes(operationType string, emitterUF string, recipientUF s
 	switch operationType {
 	case "entrada":
 		if sameUF {
-			return []string{"1", "2", "3"}
+			return []string{"1"}
 		}
-		return []string{"2", "1", "3"}
+		return []string{"2"}
 	case "saida":
 		if sameUF {
-			return []string{"5", "6", "7"}
+			return []string{"5"}
 		}
-		return []string{"6", "5", "7"}
+		return []string{"6"}
 	default:
 		return []string{}
+	}
+}
+
+func isCFOPCompatibleWithContext(cfop string, operationType string, emitterUF string, recipientUF string) bool {
+	cfop = normalizeCFOPCode(cfop)
+	if len(cfop) != 4 {
+		return false
+	}
+
+	sameUF := strings.EqualFold(strings.TrimSpace(emitterUF), strings.TrimSpace(recipientUF))
+	switch operationType {
+	case "entrada":
+		if sameUF {
+			return cfop[0] == '1'
+		}
+		return cfop[0] == '2'
+	case "saida":
+		if sameUF {
+			return cfop[0] == '5'
+		}
+		return cfop[0] == '6'
+	default:
+		return true
 	}
 }
 

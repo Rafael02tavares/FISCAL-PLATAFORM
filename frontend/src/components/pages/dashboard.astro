@@ -8,11 +8,11 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
 >
   <section class="dashboard-hero card card--hero">
     <div class="dashboard-hero__copy">
-      <span class="dashboard-kicker">Portal de consulta</span>
-      <h2>Consulte tributos por produto, nota fiscal, NCM ou operacao</h2>
+      <span class="dashboard-kicker">Central fiscal</span>
+      <h2>Consulte, valide e alimente sua base tributaria</h2>
       <p>
-        Esta deve ser a entrada principal do usuario final. A partir daqui ele consegue consultar a
-        tributacao sugerida, importar XML para leitura fiscal e navegar pelo catalogo consultavel da plataforma.
+        A dashboard agora mostra o que importa para operar: contexto da empresa, volume de notas,
+        produtos consultaveis e atalhos para gerar sugestoes fiscais com seguranca.
       </p>
 
       <div class="dashboard-hero__actions">
@@ -24,7 +24,7 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
     </div>
 
       <div class="dashboard-radar" aria-hidden="true">
-      <div class="dashboard-radar__badge">Rotas principais</div>
+      <div class="dashboard-radar__badge">Fluxo principal</div>
       <svg viewBox="0 0 360 250" class="dashboard-radar__svg" role="img">
         <defs>
           <linearGradient id="dashGlow" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -52,27 +52,46 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
 
   <section class="grid grid--4 dashboard-metrics">
     <article class="card card--padded metric-card metric-card--teal">
-      <span class="metric-card__label">Notas para consulta</span>
+      <span class="metric-card__label">Notas analisadas</span>
       <strong class="metric-card__value" id="stat-invoices">--</strong>
       <p class="metric-card__detail" id="stat-invoices-detail">Lendo historico recente...</p>
     </article>
 
     <article class="card card--padded metric-card metric-card--sky">
+      <span class="metric-card__label">Produtos consultaveis</span>
+      <strong class="metric-card__value" id="stat-products">--</strong>
+      <p class="metric-card__detail" id="stat-products-detail">Medindo memoria fiscal...</p>
+    </article>
+
+    <article class="card card--padded metric-card metric-card--amber">
       <span class="metric-card__label">Empresa ativa</span>
       <strong class="metric-card__value metric-card__value--sm" id="stat-organization">--</strong>
       <p class="metric-card__detail" id="stat-organization-detail">Buscando contexto da sessao...</p>
     </article>
 
-    <article class="card card--padded metric-card metric-card--amber">
-      <span class="metric-card__label">Status da API</span>
-      <strong class="metric-card__value" id="stat-api">--</strong>
+    <article class="card card--padded metric-card metric-card--slate">
+      <span class="metric-card__label">API fiscal</span>
+      <strong class="metric-card__value metric-card__value--sm" id="stat-api">--</strong>
       <p class="metric-card__detail" id="stat-api-detail">Verificando saude da plataforma...</p>
     </article>
+  </section>
 
-    <article class="card card--padded metric-card metric-card--slate">
-      <span class="metric-card__label">Ultima nota lida</span>
-      <strong class="metric-card__value metric-card__value--sm" id="stat-last-issued">--</strong>
-      <p class="metric-card__detail" id="stat-last-issued-detail">Aguardando leitura da base...</p>
+  <section class="dashboard-command-center">
+    <article class="command-card command-card--primary">
+      <span>Proximo passo recomendado</span>
+      <strong id="next-action-title">Carregando...</strong>
+      <p id="next-action-detail">Vamos decidir se o melhor caminho agora e consultar, importar XML ou revisar a base.</p>
+      <a id="next-action-link" class="button-link" href="/simulacao">Abrir consulta</a>
+    </article>
+    <article class="command-card">
+      <span>Contexto operacional</span>
+      <strong id="context-summary">Empresa e regime</strong>
+      <p id="context-detail">As sugestoes usam UF e regime tributario da organizacao ativa.</p>
+    </article>
+    <article class="command-card">
+      <span>Ultima nota lida</span>
+      <strong id="stat-last-issued">--</strong>
+      <p id="stat-last-issued-detail">Aguardando leitura da base...</p>
     </article>
   </section>
 
@@ -80,8 +99,8 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
     <article class="card card--padded">
       <div class="panel-head">
         <div>
-          <span class="panel-head__kicker">Leitura da base</span>
-          <h3 class="section-title">Prontidao para consulta</h3>
+          <span class="panel-head__kicker">Memoria fiscal</span>
+          <h3 class="section-title">Cobertura dos produtos</h3>
         </div>
       </div>
       <div id="dashboard-pulse" class="dashboard-note">Carregando sinais da operacao...</div>
@@ -91,7 +110,7 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
       <div class="panel-head">
         <div>
           <span class="panel-head__kicker">Portas de entrada</span>
-          <h3 class="section-title">Como o usuario consulta</h3>
+          <h3 class="section-title">Rotas mais usadas</h3>
         </div>
       </div>
       <div class="quick-actions-grid">
@@ -269,6 +288,60 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
       line-height: 1.5;
     }
 
+    .dashboard-command-center {
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr 0.9fr;
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .command-card {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+      min-height: 100%;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(186, 200, 214, 0.86);
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 28%),
+        linear-gradient(180deg, #ffffff, #f8fafc);
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.04);
+    }
+
+    .command-card--primary {
+      border-color: rgba(15, 118, 110, 0.22);
+      background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 30%),
+        linear-gradient(135deg, #f0fdfa, #ffffff 58%, #fffbeb);
+    }
+
+    .command-card span {
+      color: #0f766e;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .command-card strong {
+      color: var(--text);
+      font-size: clamp(18px, 2vw, 24px);
+      line-height: 1.12;
+    }
+
+    .command-card p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .command-card .button-link {
+      width: fit-content;
+      margin-top: 4px;
+    }
+
     .panel-head {
       display: flex;
       align-items: flex-start;
@@ -288,6 +361,46 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
     .pulse-grid {
       display: grid;
       gap: 14px;
+    }
+
+    .pulse-grid__headline {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid #dbe4ec;
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.1), transparent 32%),
+        linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .pulse-score {
+      display: grid;
+      place-items: center;
+      width: 76px;
+      height: 76px;
+      border-radius: 999px;
+      border: 9px solid #ccfbf1;
+      background: #ffffff;
+      color: #0f766e;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .pulse-grid__headline strong {
+      display: block;
+      color: var(--text);
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .pulse-grid__headline p {
+      margin: 0;
+      color: var(--text-muted);
+      line-height: 1.45;
+      font-size: 13px;
     }
 
     .pulse-strip {
@@ -449,6 +562,7 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
 
     @media (max-width: 1100px) {
       .dashboard-hero,
+      .dashboard-command-center,
       .quick-actions-grid,
       .pulse-summary {
         grid-template-columns: 1fr;
@@ -458,17 +572,25 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
 
   <script>
     import { apiFetch } from "../../lib/api";
+    import { listCatalogProducts } from "../../lib/catalog-products";
     import { listInvoices } from "../../lib/invoices";
     import { listOrganizations } from "../../lib/organizations";
 
     const statInvoices = document.getElementById("stat-invoices");
     const statInvoicesDetail = document.getElementById("stat-invoices-detail");
+    const statProducts = document.getElementById("stat-products");
+    const statProductsDetail = document.getElementById("stat-products-detail");
     const statOrganization = document.getElementById("stat-organization");
     const statOrganizationDetail = document.getElementById("stat-organization-detail");
     const statAPI = document.getElementById("stat-api");
     const statAPIDetail = document.getElementById("stat-api-detail");
     const statLastIssued = document.getElementById("stat-last-issued");
     const statLastIssuedDetail = document.getElementById("stat-last-issued-detail");
+    const nextActionTitle = document.getElementById("next-action-title");
+    const nextActionDetail = document.getElementById("next-action-detail");
+    const nextActionLink = document.getElementById("next-action-link");
+    const contextSummary = document.getElementById("context-summary");
+    const contextDetail = document.getElementById("context-detail");
     const pulse = document.getElementById("dashboard-pulse");
     const result = document.getElementById("dashboard-result");
     const adminLink = document.querySelector(".dashboard-admin-link");
@@ -488,6 +610,25 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
       name: string;
       cnpj: string;
       role?: string;
+      uf?: string;
+      tax_regime?: string;
+      crt?: string;
+    }
+
+    interface CatalogProduct {
+      id: string;
+      gtin?: string;
+      description?: string;
+      profile?: {
+        ncm?: string;
+        cest?: string;
+        cfop?: string;
+        csosn?: string;
+        icms_cst?: string;
+        pis_cst?: string;
+        cofins_cst?: string;
+        cclas_trib?: string;
+      };
     }
 
     function formatDate(value?: string) {
@@ -528,27 +669,66 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
       return normalized === "owner" || normalized === "admin" || normalized === "analyst";
     }
 
-    function renderPulse(invoices: Invoice[]) {
+    function renderNextAction(invoices: Invoice[], products: CatalogProduct[]) {
+      if (!nextActionTitle || !nextActionDetail || !(nextActionLink instanceof HTMLAnchorElement)) return;
+
+      if (!products.length && !invoices.length) {
+        nextActionTitle.textContent = "Importe uma NF-e para iniciar a base";
+        nextActionDetail.textContent = "O XML cadastra produtos rapidamente e alimenta a consulta tributaria.";
+        nextActionLink.href = "/importacoes";
+        nextActionLink.textContent = "Importar XML";
+        return;
+      }
+
+      if (products.length < 10) {
+        nextActionTitle.textContent = "Aumente a memoria de produtos";
+        nextActionDetail.textContent = "Importe mais notas ou revise produtos para melhorar a cobertura das sugestoes.";
+        nextActionLink.href = "/produtos";
+        nextActionLink.textContent = "Abrir catalogo";
+        return;
+      }
+
+      nextActionTitle.textContent = "Consulte tributos com a base atual";
+      nextActionDetail.textContent = "A memoria fiscal ja tem volume para consultas por descricao, GTIN ou NCM.";
+      nextActionLink.href = "/simulacao";
+      nextActionLink.textContent = "Consultar tributos";
+    }
+
+    function renderPulse(invoices: Invoice[], products: CatalogProduct[]) {
       if (!pulse) return;
 
-      const total = invoices.length;
+      const total = products.length;
+      const withGTIN = products.filter((product) => String(product.gtin || "").trim() !== "").length;
+      const withNCM = products.filter((product) => String(product.profile?.ncm || "").trim() !== "").length;
+      const withCEST = products.filter((product) => String(product.profile?.cest || "").trim() !== "").length;
+      const withTax = products.filter((product) =>
+        Boolean(product.profile?.csosn || product.profile?.icms_cst || product.profile?.pis_cst || product.profile?.cofins_cst)
+      ).length;
+      const readiness = Math.round((percentage(withGTIN, total) + percentage(withNCM, total) + percentage(withTax, total)) / 3);
+
       const processed = invoices.filter((invoice) =>
         String(invoice.status || "").toLowerCase().includes("process")
       ).length;
-      const withEmitter = invoices.filter((invoice) => String(invoice.emitter_name || "").trim() !== "").length;
-      const withDate = invoices.filter((invoice) => String(invoice.issued_at || "").trim() !== "").length;
       const uniqueEmitters = new Set(
         invoices.map((invoice) => String(invoice.emitter_name || "").trim()).filter(Boolean)
       ).size;
 
       const strips = [
-        { label: "Notas processadas", count: processed },
-        { label: "Emitente identificado", count: withEmitter },
-        { label: "Data identificada", count: withDate },
+        { label: "Produtos com GTIN", count: withGTIN },
+        { label: "Produtos com NCM", count: withNCM },
+        { label: "Produtos com CEST", count: withCEST },
+        { label: "Produtos com tributacao", count: withTax },
       ];
 
       pulse.innerHTML = `
         <div class="pulse-grid">
+          <div class="pulse-grid__headline">
+            <div class="pulse-score">${readiness}%</div>
+            <div>
+              <strong>${readiness >= 80 ? "Base forte para consulta" : readiness >= 50 ? "Base em evolucao" : "Base inicial"}</strong>
+              <p>${products.length} produto(s) consultaveis, ${invoices.length} nota(s) importada(s) e ${processed} nota(s) processada(s).</p>
+            </div>
+          </div>
           ${strips
             .map((strip) => {
               const fill = percentage(strip.count, total);
@@ -571,8 +751,8 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
               <strong>${uniqueEmitters || 0}</strong>
             </div>
             <div class="pulse-summary__card">
-              <span>Ritmo de carga</span>
-              <strong>${total >= 10 ? "Forte" : total >= 3 ? "Moderado" : "Inicial"}</strong>
+              <span>Ritmo da base</span>
+              <strong>${products.length >= 100 ? "Forte" : products.length >= 20 ? "Moderado" : "Inicial"}</strong>
             </div>
           </div>
         </div>
@@ -598,10 +778,15 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
         if (statAPI) statAPI.textContent = "Online";
         if (statAPIDetail) statAPIDetail.textContent = "API respondeu com sucesso ao healthcheck.";
 
-        const [invoiceData, organizationData] = await Promise.all([listInvoices(), listOrganizations()]);
+        const [invoiceData, organizationData, productData] = await Promise.all([
+          listInvoices(),
+          listOrganizations(),
+          listCatalogProducts("", { limit: 500, offset: 0 }),
+        ]);
 
         const invoices: Invoice[] = invoiceData.invoices || [];
         const organizations: Organization[] = organizationData.organizations || [];
+        const products: CatalogProduct[] = productData.items || [];
         const activeOrganization =
           organizations.find((organization) => organization.id === organizationId) || null;
         const adminArea = hasAdminAreaAccess(activeOrganization?.role);
@@ -621,11 +806,30 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
               : "Importe XMLs para ativar as consultas por documento.";
         }
 
+        if (statProducts) statProducts.textContent = String(products.length);
+        if (statProductsDetail) {
+          statProductsDetail.textContent =
+            products.length > 0
+              ? `${products.filter((product) => product.profile?.ncm).length} com NCM e ${products.filter((product) => product.profile?.cest).length} com CEST.`
+              : "Importe notas para cadastrar produtos automaticamente.";
+        }
+
         if (statOrganization) statOrganization.textContent = activeOrganization?.name || "Nao encontrada";
         if (statOrganizationDetail) {
           statOrganizationDetail.textContent = activeOrganization?.cnpj
             ? `CNPJ ${activeOrganization.cnpj}${activeOrganization.role ? ` - ${activeOrganization.role}` : ""}`
             : "Sessao sem contexto de empresa completo.";
+        }
+
+        if (contextSummary) {
+          contextSummary.textContent = activeOrganization
+            ? `${activeOrganization.uf || "UF nao definida"} · ${activeOrganization.tax_regime || "Regime nao definido"}`
+            : "Contexto nao encontrado";
+        }
+        if (contextDetail) {
+          contextDetail.textContent = activeOrganization?.crt
+            ? `CRT ${activeOrganization.crt}. As sugestoes usam esses dados como padrao de saida.`
+            : "Complete UF, regime e CRT em Organizacoes para melhorar o motor.";
         }
 
         if (statLastIssued) statLastIssued.textContent = latestInvoice ? formatDate(latestInvoice.issued_at) : "--";
@@ -635,7 +839,8 @@ import AppLayout from "../../layouts/DashboardLayout.astro";
             : "Nenhuma emissao localizada na base atual.";
         }
 
-        renderPulse(invoices);
+        renderNextAction(invoices, products);
+        renderPulse(invoices, products);
 
         if (!result) return;
 

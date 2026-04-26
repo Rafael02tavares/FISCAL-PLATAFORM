@@ -1,8 +1,15 @@
 import { getToken } from "../lib/auth";
-import { listImportBatches, uploadCBenefCatalog, uploadCESTCatalog, uploadCFOPCatalog, uploadNCMCatalog } from "../lib/admin-imports";
+import {
+  listImportBatches,
+  uploadCBenefCatalog,
+  uploadCESTCatalog,
+  uploadCFOPCatalog,
+  uploadNCMCatalog,
+  uploadStateICMSSTCatalog,
+} from "../lib/admin-imports";
 import * as XLSX from "xlsx";
 
-type CatalogType = "ncm" | "cfop" | "cest" | "cbenef";
+type CatalogType = "ncm" | "cfop" | "cest" | "cbenef" | "state-st";
 
 type ImportConfig = {
   type: CatalogType;
@@ -10,6 +17,7 @@ type ImportConfig = {
   sourceInputId: string;
   versionInputId: string;
   ufInputId?: string;
+  sourceUrlInputId?: string;
   fileInputId: string;
   contentInputId?: string;
   feedbackId: string;
@@ -17,7 +25,15 @@ type ImportConfig = {
   defaultSourceName: string;
   importingLabel: string;
   successFallback: string;
-  upload: (file: File | null, sourceName: string, versionLabel: string, content?: string, uf?: string) => Promise<any>;
+  keepOriginalFile?: boolean;
+  upload: (
+    file: File | null,
+    sourceName: string,
+    versionLabel: string,
+    content?: string,
+    uf?: string,
+    sourceUrl?: string
+  ) => Promise<any>;
 };
 
 const batchesBox = document.getElementById("import-batches");
@@ -77,6 +93,22 @@ const configs: ImportConfig[] = [
     importingLabel: "Importando cBenef...",
     successFallback: "Importacao de cBenef concluida com sucesso.",
     upload: uploadCBenefCatalog,
+  },
+  {
+    type: "state-st",
+    formId: "state-st-import-form",
+    sourceInputId: "state-st-source-name",
+    versionInputId: "state-st-version-label",
+    ufInputId: "state-st-uf",
+    sourceUrlInputId: "state-st-source-url",
+    fileInputId: "state-st-file",
+    feedbackId: "state-st-import-feedback",
+    submitButtonId: "submit-state-st-import",
+    defaultSourceName: "CONFAZ ST GO",
+    importingLabel: "Importando ST estadual...",
+    successFallback: "Importacao de ST estadual concluida com sucesso.",
+    keepOriginalFile: true,
+    upload: uploadStateICMSSTCatalog,
   },
 ];
 
@@ -194,6 +226,9 @@ function wireImportForm(config: ImportConfig) {
   const sourceInput = document.getElementById(config.sourceInputId) as HTMLInputElement | null;
   const versionInput = document.getElementById(config.versionInputId) as HTMLInputElement | null;
   const ufInput = config.ufInputId ? (document.getElementById(config.ufInputId) as HTMLInputElement | null) : null;
+  const sourceUrlInput = config.sourceUrlInputId
+    ? (document.getElementById(config.sourceUrlInputId) as HTMLInputElement | null)
+    : null;
   const fileInput = document.getElementById(config.fileInputId) as HTMLInputElement | null;
   const contentInput = config.contentInputId
     ? (document.getElementById(config.contentInputId) as HTMLTextAreaElement | null)
@@ -214,6 +249,7 @@ function wireImportForm(config: ImportConfig) {
     const sourceName = sourceInput?.value?.trim() || config.defaultSourceName;
     const versionLabel = versionInput?.value?.trim() || "";
     const uf = ufInput?.value?.trim().toUpperCase() || "";
+    const sourceUrl = sourceUrlInput?.value?.trim() || "";
     const originalLabel = submitButton?.textContent || config.importingLabel;
 
     if (submitButton) {
@@ -224,8 +260,8 @@ function wireImportForm(config: ImportConfig) {
     setFeedback(feedback, `Processando arquivo de ${config.type.toUpperCase()}. Isso pode levar alguns instantes.`, "muted");
 
     try {
-      const normalizedFile = file ? await normalizeImportFile(file) : null;
-      const response = await config.upload(normalizedFile, sourceName, versionLabel, rawContent, uf);
+      const normalizedFile = file && !config.keepOriginalFile ? await normalizeImportFile(file) : file || null;
+      const response = await config.upload(normalizedFile, sourceName, versionLabel, rawContent, uf, sourceUrl);
       setFeedback(
         feedback,
         typeof response?.message === "string" ? response.message : config.successFallback,
@@ -237,8 +273,11 @@ function wireImportForm(config: ImportConfig) {
       if (sourceInput) {
         sourceInput.value = config.defaultSourceName;
       }
-      if (ufInput && config.type === "cbenef") {
+      if (ufInput && (config.type === "cbenef" || config.type === "state-st")) {
         ufInput.value = uf || "GO";
+      }
+      if (sourceUrlInput && sourceUrl) {
+        sourceUrlInput.value = sourceUrl;
       }
     } catch (error) {
       setFeedback(feedback, `Falha na importacao: ${String(error)}`, "error");

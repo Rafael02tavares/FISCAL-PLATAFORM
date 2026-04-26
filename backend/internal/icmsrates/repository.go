@@ -31,6 +31,32 @@ type StateRate struct {
 	Notes           string `json:"notes"`
 }
 
+type StateICMSRule struct {
+	ID                string `json:"id"`
+	UF                string `json:"uf"`
+	NCMPattern        string `json:"ncm_pattern"`
+	MatchType         string `json:"match_type"`
+	CEST              string `json:"cest"`
+	OperationCode     string `json:"operation_code"`
+	TaxRegime         string `json:"tax_regime"`
+	TargetCRT         string `json:"target_crt"`
+	RuleKind          string `json:"rule_kind"`
+	CFOP              string `json:"cfop"`
+	ICMSCST           string `json:"icms_cst"`
+	CSOSN             string `json:"csosn"`
+	ICMSRate          string `json:"icms_rate"`
+	FCPRate           string `json:"fcp_rate"`
+	ICMSSTRate        string `json:"icms_st_rate"`
+	ICMSBaseReduction string `json:"icms_base_reduction"`
+	CBenef            string `json:"cbenef"`
+	ConfidenceScore   string `json:"confidence_score"`
+	SourceReference   string `json:"source_reference"`
+	SourceURL         string `json:"source_url"`
+	Notes             string `json:"notes"`
+	ValidFrom         string `json:"valid_from"`
+	ValidTo           string `json:"valid_to"`
+}
+
 type UpsertStateRateParams struct {
 	UF              string
 	InternalRate    string
@@ -40,6 +66,102 @@ type UpsertStateRateParams struct {
 	SourceReference string
 	SourceURL       string
 	Notes           string
+}
+
+func (r *Repository) ListStateICMSRules(ctx context.Context, uf string, limit int) ([]StateICMSRule, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 300
+	}
+
+	if ok, err := r.stateRulesTableExists(ctx); err != nil {
+		return nil, err
+	} else if !ok {
+		return []StateICMSRule{}, nil
+	}
+
+	uf = strings.ToUpper(strings.TrimSpace(uf))
+	query := `
+		SELECT
+			id::text,
+			COALESCE(uf, ''),
+			COALESCE(ncm_pattern, ''),
+			COALESCE(match_type, ''),
+			COALESCE(cest, ''),
+			COALESCE(operation_code, ''),
+			COALESCE(tax_regime, ''),
+			COALESCE(target_crt, ''),
+			COALESCE(rule_kind, ''),
+			COALESCE(cfop, ''),
+			COALESCE(icms_cst, ''),
+			COALESCE(csosn, ''),
+			COALESCE(icms_rate::text, ''),
+			COALESCE(fcp_rate::text, ''),
+			COALESCE(icms_st_rate::text, ''),
+			COALESCE(icms_base_reduction::text, ''),
+			COALESCE(cbenef, ''),
+			COALESCE(confidence_score::text, ''),
+			COALESCE(source_reference, ''),
+			COALESCE(source_url, ''),
+			COALESCE(notes, ''),
+			TO_CHAR(valid_from, 'YYYY-MM-DD'),
+			COALESCE(TO_CHAR(valid_to, 'YYYY-MM-DD'), '')
+		FROM state_icms_rules
+		WHERE is_active = TRUE
+		  AND ($1 = '' OR UPPER(uf) = UPPER($1))
+		ORDER BY
+			uf ASC,
+			CASE WHEN ncm_pattern = '' THEN 1 ELSE 0 END,
+			CASE WHEN match_type = 'exact' THEN 0 ELSE 1 END,
+			LENGTH(ncm_pattern) DESC,
+			confidence_score DESC,
+			created_at DESC
+		LIMIT $2
+	`
+
+	rows, err := r.db.Query(ctx, query, uf, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list state icms rules: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]StateICMSRule, 0, limit)
+	for rows.Next() {
+		var item StateICMSRule
+		if err := rows.Scan(
+			&item.ID,
+			&item.UF,
+			&item.NCMPattern,
+			&item.MatchType,
+			&item.CEST,
+			&item.OperationCode,
+			&item.TaxRegime,
+			&item.TargetCRT,
+			&item.RuleKind,
+			&item.CFOP,
+			&item.ICMSCST,
+			&item.CSOSN,
+			&item.ICMSRate,
+			&item.FCPRate,
+			&item.ICMSSTRate,
+			&item.ICMSBaseReduction,
+			&item.CBenef,
+			&item.ConfidenceScore,
+			&item.SourceReference,
+			&item.SourceURL,
+			&item.Notes,
+			&item.ValidFrom,
+			&item.ValidTo,
+		); err != nil {
+			return nil, fmt.Errorf("scan state icms rule: %w", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate state icms rules: %w", err)
+	}
+
+	return items, nil
 }
 
 func (r *Repository) ListStateRates(ctx context.Context) ([]StateRate, error) {
@@ -218,6 +340,23 @@ func (r *Repository) tableExists(ctx context.Context) (bool, error) {
 	var exists bool
 	if err := r.db.QueryRow(ctx, query).Scan(&exists); err != nil {
 		return false, fmt.Errorf("check icms_state_rates table: %w", err)
+	}
+	return exists, nil
+}
+
+func (r *Repository) stateRulesTableExists(ctx context.Context) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT 1
+			FROM information_schema.tables
+			WHERE table_schema = 'public'
+			  AND table_name = 'state_icms_rules'
+		)
+	`
+
+	var exists bool
+	if err := r.db.QueryRow(ctx, query).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check state_icms_rules table: %w", err)
 	}
 	return exists, nil
 }

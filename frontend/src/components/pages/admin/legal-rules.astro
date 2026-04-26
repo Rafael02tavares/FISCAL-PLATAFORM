@@ -3,9 +3,10 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
 ---
 
 <AppLayout title="Admin · Regras legais">
-  <section class="page-header">
+  <section class="page-header legal-hero">
+    <span class="section-kicker">Governanca fiscal</span>
     <h1>Regras legais</h1>
-    <p>Cadastre regras normativas aplicáveis por tributo, operação, regime e NCM.</p>
+    <p>Cadastre e consulte regras normativas por tributo, operacao, regime, NCM e estado.</p>
   </section>
 
   <section class="panel">
@@ -41,22 +42,22 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
         <select id="value-type" required>
           <option value="">Selecione</option>
           <option value="cfop_rule">CFOP</option>
-          <option value="classification_rule">Classificação</option>
+          <option value="classification_rule">Classificacao</option>
           <option value="cst_rule">CST</option>
-          <option value="rate_rule">Alíquota</option>
-          <option value="benefit_rule">Benefício</option>
+          <option value="rate_rule">Aliquota</option>
+          <option value="benefit_rule">Beneficio</option>
         </select>
       </label>
 
       <label>
-        Operação fiscal
+        Operacao fiscal
         <select id="operation-code">
-          <option value="">Carregando operações...</option>
+          <option value="">Carregando operacoes...</option>
         </select>
       </label>
 
       <label>
-        Regime tributário
+        Regime tributario
         <select id="tax-regime">
           <option value="">Todos</option>
           <option value="simples_nacional">Simples Nacional</option>
@@ -65,7 +66,7 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
         </select>
       </label>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+      <div class="form-grid form-grid--3">
         <label>
           NCM
           <input type="text" id="ncm-code" placeholder="22021000" />
@@ -82,7 +83,7 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
         </label>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+      <div class="form-grid form-grid--3">
         <label>
           CFOP
           <input type="text" id="cfop" />
@@ -99,7 +100,7 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
         </label>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+      <div class="form-grid form-grid--3">
         <label>
           ICMS CST
           <input type="text" id="icms-cst" />
@@ -116,7 +117,7 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
         </label>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="form-grid form-grid--2">
         <label>
           UF origem
           <input type="text" id="emitter-uf" maxlength="2" />
@@ -138,24 +139,24 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
         ></textarea>
       </label>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px;">
+      <div class="form-grid form-grid--4">
         <label>
           Prioridade
           <input type="number" id="priority" value="100" />
         </label>
 
         <label>
-          Confiança base
+          Confianca base
           <input type="text" id="confidence-base" value="0.70" />
         </label>
 
         <label>
-          Vigência inicial
+          Vigencia inicial
           <input type="date" id="effective-from" />
         </label>
 
         <label>
-          Vigência final
+          Vigencia final
           <input type="date" id="effective-to" />
         </label>
       </div>
@@ -166,8 +167,57 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
     <pre id="legal-rule-result" class="result-box"></pre>
   </section>
 
-  <section class="panel" style="margin-top:20px;">
-    <h2>Regras cadastradas</h2>
+  <section class="panel legal-rules-panel">
+    <div class="legal-rules-heading">
+      <div>
+        <span class="section-kicker">Matriz normativa</span>
+        <h2>Regras cadastradas por estado</h2>
+        <p>Filtre por UF, tributo, regime e operacao para enxergar qual regra fortalece a sugestao fiscal em cada estado.</p>
+      </div>
+      <div class="rules-summary" id="rules-summary">
+        <strong>--</strong>
+        <span>regras carregadas</span>
+      </div>
+    </div>
+
+    <div class="rules-filter-bar">
+      <label>
+        Estado
+        <select id="filter-uf">
+          <option value="">Todos os estados</option>
+        </select>
+      </label>
+
+      <label>
+        Tributo
+        <select id="filter-tax-type">
+          <option value="">Todos os tributos</option>
+        </select>
+      </label>
+
+      <label>
+        Regime
+        <select id="filter-tax-regime">
+          <option value="">Todos os regimes</option>
+        </select>
+      </label>
+
+      <label>
+        Operacao
+        <select id="filter-operation">
+          <option value="">Todas as operacoes</option>
+        </select>
+      </label>
+
+      <label class="rules-search">
+        Buscar
+        <input id="filter-search" type="search" placeholder="NCM, CFOP, CST, CEST, fonte..." />
+      </label>
+
+      <button type="button" id="clear-filters" class="secondary-button">Limpar filtros</button>
+    </div>
+
+    <div class="rules-state-strip" id="rules-state-strip"></div>
     <div id="legal-rule-list">Carregando...</div>
   </section>
 
@@ -179,7 +229,16 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
     const listWrapper = document.getElementById("legal-rule-list");
     const sourceSelect = document.getElementById("legal-source-id");
     const operationSelect = document.getElementById("operation-code");
+    const rulesSummary = document.getElementById("rules-summary");
+    const filterUF = document.getElementById("filter-uf");
+    const filterTaxType = document.getElementById("filter-tax-type");
+    const filterTaxRegime = document.getElementById("filter-tax-regime");
+    const filterOperation = document.getElementById("filter-operation");
+    const filterSearch = document.getElementById("filter-search");
+    const clearFilters = document.getElementById("clear-filters");
+    const stateStrip = document.getElementById("rules-state-strip");
     const LEGAL_RULE_DRAFT_KEY = "legal_rule_prefill";
+    let allLegalRules = [];
 
     function setResult(message) {
       if (result) result.textContent = message;
@@ -215,7 +274,11 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
     }
 
     async function listLegalRules() {
-      return apiFetch("/legal-rules?limit=100", { method: "GET" });
+      return apiFetch("/legal-rules?limit=300", { method: "GET" });
+    }
+
+    async function listStateICMSRules() {
+      return apiFetch("/admin/icms-state-rules?limit=500", { method: "GET" });
     }
 
     async function createLegalRule(payload) {
@@ -229,34 +292,262 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
       return apiFetch("/fiscal-operations", { method: "GET" });
     }
 
-    function renderRules(items) {
-      if (!listWrapper) return;
+    function escapeHTML(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
 
-      if (!items?.length) {
-        listWrapper.innerHTML = "<p>Nenhuma regra legal cadastrada.</p>";
+    function normalizeValue(value) {
+      return String(value || "").trim();
+    }
+
+    function stateKey(item) {
+      const emitterUF = normalizeValue(item.emitter_uf).toUpperCase();
+      const recipientUF = normalizeValue(item.recipient_uf).toUpperCase();
+      return recipientUF || emitterUF || "NACIONAL";
+    }
+
+    function formatStateFlow(item) {
+      const emitterUF = normalizeValue(item.emitter_uf).toUpperCase();
+      const recipientUF = normalizeValue(item.recipient_uf).toUpperCase();
+      if (emitterUF && recipientUF) return `${emitterUF} -> ${recipientUF}`;
+      return recipientUF || emitterUF || "Nacional";
+    }
+
+    function uniqueSorted(items, getter) {
+      return [...new Set(items.map(getter).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    }
+
+    function populateFilter(select, values, emptyLabel) {
+      if (!select) return;
+      const current = select.value;
+      select.innerHTML = `
+        <option value="">${emptyLabel}</option>
+        ${values.map((value) => `<option value="${escapeHTML(value)}">${escapeHTML(value)}</option>`).join("")}
+      `;
+      if (values.includes(current)) select.value = current;
+    }
+
+    function populateRuleFilters(items) {
+      populateFilter(filterUF, uniqueSorted(items, stateKey), "Todos os estados");
+      populateFilter(filterTaxType, uniqueSorted(items, (item) => normalizeValue(item.tax_type).toUpperCase()), "Todos os tributos");
+      populateFilter(filterTaxRegime, uniqueSorted(items, (item) => normalizeValue(item.tax_regime)), "Todos os regimes");
+      populateFilter(filterOperation, uniqueSorted(items, (item) => normalizeValue(item.operation_code)), "Todas as operacoes");
+    }
+
+    function mapStateICMSRule(item) {
+      const source = item.source_reference || "Matriz estadual de ICMS";
+      return {
+        id: item.id,
+        source_kind: "state_icms_rule",
+        legal_source_id: source,
+        tax_type: item.rule_kind === "ST" ? "ICMS-ST" : "ICMS",
+        operation_code: item.operation_code,
+        tax_regime: item.tax_regime,
+        ncm_code: item.ncm_pattern,
+        cest: item.cest,
+        cclas_trib: "",
+        cfop: item.cfop,
+        pis_cst: "",
+        cofins_cst: "",
+        icms_cst: item.icms_cst,
+        csosn: item.csosn,
+        cbenef: item.cbenef,
+        emitter_uf: item.uf,
+        recipient_uf: item.uf,
+        value_type: item.match_type === "exact" ? "motor_icms_exato" : item.ncm_pattern ? "motor_icms_prefixo" : "motor_icms_geral",
+        value_content: JSON.stringify({
+          rule_kind: item.rule_kind,
+          match_type: item.match_type,
+          icms_rate: item.icms_rate,
+          fcp_rate: item.fcp_rate,
+          icms_st_rate: item.icms_st_rate,
+          icms_base_reduction: item.icms_base_reduction,
+          source_reference: item.source_reference,
+        }),
+        priority: item.match_type === "exact" ? 20 : item.ncm_pattern ? 40 : 90,
+        confidence_base: item.confidence_score,
+        effective_from: item.valid_from,
+        effective_to: item.valid_to,
+        source_reference: source,
+        source_url: item.source_url,
+        notes: item.notes,
+      };
+    }
+
+    function getFilteredRules() {
+      const selectedUF = normalizeValue(filterUF?.value).toUpperCase();
+      const selectedTaxType = normalizeValue(filterTaxType?.value).toUpperCase();
+      const selectedRegime = normalizeValue(filterTaxRegime?.value).toLowerCase();
+      const selectedOperation = normalizeValue(filterOperation?.value).toLowerCase();
+      const search = normalizeValue(filterSearch?.value).toLowerCase();
+
+      return allLegalRules.filter((item) => {
+        const uf = stateKey(item).toUpperCase();
+        const taxType = normalizeValue(item.tax_type).toUpperCase();
+        const regime = normalizeValue(item.tax_regime).toLowerCase();
+        const operation = normalizeValue(item.operation_code).toLowerCase();
+        const haystack = [
+          item.tax_type,
+          item.value_type,
+          item.operation_code,
+          item.tax_regime,
+          item.ncm_code,
+          item.cest,
+          item.cclas_trib,
+          item.cfop,
+          item.pis_cst,
+          item.cofins_cst,
+          item.icms_cst,
+          item.csosn,
+          item.cbenef,
+          item.emitter_uf,
+          item.recipient_uf,
+          item.legal_source_id,
+          item.source_reference,
+          item.notes,
+          item.value_content,
+        ].map((value) => normalizeValue(value).toLowerCase()).join(" ");
+
+        return (!selectedUF || uf === selectedUF)
+          && (!selectedTaxType || taxType === selectedTaxType)
+          && (!selectedRegime || regime === selectedRegime)
+          && (!selectedOperation || operation === selectedOperation)
+          && (!search || haystack.includes(search));
+      });
+    }
+
+    function updateStateStrip(items) {
+      if (!stateStrip) return;
+      const counts = items.reduce((acc, item) => {
+        const uf = stateKey(item);
+        acc[uf] = (acc[uf] || 0) + 1;
+        return acc;
+      }, {});
+
+      const entries = Object.entries(counts).sort(([a], [b]) => a.localeCompare(b));
+      if (!entries.length) {
+        stateStrip.innerHTML = "";
         return;
       }
 
-      const html = items.map((item) => `
-        <div class="admin-card">
-          <div class="admin-card-top">
-            <strong>${item.tax_type || "-"}</strong>
-            <span class="badge">${item.value_type || "-"}</span>
-          </div>
-          <p><strong>Fonte:</strong> ${item.legal_source_id || "-"}</p>
-          <p><strong>Operação:</strong> ${item.operation_code || "-"}</p>
-          <p><strong>Regime:</strong> ${item.tax_regime || "-"}</p>
-          <p><strong>NCM:</strong> ${item.ncm_code || "-"}</p>
-          <p><strong>CFOP:</strong> ${item.cfop || "-"}</p>
-          <p><strong>UFs:</strong> ${item.emitter_uf || "-"} → ${item.recipient_uf || "-"}</p>
-          <p><strong>Prioridade:</strong> ${item.priority || "-"}</p>
-          <p><strong>Confiança base:</strong> ${item.confidence_base || "-"}</p>
-          <p><strong>JSON:</strong></p>
-          <pre class="json-box">${item.value_content || "{}"}</pre>
-        </div>
+      stateStrip.innerHTML = entries.map(([uf, count]) => `
+        <button class="state-pill" type="button" data-uf="${escapeHTML(uf)}">
+          <strong>${escapeHTML(uf)}</strong>
+          <span>${count}</span>
+        </button>
       `).join("");
 
-      listWrapper.innerHTML = html;
+      stateStrip.querySelectorAll("[data-uf]").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (filterUF) {
+            filterUF.value = button.dataset.uf || "";
+            renderFilteredRules();
+          }
+        });
+      });
+    }
+
+    function renderFilteredRules() {
+      renderRules(getFilteredRules());
+    }
+
+    function renderRules(items) {
+      if (!listWrapper) return;
+
+      if (rulesSummary) {
+        rulesSummary.innerHTML = `<strong>${items?.length || 0}</strong><span>de ${allLegalRules.length} regras</span>`;
+      }
+      updateStateStrip(items || []);
+
+      if (!items?.length) {
+        listWrapper.innerHTML = `
+          <div class="empty-rules">
+            <strong>Nenhuma regra encontrada para os filtros atuais.</strong>
+            <span>Limpe os filtros ou cadastre uma regra estadual para fortalecer o motor.</span>
+          </div>
+        `;
+        return;
+      }
+
+      const grouped = items.reduce((acc, item) => {
+        const uf = stateKey(item);
+        if (!acc[uf]) acc[uf] = [];
+        acc[uf].push(item);
+        return acc;
+      }, {});
+
+      listWrapper.innerHTML = Object.entries(grouped)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([uf, rules]) => `
+          <article class="state-rule-group">
+            <header class="state-rule-group__header">
+              <div>
+                <span class="state-label">Estado</span>
+                <strong>${escapeHTML(uf)}</strong>
+              </div>
+              <span>${rules.length} regra(s)</span>
+            </header>
+
+            <div class="rules-table-wrap">
+              <table class="rules-table">
+                <thead>
+                  <tr>
+                    <th>Tributo</th>
+                    <th>Operacao</th>
+                    <th>Regime</th>
+                    <th>UF</th>
+                    <th>Classificacao</th>
+                    <th>Resultado</th>
+                    <th>Forca</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rules.map((item) => {
+                    const output = [
+                      item.cfop ? `CFOP ${item.cfop}` : "",
+                      item.icms_cst ? `ICMS CST ${item.icms_cst}` : "",
+                      item.csosn ? `CSOSN ${item.csosn}` : "",
+                      item.pis_cst ? `PIS ${item.pis_cst}` : "",
+                      item.cofins_cst ? `COFINS ${item.cofins_cst}` : "",
+                      item.cbenef ? `cBenef ${item.cbenef}` : "",
+                    ].filter(Boolean);
+                    const classification = [
+                      item.ncm_code ? `NCM ${item.ncm_code}` : "",
+                      item.cest ? `CEST ${item.cest}` : "",
+                      item.cclas_trib ? `cClasTrib ${item.cclas_trib}` : "",
+                    ].filter(Boolean);
+                    const confidenceWidth = Math.min(100, Math.max(0, Number(item.confidence_base || 0) * 100 || 0));
+                    return `
+                      <tr>
+                        <td>
+                          <span class="tax-chip tax-chip--${escapeHTML(normalizeValue(item.tax_type).toLowerCase())}">
+                            ${escapeHTML(item.tax_type || "-")}
+                          </span>
+                          <small>${escapeHTML(item.value_type || "-")}</small>
+                          ${item.source_kind === "state_icms_rule" ? `<small class="engine-source">Motor ICMS estadual</small>` : ""}
+                        </td>
+                        <td>${escapeHTML(item.operation_code || "Todas")}</td>
+                        <td>${escapeHTML(item.tax_regime || "Todos")}</td>
+                        <td><strong>${escapeHTML(formatStateFlow(item))}</strong></td>
+                        <td>${classification.length ? escapeHTML(classification.join(" · ")) : "Geral"}</td>
+                        <td>${output.length ? escapeHTML(output.join(" · ")) : escapeHTML(item.value_content || "{}")}</td>
+                        <td>
+                          <div class="confidence-meter"><span style="width:${confidenceWidth}%"></span></div>
+                          <small>Prior. ${escapeHTML(item.priority || "-")} · Conf. ${escapeHTML(item.confidence_base || "-")}</small>
+                        </td>
+                      </tr>
+                    `;
+                  }).join("")}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        `).join("");
     }
 
     async function loadSources() {
@@ -274,12 +565,12 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
         sourceSelect.innerHTML = `
           <option value="">Selecione</option>
           ${items.map((item) => `
-            <option value="${item.id}">
-              ${item.title} · ${item.tax_type}${item.uf ? ` · ${item.uf}` : ""}
+            <option value="${escapeHTML(item.id)}">
+              ${escapeHTML(item.title)} · ${escapeHTML(item.tax_type)}${item.uf ? ` · ${escapeHTML(item.uf)}` : ""}
             </option>
           `).join("")}
         `;
-      } catch (error) {
+      } catch {
         if (sourceSelect) {
           sourceSelect.innerHTML = `<option value="">Erro ao carregar fontes</option>`;
         }
@@ -294,29 +585,35 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
         if (!operationSelect) return;
 
         if (!items.length) {
-          operationSelect.innerHTML = `<option value="">Nenhuma operação encontrada</option>`;
+          operationSelect.innerHTML = `<option value="">Nenhuma operacao encontrada</option>`;
           return;
         }
 
         operationSelect.innerHTML = `
           <option value="">Todas</option>
           ${items.map((item) => `
-            <option value="${item.code}">
-              ${item.name}
-            </option>
+            <option value="${escapeHTML(item.code)}">${escapeHTML(item.name)}</option>
           `).join("")}
         `;
       } catch {
         if (operationSelect) {
-          operationSelect.innerHTML = `<option value="">Erro ao carregar operações</option>`;
+          operationSelect.innerHTML = `<option value="">Erro ao carregar operacoes</option>`;
         }
       }
     }
 
     async function loadRules() {
       try {
-        const data = await listLegalRules();
-        renderRules(data.items || []);
+        const [legalData, stateData] = await Promise.all([
+          listLegalRules(),
+          listStateICMSRules(),
+        ]);
+        allLegalRules = [
+          ...(legalData.items || []),
+          ...((stateData.items || []).map(mapStateICMSRule)),
+        ];
+        populateRuleFilters(allLegalRules);
+        renderFilteredRules();
       } catch (error) {
         if (listWrapper) {
           listWrapper.textContent = `Erro ao carregar regras legais: ${String(error)}`;
@@ -334,9 +631,7 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
         draft = null;
       }
 
-      if (!draft || typeof draft !== "object") {
-        return;
-      }
+      if (!draft || typeof draft !== "object") return;
 
       const map = {
         "tax-type": draft.tax_type,
@@ -361,9 +656,7 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
 
       Object.entries(map).forEach(([id, value]) => {
         const element = document.getElementById(id);
-        if (element) {
-          element.value = value || "";
-        }
+        if (element) element.value = value || "";
       });
 
       setResult("Rascunho carregado a partir da ultima consulta tributaria. Revise a fonte legal antes de salvar.");
@@ -378,7 +671,7 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
       try {
         JSON.parse(valueContent);
       } catch {
-        setResult("O campo Value Content precisa ser um JSON válido.");
+        setResult("O campo Value Content precisa ser um JSON valido.");
         return;
       }
 
@@ -407,7 +700,7 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
       };
 
       if (!payload.legal_source_id || !payload.tax_type || !payload.value_type) {
-        setResult("Preencha os campos obrigatórios.");
+        setResult("Preencha os campos obrigatorios.");
         return;
       }
 
@@ -422,47 +715,348 @@ import AppLayout from "../../../layouts/DashboardLayout.astro";
       }
     });
 
+    [filterUF, filterTaxType, filterTaxRegime, filterOperation, filterSearch].forEach((element) => {
+      element?.addEventListener("input", renderFilteredRules);
+      element?.addEventListener("change", renderFilteredRules);
+    });
+
+    clearFilters?.addEventListener("click", () => {
+      [filterUF, filterTaxType, filterTaxRegime, filterOperation, filterSearch].forEach((element) => {
+        if (element) element.value = "";
+      });
+      renderFilteredRules();
+    });
+
     Promise.all([loadSources(), loadOperations(), loadRules()]).then(applyDraftPrefill);
   </script>
 
   <style>
-    .admin-card {
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      background: white;
-      padding: 14px;
-      margin-bottom: 12px;
+    .legal-hero {
+      background:
+        radial-gradient(circle at 90% 10%, rgba(14, 165, 233, 0.18), transparent 28rem),
+        linear-gradient(135deg, rgba(236, 254, 255, 0.82), rgba(255, 251, 235, 0.92));
+      border-bottom: 1px solid #c7dce9;
     }
 
-    .admin-card-top {
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .form-grid--2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .form-grid--3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .form-grid--4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .legal-rules-panel {
+      margin-top: 20px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.13), transparent 32rem),
+        linear-gradient(135deg, rgba(255, 251, 235, 0.72), rgba(240, 253, 250, 0.86));
+    }
+
+    .legal-rules-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .section-kicker,
+    .state-label {
+      display: inline-flex;
+      width: fit-content;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .legal-rules-heading h2 {
+      margin: 10px 0 6px;
+      color: #12263a;
+      font-size: clamp(28px, 3vw, 44px);
+      line-height: 0.95;
+    }
+
+    .legal-rules-heading p {
+      margin: 0;
+      color: #5f7289;
+      max-width: 780px;
+    }
+
+    .rules-summary {
+      min-width: 170px;
+      border: 1px solid #c7dce9;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.82);
+      padding: 18px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    .rules-summary strong {
+      display: block;
+      color: #0f766e;
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .rules-summary span {
+      color: #64748b;
+      font-weight: 700;
+    }
+
+    .rules-filter-bar {
+      display: grid;
+      grid-template-columns: 0.8fr 0.9fr 1fr 1fr minmax(220px, 1.5fr) auto;
+      gap: 12px;
+      align-items: end;
+      border: 1px solid #c7dce9;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.88);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .rules-filter-bar label {
+      color: #475569;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .rules-filter-bar select,
+    .rules-filter-bar input {
+      width: 100%;
+      margin-top: 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 15px;
+      background: #fff;
+      color: #12263a;
+      padding: 12px 14px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .rules-filter-bar select:focus,
+    .rules-filter-bar input:focus {
+      border-color: #0e7490;
+      box-shadow: 0 0 0 4px rgba(14, 116, 144, 0.12);
+    }
+
+    .secondary-button {
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
+      background: #fff;
+      color: #12263a;
+      padding: 13px 16px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .secondary-button:hover {
+      border-color: #0e7490;
+      color: #0e7490;
+    }
+
+    .rules-state-strip {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 16px;
+    }
+
+    .state-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #bae6fd;
+      border-radius: 999px;
+      background: #f0f9ff;
+      color: #075985;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .state-pill span {
+      display: inline-flex;
+      min-width: 24px;
+      height: 24px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: #fff;
+      color: #0f766e;
+      font-size: 12px;
+    }
+
+    .empty-rules {
+      border: 1px dashed #f59e0b;
+      border-radius: 22px;
+      background: #fffbeb;
+      color: #92400e;
+      padding: 22px;
+    }
+
+    .empty-rules strong,
+    .empty-rules span {
+      display: block;
+    }
+
+    .state-rule-group {
+      border: 1px solid #c7dce9;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.92);
+      overflow: hidden;
+      margin-top: 16px;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+    }
+
+    .state-rule-group__header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
+      gap: 16px;
+      border-bottom: 1px solid #dbe7ef;
+      background: linear-gradient(90deg, #ecfeff, #fffbeb);
+      padding: 16px 18px;
     }
 
-    .admin-card p {
-      margin: 6px 0;
+    .state-rule-group__header strong {
+      display: block;
+      margin-top: 6px;
+      color: #12263a;
+      font-size: 26px;
     }
 
-    .badge {
-      background: #eef2ff;
-      color: #3730a3;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
+    .state-rule-group__header > span {
+      color: #0f766e;
+      font-weight: 900;
     }
 
-    .json-box {
+    .rules-table-wrap {
+      overflow-x: auto;
+    }
+
+    .rules-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      background: #fff;
+    }
+
+    .rules-table th,
+    .rules-table td {
+      border-bottom: 1px solid #e2e8f0;
+      border-right: 1px solid #eef2f7;
+      padding: 13px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .rules-table th {
       background: #f8fafc;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 10px;
-      white-space: pre-wrap;
-      word-break: break-word;
+      color: #475569;
       font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .rules-table tbody tr:nth-child(even) {
+      background: #fbfdff;
+    }
+
+    .rules-table tbody tr:hover {
+      background: #ecfeff;
+    }
+
+    .rules-table small {
+      display: block;
+      margin-top: 6px;
+      color: #64748b;
+      font-weight: 700;
+    }
+
+    .engine-source {
+      width: fit-content;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: #047857 !important;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 900 !important;
+    }
+
+    .tax-chip {
+      display: inline-flex;
+      border-radius: 999px;
+      background: #e0f2fe;
+      color: #075985;
+      padding: 5px 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .tax-chip--icms {
+      background: #ccfbf1;
+      color: #0f766e;
+    }
+
+    .tax-chip--pis,
+    .tax-chip--cofins {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .confidence-meter {
+      width: 120px;
+      height: 8px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+
+    .confidence-meter span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #0f766e, #0ea5e9);
+    }
+
+    @media (max-width: 1100px) {
+      .legal-rules-heading {
+        display: block;
+      }
+
+      .rules-summary {
+        margin-top: 14px;
+      }
+
+      .rules-filter-bar,
+      .form-grid--2,
+      .form-grid--3,
+      .form-grid--4 {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </AppLayout>

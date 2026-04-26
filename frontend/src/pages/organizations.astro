@@ -4,16 +4,83 @@ import organizationsScript from "../scripts/organizations.ts?url";
 ---
 
 <DashboardLayout
-  title="Organizacoes"
-  subtitle="Crie uma empresa e defina qual ficara ativa na sessao"
+  title="Contexto da organizacao"
+  subtitle="Gerencie UF, regime tributario e CRT usados como base para sugestoes fiscais"
 >
   <div class="page-header">
-    <h2>Organizacoes</h2>
+    <h2>Organizacao e contexto fiscal</h2>
     <p>
-      Essa tela usa a API real para listar empresas do usuario, criar novas organizacoes e salvar a
-      organizacao ativa no navegador.
+      Defina aqui a empresa ativa, UF base, regime tributario e CRT. Esse contexto alimenta as sugestoes por estado,
+      a revisao automatica de produtos, simulacoes e leitura das notas.
     </p>
   </div>
+
+  <section class="organization-hero">
+    <div>
+      <span class="hero-eyebrow">Contexto fiscal padrao</span>
+      <h3>As sugestoes precisam saber de qual UF e regime a empresa opera</h3>
+      <p>
+        Quando a consulta nao informar UF, regime ou CRT, o motor tributario usa os dados da organizacao ativa.
+        Para varejo, isso define se a saida usa CST ou CSOSN e qual regra estadual deve ser considerada.
+      </p>
+    </div>
+    <div id="organization-context-panel" class="dashboard-note">Carregando contexto fiscal...</div>
+  </section>
+
+  <section class="card card--padded">
+    <h3 class="section-title">Gerenciar contexto fiscal da organizacao ativa</h3>
+    <form id="organization-context-form" class="organization-form" style="display: none;">
+      <div class="organization-grid">
+        <label>
+          Nome da organizacao
+          <input id="context-org-name" name="name" type="text" placeholder="Empresa Exemplo LTDA" required />
+        </label>
+
+        <label>
+          CNPJ
+          <input id="context-org-cnpj" name="cnpj" type="text" placeholder="00.000.000/0001-00" />
+        </label>
+      </div>
+
+      <div class="organization-grid organization-grid--3">
+        <label>
+          UF base
+          <input id="context-org-home-uf" name="home_uf" type="text" maxlength="2" placeholder="GO" required />
+        </label>
+
+        <label>
+          Regime tributario
+          <select id="context-org-tax-regime" name="tax_regime">
+            <option value="simples_nacional">Simples Nacional</option>
+            <option value="lucro_presumido">Lucro Presumido</option>
+            <option value="lucro_real">Lucro Real</option>
+          </select>
+        </label>
+
+        <label>
+          CRT
+          <select id="context-org-crt" name="crt">
+            <option value="1">1 - Simples Nacional</option>
+            <option value="2">2 - Simples excesso sublimite</option>
+            <option value="3">3 - Regime Normal</option>
+          </select>
+        </label>
+      </div>
+
+      <label>
+        Inscricao estadual
+        <input id="context-org-state-registration" name="state_registration" type="text" placeholder="Opcional" />
+      </label>
+
+      <div class="organization-form__actions">
+        <button class="primary-button" type="submit">Salvar contexto fiscal</button>
+        <a class="secondary-button" href="/produtos">Ir para produtos</a>
+      </div>
+    </form>
+    <div id="organization-context-message" class="organization-message"></div>
+  </section>
+
+  <div style="height: 18px;"></div>
 
   <div class="grid grid--2">
     <section class="card card--padded">
@@ -104,6 +171,68 @@ import organizationsScript from "../scripts/organizations.ts?url";
 
   <style>
     .dashboard-note { margin: 0; color: var(--text-muted); }
+    .organization-hero {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 24px;
+      border: 1px solid #dbe4ee;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.14), transparent 32%),
+        linear-gradient(135deg, #ffffff, #f8fbff);
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #ccfbf1;
+      color: #115e59;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .organization-hero h3 {
+      margin: 10px 0;
+      font-size: clamp(26px, 3vw, 38px);
+    }
+    .organization-hero p {
+      margin: 0;
+      color: #475569;
+      max-width: 68ch;
+    }
+    .fiscal-context-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .fiscal-context-summary article {
+      padding: 16px;
+      border: 1px solid #dbe4ee;
+      border-radius: 18px;
+      background: white;
+    }
+    .fiscal-context-summary span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .fiscal-context-summary strong {
+      display: block;
+      margin: 8px 0 4px;
+      color: #0f172a;
+      font-size: 24px;
+    }
+    .fiscal-context-summary p {
+      margin: 0;
+      color: #64748b;
+      font-size: 13px;
+    }
     .session-summary { display: grid; gap: 10px; }
     .organization-form { display: grid; gap: 14px; }
     .organization-form label { display: grid; gap: 8px; font-size: 14px; font-weight: 600; }
@@ -120,6 +249,9 @@ import organizationsScript from "../scripts/organizations.ts?url";
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
+    }
+    .organization-grid--3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
     .organization-form__actions,
     .organization-card__actions {
@@ -198,7 +330,10 @@ import organizationsScript from "../scripts/organizations.ts?url";
     .dashboard-empty p { margin: 6px 0 0; color: var(--text-muted); }
     .dashboard-empty--error { border-color: #fecaca; background: #fff7f7; }
     @media (max-width: 900px) {
-      .organization-grid { grid-template-columns: 1fr; }
+      .organization-hero,
+      .organization-grid,
+      .organization-grid--3,
+      .fiscal-context-summary { grid-template-columns: 1fr; }
     }
   </style>
 </DashboardLayout>

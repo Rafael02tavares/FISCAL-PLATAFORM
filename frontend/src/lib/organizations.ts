@@ -19,3 +19,17 @@ export async function createOrganization(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export async function updateOrganization(organizationId: string, payload: {
+  name: string;
+  cnpj: string;
+  tax_regime: string;
+  crt: string;
+  state_registration: string;
+  home_uf: string;
+}) {
+  return apiFetch(`/organizations/${encodeURIComponent(organizationId)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
