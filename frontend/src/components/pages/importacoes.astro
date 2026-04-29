@@ -14,17 +14,29 @@ import importsScript from "../../scripts/importacoes.ts?url";
 
   <div class="grid grid--2">
     <section class="card card--padded">
-      <form id="upload-form" class="upload-form">
-        <label>
+      <form id="upload-form" class="grid gap-3.5">
+        <label class="grid gap-2 font-semibold text-sm">
           Arquivos XML
-          <input id="xml-file" type="file" accept=".xml,text/xml,application/xml" multiple required />
+          <input
+            id="xml-file"
+            type="file"
+            accept=".xml,text/xml,application/xml"
+            multiple
+            required
+            class="form-input-file"
+          />
         </label>
-        <p class="upload-hint">Selecione um ou varios arquivos XML para processamento em lote.</p>
-        <div class="upload-actions">
-          <button class="primary-button" type="submit">Enviar lote</button>
+        <p class="m-0 text-text-muted text-[13px]">
+          Selecione um ou varios arquivos XML para processamento em lote.
+        </p>
+        <div class="flex gap-2.5 mt-1">
+          <button
+            type="submit"
+            class="primary-button"
+          >Enviar lote</button>
         </div>
       </form>
-      <div id="upload-message" class="dashboard-note"></div>
+      <div id="upload-message" class="dashboard-note mt-3.5"></div>
     </section>
 
     <section class="card card--padded">
@@ -33,7 +45,7 @@ import importsScript from "../../scripts/importacoes.ts?url";
     </section>
   </div>
 
-  <div style="height: 18px;"></div>
+  <div class="h-[18px]"></div>
 
   <section class="card card--padded">
     <h3 class="section-title">Notas importadas</h3>
@@ -41,32 +53,4 @@ import importsScript from "../../scripts/importacoes.ts?url";
   </section>
 
   <script type="module" src={importsScript}></script>
-
-  <style>
-    .upload-form { display: grid; gap: 14px; }
-    .upload-form label { display: grid; gap: 8px; font-weight: 600; }
-    .upload-hint { margin: 0; color: var(--text-muted); font-size: 13px; }
-    .upload-actions { display: flex; gap: 10px; }
-    .primary-button {
-      border: none;
-      border-radius: 12px;
-      background: var(--primary);
-      color: white;
-      font: inherit;
-      font-weight: 700;
-      padding: 12px 16px;
-      cursor: pointer;
-    }
-    .message-box { margin-top: 14px; border-radius: 12px; padding: 12px 14px; }
-    .message-box--error { background: #fff1f2; color: #b91c1c; }
-    .message-box--success { background: #ecfdf5; color: #166534; }
-    .session-card { display: grid; gap: 8px; }
-    .dashboard-empty {
-      border: 1px dashed var(--border);
-      border-radius: 14px;
-      padding: 18px;
-      background: var(--surface-soft);
-    }
-    .dashboard-empty--error { border-color: #fecaca; background: #fff7f7; }
-  </style>
 </DashboardLayout>

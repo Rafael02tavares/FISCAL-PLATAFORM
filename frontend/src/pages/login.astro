@@ -1,6 +1,7 @@
 ---
 const title = "Entrar";
 import loginScript from "../scripts/login.ts?url";
+import "../components/styles/global.css";
 ---
 
 <html lang="pt-BR">
@@ -11,263 +12,93 @@ import loginScript from "../scripts/login.ts?url";
     <link rel="alternate icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/brand-mark.svg" />
     <title>{title}</title>
-    <style>
-      :root {
-        --bg: #eef4ff;
-        --surface: #ffffff;
-        --surface-soft: #f8fafc;
-        --border: #dbe4f0;
-        --text: #0f172a;
-        --muted: #64748b;
-        --primary: #1d4ed8;
-        --primary-dark: #1e40af;
-        --danger: #dc2626;
-        --success: #15803d;
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: Inter, "Segoe UI", sans-serif;
-        color: var(--text);
-        background:
-          radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%),
-          radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.16), transparent 24%),
-          linear-gradient(180deg, #f7fbff 0%, #edf3ff 100%);
-        display: grid;
-        place-items: center;
-        padding: 24px;
-      }
-      .auth-shell {
-        width: min(1040px, 100%);
-        display: grid;
-        grid-template-columns: 1.05fr 0.95fr;
-        border-radius: 28px;
-        overflow: hidden;
-        background: var(--surface);
-        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
-      }
-      .auth-aside {
-        position: relative;
-        overflow: hidden;
-        padding: 40px;
-        background:
-          linear-gradient(160deg, rgba(29, 78, 216, 0.96), rgba(14, 116, 144, 0.88)),
-          #1d4ed8;
-        color: #eff6ff;
-      }
-      .auth-aside::after {
-        content: "";
-        position: absolute;
-        right: -76px;
-        bottom: -86px;
-        width: 240px;
-        height: 240px;
-        border-radius: 999px;
-        background: rgba(242, 184, 75, 0.2);
-      }
-      .auth-brand {
-        position: relative;
-        z-index: 1;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        margin-bottom: 28px;
-      }
-      .auth-brand img {
-        width: 62px;
-        height: 62px;
-        border-radius: 18px;
-        box-shadow: 0 18px 44px rgba(8, 20, 29, 0.24);
-      }
-      .auth-brand span {
-        display: block;
-        color: rgba(239, 246, 255, 0.72);
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-      }
-      .auth-brand strong {
-        display: block;
-        margin-top: 4px;
-        color: #ffffff;
-        font-size: 24px;
-        line-height: 1;
-      }
-      .auth-aside h1 { margin: 0 0 14px; font-size: 34px; line-height: 1.1; }
-      .auth-aside p { margin: 0; color: rgba(239, 246, 255, 0.9); max-width: 38ch; }
-      .auth-aside h1,
-      .auth-aside p,
-      .auth-highlights {
-        position: relative;
-        z-index: 1;
-      }
-      .auth-highlights { margin-top: 28px; display: grid; gap: 14px; }
-      .auth-highlight {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        border-radius: 18px;
-        padding: 16px 18px;
-      }
-      .auth-highlight strong { display: block; margin-bottom: 6px; }
-      .auth-panel { padding: 34px 32px; }
-      .auth-tabs {
-        display: inline-grid;
-        grid-template-columns: 1fr 1fr;
-        background: var(--surface-soft);
-        border-radius: 999px;
-        padding: 4px;
-        margin-bottom: 22px;
-      }
-      .auth-tab {
-        border: none;
-        background: transparent;
-        color: var(--muted);
-        padding: 10px 18px;
-        border-radius: 999px;
-        cursor: pointer;
-        font-weight: 600;
-      }
-      .auth-tab.is-active {
-        background: var(--surface);
-        color: var(--text);
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
-      }
-      .auth-form {
-        display: none;
-        gap: 14px;
-      }
-      .auth-form.is-active {
-        display: grid;
-      }
-      .auth-form h2 { margin: 0; font-size: 24px; }
-      .auth-form p { margin: 0 0 6px; color: var(--muted); }
-      label { display: grid; gap: 8px; font-weight: 600; font-size: 14px; }
-      input {
-        width: 100%;
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 13px 14px;
-        font: inherit;
-      }
-      input:focus {
-        outline: 2px solid rgba(37, 99, 235, 0.22);
-        border-color: var(--primary);
-      }
-      .auth-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-      .auth-button {
-        border: none;
-        border-radius: 14px;
-        padding: 13px 18px;
-        background: var(--primary);
-        color: white;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .auth-button:hover { background: var(--primary-dark); }
-      .auth-button:disabled {
-        opacity: 0.7;
-        cursor: wait;
-      }
-      .auth-button--ghost {
-        background: transparent;
-        color: var(--primary);
-        border: 1px solid rgba(29, 78, 216, 0.2);
-      }
-      .auth-message {
-        min-height: 48px;
-        border-radius: 14px;
-        padding: 12px 14px;
-        font-size: 14px;
-        display: none;
-      }
-      .auth-message.is-visible { display: block; }
-      .auth-message.is-error { background: #fff1f2; color: var(--danger); }
-      .auth-message.is-success { background: #ecfdf5; color: var(--success); }
-      .auth-footer { margin-top: 18px; color: var(--muted); font-size: 14px; }
-      .auth-footer a { color: var(--primary); font-weight: 600; }
-      @media (max-width: 900px) {
-        .auth-shell { grid-template-columns: 1fr; }
-        .auth-aside, .auth-panel { padding: 24px; }
-      }
-    </style>
   </head>
-  <body>
-    <section class="auth-shell">
-      <aside class="auth-aside">
-        <div class="auth-brand">
-          <img src="/brand-mark.svg" alt="" width="62" height="62" />
+  <body class="m-0 min-h-screen font-sans text-slate-900 bg-[#eef4ff] flex items-center justify-center p-6" style="background: radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%), radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.16), transparent 24%), linear-gradient(180deg, #f7fbff 0%, #edf3ff 100%);">
+    
+    <section class="w-full max-w-[1040px] grid grid-cols-1 md:grid-cols-[1.05fr_0.95fr] rounded-[28px] overflow-hidden bg-white shadow-[0_24px_60px_rgba(15,23,42,0.12)]">
+      
+      <aside class="relative overflow-hidden p-6 md:p-10 text-blue-50 bg-blue-700" style="background: linear-gradient(160deg, rgba(29, 78, 216, 0.96), rgba(14, 116, 144, 0.88)), #1d4ed8;">
+        <!-- decorative shape -->
+        <div class="absolute -right-[76px] -bottom-[86px] w-[240px] h-[240px] rounded-full bg-[#f2b84b33]"></div>
+        
+        <div class="relative z-10 flex items-center gap-3.5 mb-7">
+          <img src="/brand-mark.svg" alt="" width="62" height="62" class="w-[62px] h-[62px] rounded-[18px] shadow-[0_18px_44px_rgba(8,20,29,0.24)]" />
           <div>
-            <span>Fiscal Platform</span>
-            <strong>Motor tributario</strong>
+            <span class="block text-blue-100/70 text-[11px] font-extrabold tracking-[0.16em] uppercase">Fiscal Platform</span>
+            <strong class="block mt-1 text-white text-2xl leading-none">Motor tributario</strong>
           </div>
         </div>
-        <h1>Fiscal Platform</h1>
-        <p>
+        
+        <h1 class="relative z-10 m-0 mb-3.5 text-[34px] leading-[1.1] font-display">Fiscal Platform</h1>
+        <p class="relative z-10 m-0 text-blue-50/90 max-w-[38ch]">
           Entre com sua conta para acessar organizacoes, importar notas e alimentar a dashboard
           com dados reais do ambiente.
         </p>
-        <div class="auth-highlights">
-          <div class="auth-highlight">
-            <strong>1. Autentique</strong>
-            <span>O token da API e salvo no navegador para as rotas protegidas.</span>
+        
+        <div class="relative z-10 mt-7 grid gap-3.5">
+          <div class="bg-white/10 border border-white/15 rounded-[18px] px-[18px] py-4">
+            <strong class="block mb-1.5 font-bold">1. Autentique</strong>
+            <span class="text-sm">O token da API e salvo no navegador para as rotas protegidas.</span>
           </div>
-          <div class="auth-highlight">
-            <strong>2. Escolha a organizacao</strong>
-            <span>Depois do login, selecione a empresa ativa para consultar invoices.</span>
+          <div class="bg-white/10 border border-white/15 rounded-[18px] px-[18px] py-4">
+            <strong class="block mb-1.5 font-bold">2. Escolha a organizacao</strong>
+            <span class="text-sm">Depois do login, selecione a empresa ativa para consultar invoices.</span>
           </div>
-          <div class="auth-highlight">
-            <strong>3. Volte para a dashboard</strong>
-            <span>Com sessao e organizacao definidas, os cards passam a ler dados reais.</span>
+          <div class="bg-white/10 border border-white/15 rounded-[18px] px-[18px] py-4">
+            <strong class="block mb-1.5 font-bold">3. Volte para a dashboard</strong>
+            <span class="text-sm">Com sessao e organizacao definidas, os cards passam a ler dados reais.</span>
           </div>
         </div>
       </aside>
 
-      <main class="auth-panel">
-        <div class="auth-tabs" role="tablist" aria-label="Autenticacao">
-          <a class="auth-tab is-active" href="#login-form" data-target="login-form" aria-selected="true">
+      <main class="p-6 md:p-[34px_32px]">
+        <div class="inline-grid grid-cols-2 bg-slate-50 rounded-full p-1 mb-5" role="tablist" aria-label="Autenticacao">
+          <a class="auth-tab text-center border-none bg-transparent text-slate-500 py-2.5 px-4 rounded-full cursor-pointer font-semibold data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:shadow-[0_6px_18px_rgba(15,23,42,0.08)] transition-all" href="#login-form" data-target="login-form" aria-selected="true" data-active="true">
             Entrar
           </a>
-          <a class="auth-tab" href="#register-form" data-target="register-form" aria-selected="false">
+          <a class="auth-tab text-center border-none bg-transparent text-slate-500 py-2.5 px-4 rounded-full cursor-pointer font-semibold data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:shadow-[0_6px_18px_rgba(15,23,42,0.08)] transition-all" href="#register-form" data-target="register-form" aria-selected="false" data-active="false">
             Cadastrar
           </a>
         </div>
 
-        <div id="auth-message" class="auth-message" aria-live="polite"></div>
+        <div id="auth-message" class="hidden min-h-[48px] rounded-[14px] p-3 text-sm [&.is-visible]:block [&.is-error]:bg-rose-50 [&.is-error]:text-red-600 [&.is-success]:bg-emerald-50 [&.is-success]:text-green-700" aria-live="polite"></div>
 
-        <form id="login-form" class="auth-form is-active" novalidate>
-          <h2>Acessar conta</h2>
-          <p>Use o email e a senha cadastrados para gerar o token de acesso.</p>
-          <label>
+        <form id="login-form" class="grid gap-3.5" novalidate>
+          <h2 class="m-0 text-2xl font-display">Acessar conta</h2>
+          <p class="m-0 mb-1.5 text-slate-500 text-sm">Use o email e a senha cadastrados para gerar o token de acesso.</p>
+          
+          <label class="grid gap-2 font-semibold text-sm">
             Email
-            <input id="login-email" type="email" placeholder="voce@empresa.com" autocomplete="email" required />
+            <input id="login-email" class="w-full border border-slate-200 rounded-[14px] px-3.5 py-3 [font:inherit] focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600" type="email" placeholder="voce@empresa.com" autocomplete="email" required />
           </label>
-          <label>
+          <label class="grid gap-2 font-semibold text-sm">
             Senha
-            <input id="login-password" type="password" placeholder="Sua senha" autocomplete="current-password" required />
+            <input id="login-password" class="w-full border border-slate-200 rounded-[14px] px-3.5 py-3 [font:inherit] focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600" type="password" placeholder="Sua senha" autocomplete="current-password" required />
           </label>
-          <div class="auth-actions">
-            <button class="auth-button" type="submit" id="login-submit">Entrar</button>
-            <a class="auth-button auth-button--ghost" href="/">Voltar para a dashboard</a>
+          
+          <div class="flex gap-3 items-center flex-wrap mt-2">
+            <button class="border-none rounded-[14px] px-[18px] py-[13px] bg-blue-700 text-white font-bold cursor-pointer hover:bg-blue-800 disabled:opacity-70 disabled:cursor-wait transition-colors" type="submit" id="login-submit">Entrar</button>
+            <a class="border border-blue-700/20 rounded-[14px] px-[18px] py-[13px] bg-transparent text-blue-700 font-bold hover:bg-blue-50 transition-colors" href="/">Voltar para a dashboard</a>
           </div>
         </form>
 
-        <form id="register-form" class="auth-form" novalidate>
-          <h2>Criar conta</h2>
-          <p>Cadastre um usuario novo para comecar a usar o ambiente local.</p>
-          <label>
+        <form id="register-form" class="hidden gap-3.5" novalidate>
+          <h2 class="m-0 text-2xl font-display">Criar conta</h2>
+          <p class="m-0 mb-1.5 text-slate-500 text-sm">Cadastre um usuario novo para comecar a usar o ambiente local.</p>
+          
+          <label class="grid gap-2 font-semibold text-sm">
             Nome
-            <input id="register-name" type="text" placeholder="Nome do responsavel" autocomplete="name" required />
+            <input id="register-name" class="w-full border border-slate-200 rounded-[14px] px-3.5 py-3 [font:inherit] focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600" type="text" placeholder="Nome do responsavel" autocomplete="name" required />
           </label>
-          <label>
+          <label class="grid gap-2 font-semibold text-sm">
             Email
-            <input id="register-email" type="email" placeholder="voce@empresa.com" autocomplete="email" required />
+            <input id="register-email" class="w-full border border-slate-200 rounded-[14px] px-3.5 py-3 [font:inherit] focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600" type="email" placeholder="voce@empresa.com" autocomplete="email" required />
           </label>
-          <label>
+          <label class="grid gap-2 font-semibold text-sm">
             Senha
             <input
               id="register-password"
+              class="w-full border border-slate-200 rounded-[14px] px-3.5 py-3 [font:inherit] focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
               type="password"
               placeholder="Minimo de 6 caracteres"
               autocomplete="new-password"
@@ -275,10 +106,11 @@ import loginScript from "../scripts/login.ts?url";
               required
             />
           </label>
-          <label>
+          <label class="grid gap-2 font-semibold text-sm">
             Confirmar senha
             <input
               id="register-password-confirm"
+              class="w-full border border-slate-200 rounded-[14px] px-3.5 py-3 [font:inherit] focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
               type="password"
               placeholder="Repita a senha"
               autocomplete="new-password"
@@ -286,21 +118,38 @@ import loginScript from "../scripts/login.ts?url";
               required
             />
           </label>
-          <div class="auth-actions">
-            <button class="auth-button" type="submit" id="register-submit">Criar conta</button>
-            <button class="auth-button auth-button--ghost" type="button" id="switch-to-login">
+          
+          <div class="flex gap-3 items-center flex-wrap mt-2">
+            <button class="border-none rounded-[14px] px-[18px] py-[13px] bg-blue-700 text-white font-bold cursor-pointer hover:bg-blue-800 disabled:opacity-70 disabled:cursor-wait transition-colors" type="submit" id="register-submit">Criar conta</button>
+            <button class="border border-blue-700/20 rounded-[14px] px-[18px] py-[13px] bg-transparent text-blue-700 font-bold hover:bg-blue-50 transition-colors cursor-pointer" type="button" id="switch-to-login">
               Ja tenho conta
             </button>
           </div>
         </form>
 
-        <p class="auth-footer">
-          Depois do login, siga para <a href="/organizations">Organizacoes</a> para definir o
+        <p class="mt-[18px] text-slate-500 text-sm">
+          Depois do login, siga para <a href="/organizations" class="text-blue-700 font-semibold hover:underline">Organizacoes</a> para definir o
           contexto ativo da dashboard.
         </p>
       </main>
     </section>
 
     <script type="module" src={loginScript}></script>
+    <script>
+      // Small script to handle the tab styling since we removed is-active class from global css 
+      // Note: the loginScript handles display/hide of forms, but we need to toggle 'data-active' attribute for styling on tabs
+      const tabs = document.querySelectorAll('.auth-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          e.preventDefault();
+          tabs.forEach(t => {
+            t.setAttribute('data-active', 'false');
+            t.classList.remove('is-active');
+          });
+          tab.setAttribute('data-active', 'true');
+          tab.classList.add('is-active'); // keep is-active for compatibility with loginScript
+        });
+      });
+    </script>
   </body>
 </html>

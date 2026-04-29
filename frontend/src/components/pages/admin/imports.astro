@@ -15,6 +15,8 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
   <div class="admin-import-grid">
     <section class="card card--padded">
       <div class="catalog-stack">
+
+        <!-- NCM -->
         <article class="catalog-panel">
           <div class="catalog-panel__header">
             <div>
@@ -27,17 +29,22 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
           <form id="ncm-import-form" class="form-grid">
             <label>
               Nome da fonte
-              <input id="source-name" type="text" value="NCM CSV" />
+              <input id="source-name" type="text" value="NCM CSV" class="form-input" />
             </label>
 
             <label>
               Versao
-              <input id="version-label" type="text" placeholder="Ex.: tabela 2026-01" />
+              <input id="version-label" type="text" placeholder="Ex.: tabela 2026-01" class="form-input" />
             </label>
 
             <label class="full-width">
               Arquivo de importacao
-              <input id="ncm-file" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+              <input
+                id="ncm-file"
+                type="file"
+                accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                class="form-input-file"
+              />
             </label>
 
             <div class="full-width import-actions">
@@ -51,6 +58,7 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
           </div>
         </article>
 
+        <!-- CFOP -->
         <article class="catalog-panel catalog-panel--accent">
           <div class="catalog-panel__header">
             <div>
@@ -63,17 +71,22 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
           <form id="cfop-import-form" class="form-grid">
             <label>
               Nome da fonte
-              <input id="cfop-source-name" type="text" value="CFOP XLSX" />
+              <input id="cfop-source-name" type="text" value="CFOP XLSX" class="form-input" />
             </label>
 
             <label>
               Versao
-              <input id="cfop-version-label" type="text" placeholder="Ex.: tabela 2026-04" />
+              <input id="cfop-version-label" type="text" placeholder="Ex.: tabela 2026-04" class="form-input" />
             </label>
 
             <label class="full-width">
               Arquivo de importacao
-              <input id="cfop-file" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+              <input
+                id="cfop-file"
+                type="file"
+                accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                class="form-input-file"
+              />
             </label>
 
             <div class="full-width import-actions">
@@ -87,6 +100,7 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
           </div>
         </article>
 
+        <!-- CEST -->
         <article class="catalog-panel catalog-panel--cest">
           <div class="catalog-panel__header">
             <div>
@@ -99,17 +113,22 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
           <form id="cest-import-form" class="form-grid">
             <label>
               Nome da fonte
-              <input id="cest-source-name" type="text" value="CEST XLSX" />
+              <input id="cest-source-name" type="text" value="CEST XLSX" class="form-input" />
             </label>
 
             <label>
               Versao
-              <input id="cest-version-label" type="text" placeholder="Ex.: CONFAZ 2026" />
+              <input id="cest-version-label" type="text" placeholder="Ex.: CONFAZ 2026" class="form-input" />
             </label>
 
             <label class="full-width">
               Arquivo de importacao
-              <input id="cest-file" type="file" accept=".csv,.xlsx,.txt,.html,text/csv,text/plain,text/html,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+              <input
+                id="cest-file"
+                type="file"
+                accept=".csv,.xlsx,.txt,.html,text/csv,text/plain,text/html,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                class="form-input-file"
+              />
             </label>
 
             <label class="full-width">
@@ -118,6 +137,7 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
                 id="cest-raw-content"
                 rows="8"
                 placeholder="Cole linhas com ITEM | CEST | NCM/SH | DESCRICAO copiadas do Convênio ICMS 142/18"
+                class="form-textarea"
               ></textarea>
             </label>
 
@@ -132,6 +152,7 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
           </div>
         </article>
 
+        <!-- cBenef -->
         <article class="catalog-panel catalog-panel--cbenef">
           <div class="catalog-panel__header">
             <div>
@@ -144,22 +165,27 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
           <form id="cbenef-import-form" class="form-grid">
             <label>
               Nome da fonte
-              <input id="cbenef-source-name" type="text" value="cBenef GO" />
+              <input id="cbenef-source-name" type="text" value="cBenef GO" class="form-input" />
             </label>
 
             <label>
               Versao
-              <input id="cbenef-version-label" type="text" placeholder="Ex.: IN 1518/22 atualizada" />
+              <input id="cbenef-version-label" type="text" placeholder="Ex.: IN 1518/22 atualizada" class="form-input" />
             </label>
 
             <label>
               UF padrao
-              <input id="cbenef-uf" type="text" value="GO" maxlength="2" placeholder="GO" />
+              <input id="cbenef-uf" type="text" value="GO" maxlength="2" placeholder="GO" class="form-input" />
             </label>
 
             <label>
               Arquivo de importacao
-              <input id="cbenef-file" type="file" accept=".csv,.xlsx,.txt,.html,text/csv,text/plain,text/html,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+              <input
+                id="cbenef-file"
+                type="file"
+                accept=".csv,.xlsx,.txt,.html,text/csv,text/plain,text/html,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                class="form-input-file"
+              />
             </label>
 
             <label class="full-width">
@@ -168,6 +194,7 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
                 id="cbenef-raw-content"
                 rows="8"
                 placeholder="Cole linhas como CODIGO | CST 00 | CST 10 | ... | DISPOSITIVO LEGAL | DESCRICAO | OBSERVACAO"
+                class="form-textarea"
               ></textarea>
             </label>
 
@@ -182,6 +209,7 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
           </div>
         </article>
 
+        <!-- ST estadual CONFAZ -->
         <article class="catalog-panel catalog-panel--st">
           <div class="catalog-panel__header">
             <div>
@@ -194,22 +222,27 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
           <form id="state-st-import-form" class="form-grid">
             <label>
               Nome da fonte
-              <input id="state-st-source-name" type="text" value="CONFAZ ST GO" />
+              <input id="state-st-source-name" type="text" value="CONFAZ ST GO" class="form-input" />
             </label>
 
             <label>
               Versao
-              <input id="state-st-version-label" type="text" value="Versao 001 - vigencia 10/07/2023" />
+              <input id="state-st-version-label" type="text" value="Versao 001 - vigencia 10/07/2023" class="form-input" />
             </label>
 
             <label>
               UF
-              <input id="state-st-uf" type="text" value="GO" maxlength="2" placeholder="GO" />
+              <input id="state-st-uf" type="text" value="GO" maxlength="2" placeholder="GO" class="form-input" />
             </label>
 
             <label>
               Arquivo XLSX
-              <input id="state-st-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+              <input
+                id="state-st-file"
+                type="file"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                class="form-input-file"
+              />
             </label>
 
             <label class="full-width">
@@ -218,6 +251,7 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
                 id="state-st-source-url"
                 type="url"
                 value="https://www.confaz.fazenda.gov.br/legislacao/portal-nacional-da-substituicao-tributaria/goias/planilha_eletronica_st_versao_0001_go_vigencia_a_partir_de_10-07-23.xlsx"
+                class="form-input"
               />
             </label>
 
@@ -231,6 +265,7 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
             Use o XLSX original do CONFAZ. Ele sera lido por abas e salvo como regra estadual de ICMS-ST.
           </div>
         </article>
+
       </div>
     </section>
 
@@ -313,47 +348,16 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
       white-space: nowrap;
     }
 
-    .catalog-tag--gold {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .catalog-tag--blue {
-      background: #dbeafe;
-      color: #1d4ed8;
-    }
-
-    .catalog-tag--teal {
-      background: #ccfbf1;
-      color: #0f766e;
-    }
-
-    .catalog-tag--amber {
-      background: #fef3c7;
-      color: #92400e;
-    }
+    .catalog-tag--gold  { background: #fef3c7; color: #92400e; }
+    .catalog-tag--blue  { background: #dbeafe; color: #1d4ed8; }
+    .catalog-tag--teal  { background: #ccfbf1; color: #0f766e; }
+    .catalog-tag--amber { background: #fef3c7; color: #92400e; }
 
     .form-grid label {
       display: grid;
       gap: 8px;
       font-weight: 600;
       font-size: 14px;
-    }
-
-    .form-grid input,
-    .form-grid textarea {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 14px;
-      font: inherit;
-      background: white;
-    }
-
-    .form-grid textarea {
-      min-height: 160px;
-      resize: vertical;
-      line-height: 1.5;
     }
 
     .full-width {
@@ -365,100 +369,6 @@ import adminImportsScript from "../../../scripts/admin-imports.ts?url";
       gap: 12px;
       align-items: center;
       flex-wrap: wrap;
-    }
-
-    .primary-button {
-      border: none;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #0f766e, #2563eb);
-      color: white;
-      font: inherit;
-      font-weight: 700;
-      padding: 12px 16px;
-      cursor: pointer;
-    }
-
-    .primary-button--gold {
-      background: linear-gradient(135deg, #b45309, #f59e0b);
-    }
-
-    .primary-button--blue {
-      background: linear-gradient(135deg, #1d4ed8, #0f766e);
-    }
-
-    .primary-button--teal {
-      background: linear-gradient(135deg, #0f766e, #0891b2);
-    }
-
-    .primary-button--amber {
-      background: linear-gradient(135deg, #92400e, #f59e0b);
-    }
-
-    .secondary-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px 16px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      color: var(--text);
-      text-decoration: none;
-      background: white;
-      font-weight: 700;
-    }
-
-    .batch-list {
-      display: grid;
-      gap: 12px;
-    }
-
-    .batch-card {
-      display: grid;
-      gap: 8px;
-      padding: 16px;
-      border-radius: 16px;
-      border: 1px solid #dbe4ee;
-      background: linear-gradient(180deg, #ffffff, #f8fafc);
-    }
-
-    .batch-card__top {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: baseline;
-    }
-
-    .batch-card__meta {
-      display: grid;
-      gap: 6px;
-      color: #475569;
-      font-size: 14px;
-    }
-
-    .batch-badge {
-      display: inline-flex;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: #dcfce7;
-      color: #166534;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .feedback {
-      margin-top: 16px;
-      border-radius: 14px;
-      padding: 14px 16px;
-    }
-
-    .feedback--success {
-      background: #ecfdf5;
-      color: #166534;
-    }
-
-    .feedback--error {
-      background: #fff1f2;
-      color: #b91c1c;
     }
 
     @media (max-width: 900px) {

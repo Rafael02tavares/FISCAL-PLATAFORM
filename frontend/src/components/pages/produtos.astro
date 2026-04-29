@@ -666,47 +666,47 @@ import produtosScript from "../../scripts/produtos.ts?url";
 
     .product-table {
       width: 100%;
-      min-width: 1180px;
+      min-width: 1400px;
       border-collapse: collapse;
       table-layout: fixed;
       color: #0f172a;
-      font-size: 12px;
+      font-size: 13px;
     }
 
-    .product-table__col-index { width: 44px; }
-    .product-table__col-product { width: 280px; }
-    .product-table__col-gtin { width: 142px; }
+    .product-table__col-index { width: 50px; }
+    .product-table__col-product { width: 320px; }
+    .product-table__col-gtin { width: 150px; }
     .product-table__col-ncm { width: 190px; }
     .product-table__col-cest { width: 150px; }
-    .product-table__col-icms { width: 105px; }
-    .product-table__col-piscofins { width: 118px; }
-    .product-table__col-reform { width: 104px; }
-    .product-table__col-status { width: 115px; }
-    .product-table__col-actions { width: 132px; }
+    .product-table__col-icms { width: 120px; }
+    .product-table__col-piscofins { width: 130px; }
+    .product-table__col-reform { width: 110px; }
+    .product-table__col-status { width: 140px; }
+    .product-table__col-actions { width: 160px; }
 
     .product-table th {
       position: sticky;
       top: 0;
       z-index: 1;
-      padding: 7px 8px;
-      background: #d9ead3;
-      border: 1px solid #93c47d;
-      color: #274e13;
-      font-size: 11px;
+      padding: 14px 16px;
+      background: #f8fafc;
+      border-bottom: 2px solid #cbd5e1;
+      color: #334155;
+      font-size: 12px;
       font-weight: 800;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.04em;
       text-align: left;
       text-transform: uppercase;
       white-space: nowrap;
     }
 
     .product-table td {
-      height: 44px;
-      padding: 6px 8px;
-      border: 1px solid #cbd5e1;
+      height: 56px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e2e8f0;
       vertical-align: middle;
-      font-size: 12px;
-      line-height: 1.25;
+      font-size: 13px;
+      line-height: 1.4;
     }
 
     .product-table__row--even td {
@@ -714,7 +714,7 @@ import produtosScript from "../../scripts/produtos.ts?url";
     }
 
     .product-table__row--odd td {
-      background: #f3f6fb;
+      background: #f8fafc;
     }
 
     .product-table tbody tr:hover td {
@@ -928,30 +928,38 @@ import produtosScript from "../../scripts/produtos.ts?url";
     .product-edit-button,
     .product-suggest-button {
       display: inline-flex;
-      border: 1px solid #9ca3af;
-      border-radius: 3px;
-      background: #f8fafc;
-      color: #1f2937;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
       cursor: pointer;
       font: inherit;
-      font-size: 11px;
-      font-weight: 800;
-      padding: 5px 7px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 12px;
+      transition: all 150ms ease;
     }
 
     .product-suggest-button {
-      border-color: #6aa84f;
-      background: #e2f0d9;
-      color: #274e13;
+      border: none;
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+      color: white;
+      box-shadow: 0 4px 6px rgba(15, 118, 110, 0.15);
     }
 
-    .product-edit-button:hover,
-    .product-suggest-button:hover {
-      background: #fff2cc;
+    .product-edit-button {
+      border: 1px solid #cbd5e1;
+      background: white;
+      color: #0f172a;
+    }
+
+    .product-edit-button:hover {
+      border-color: #0ea5e9;
+      background: #f8fafc;
     }
 
     .product-suggest-button:hover {
-      background: #d9ead3;
+      box-shadow: 0 6px 12px rgba(15, 118, 110, 0.25);
+      transform: translateY(-1px);
     }
 
     .product-card__top h4 {

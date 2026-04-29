@@ -75,44 +75,9 @@ import dashboardHomeScript from "../../scripts/dashboard-home.ts?url";
   <section class="card card--padded">
     <h3 class="section-title">Ultimas notas importadas</h3>
     <div id="invoices-panel">
-      <p class="dashboard-muted">Carregando dados da API...</p>
+      <p class="m-0 text-slate-500">Carregando dados da API...</p>
     </div>
   </section>
 
   <script type="module" src={dashboardHomeScript}></script>
-
-  <style>
-    .stat-card__value--compact {
-      font-size: 22px;
-      line-height: 1.2;
-      word-break: break-word;
-    }
-
-    .dashboard-muted {
-      margin: 0;
-      color: var(--text-muted);
-    }
-
-    .dashboard-empty {
-      border: 1px dashed var(--border);
-      border-radius: 12px;
-      padding: 18px;
-      background: var(--surface-soft);
-    }
-
-    .dashboard-empty strong {
-      display: block;
-      margin-bottom: 6px;
-    }
-
-    .dashboard-empty p {
-      margin: 0;
-      color: var(--text-muted);
-    }
-
-    .dashboard-empty--error {
-      border-color: #fecaca;
-      background: #fff7f7;
-    }
-  </style>
 </DashboardLayout>

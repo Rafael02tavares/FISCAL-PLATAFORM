@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@astrojs/node": "^9.5.4",
+    "@tailwindcss/vite": "^4.2.4",
     "astro": "^5.17.1",
+    "tailwindcss": "^4.2.4",
     "xlsx": "^0.18.5"
   }
 }
